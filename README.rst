@@ -10,7 +10,21 @@ Usage
 
 ::
 
-  gdown "[URL]" [FILENAME]
+  gdown "[URL]" -O [FILENAME]
+
+ex)
+
+::
+
+  gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vVlpzRkwzYUladms&export=download" -O hoge.txt
+
+
+Installation
+============
+
+::
+
+  pip install gdown
 
 
 License

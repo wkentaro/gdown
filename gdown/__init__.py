@@ -54,7 +54,7 @@ def main():
                     confirm = ''
                     break
             else:
-                print('Could not download the file :-(')
+                print('Small size file or invalid url.')
                 quit()
 
         if confirm:
