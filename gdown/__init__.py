@@ -11,8 +11,10 @@ from urlparse import urlparse, parse_qs
 __version__ = '1.0.1'
 
 
-def wget_download(url, filename):
+def wget_download(url, filename, be_quiet):
     cmd = 'wget --load-cookie /tmp/cookie.txt'
+    if be_quiet:
+        cmd += ' --quiet'
     cmd += ' --save-cookie /tmp/cookie.txt "{0}"'
     cmd = cmd.format(url)
     if filename:
@@ -24,14 +26,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('url')
     parser.add_argument('-O', '--output', default=None)
+    parser.add_argument('-q', '--quiet', action='store_true')
     args = parser.parse_args()
     url = args.url
     filename = args.output
+    be_quiet = args.quiet
     if filename is None:
         query = urlparse(url).query
         filename = parse_qs(query)['id'][0]
 
-    wget_download(url, filename)
+    wget_download(url, filename, be_quiet)
 
     while os.stat(filename).st_size < 100000:
         with open(filename) as f:
@@ -60,7 +64,7 @@ def main():
         if confirm:
             url = re.sub(r'confirm=([^;&]+)', r'confirm='+confirm, url)
 
-        wget_download(url, filename)
+        wget_download(url=url, filename=filename, be_quiet=be_quiet)
 
 
 if __name__ == '__main__':
