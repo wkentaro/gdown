@@ -8,7 +8,7 @@ import subprocess
 import sys
 from urlparse import urlparse, parse_qs
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 
 def wget_download(url, filename, be_quiet):
