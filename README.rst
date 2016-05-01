@@ -1,7 +1,7 @@
 gdown
 =====
 
-Google Drive direct download of big files
+Google Drive direct download of big files.
 
 
 Usage
