@@ -1,4 +1,3 @@
-=====
 gdown
 =====
 
@@ -6,21 +5,22 @@ Google Drive direct download of big files
 
 
 Usage
-=====
+-----
 
-::
+.. code-block:: bash
 
   gdown "[URL]" -O [FILENAME]
 
-ex)
 
-::
+**Example**
 
-  gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vVlpzRkwzYUladms&export=download" -O hoge.txt
+.. code-block:: bash
+
+  gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vVlpzRkwzYUladms" -O hoge.txt
 
 
 Installation
-============
+------------
 
 ::
 
@@ -28,7 +28,7 @@ Installation
 
 
 License
-=======
+-------
 This is originally created with Perl, and this is Python version Command Line Tool.
 
 ::
