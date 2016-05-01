@@ -6,7 +6,12 @@ import os
 import re
 import subprocess
 import sys
-from urlparse import urlparse, parse_qs
+try:
+    from urlparse import urlparse
+    from urlparse import parse_qs
+except ImportError:
+    from urllib.parse import urlparse
+    from urllib.parse import parse_qs
 
 __version__ = '1.0.2'
 
