@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import argparse
 import codecs
 import os
+import pkg_resources
 import re
 import subprocess
 import sys
@@ -15,7 +16,9 @@ except ImportError:
     from urllib.parse import urlparse
     from urllib.parse import parse_qs
 
-__version__ = '1.0.2'
+
+__author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
+__version__ = pkg_resources.get_distribution('gdown').version
 
 
 def wget_download(url, filename, be_quiet):
