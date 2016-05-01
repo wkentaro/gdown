@@ -1,13 +1,13 @@
 gdown
 =====
 
-Google Drive direct download of big files.
-
-
 .. image:: https://travis-ci.org/wkentaro/gdown.svg?branch=master
     :target: https://travis-ci.org/wkentaro/gdown
 .. image:: https://badge.fury.io/py/gdown.svg
     :target: https://badge.fury.io/py/gdown
+
+
+Google Drive direct download of big files.
 
 
 Usage
