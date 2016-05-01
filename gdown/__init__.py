@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
 import argparse
+import codecs
 import os
 import re
 import subprocess
@@ -43,7 +45,7 @@ def main():
     wget_download(url, filename, be_quiet)
 
     while os.stat(filename).st_size < 100000:
-        with open(filename) as f:
+        with codecs.open(filename, 'r', encoding='latin-1') as f:
             for line in f.readlines():
                 m = re.search('href="(\/uc\?export=download[^"]+)', line)
                 if m:
