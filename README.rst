@@ -28,7 +28,7 @@ Usage
 Installation
 ------------
 
-::
+.. code-block:: bash
 
   pip install gdown
 
