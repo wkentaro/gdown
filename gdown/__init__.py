@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals
 import argparse
@@ -9,6 +8,7 @@ import pkg_resources
 import re
 import subprocess
 import sys
+import tempfile
 try:
     from urlparse import urlparse
     from urlparse import parse_qs
@@ -22,13 +22,14 @@ __version__ = pkg_resources.get_distribution('gdown').version
 
 
 def wget_download(url, filename, be_quiet):
-    cmd = 'wget --load-cookie /tmp/cookie.txt'
+    tmp_file = tempfile.mktemp()
+    cmd = 'wget --load-cookie /tmp/{tmp_file}'
     if be_quiet:
         cmd += ' --quiet'
-    cmd += ' --save-cookie /tmp/cookie.txt "{0}"'
-    cmd = cmd.format(url)
+    cmd += ' --save-cookie /tmp/{tmp_file} "{url}"'
+    cmd = cmd.format(tmp_file=tmp_file, url=url)
     if filename:
-        cmd += ' -O {}'.format(filename)
+        cmd += ' -O {fname}'.format(fname=filename)
     subprocess.call(cmd, shell=True)
 
 
