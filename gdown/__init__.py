@@ -24,15 +24,14 @@ __version__ = pkg_resources.get_distribution('gdown').version
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
 
-def wget_download(url, filename, be_quiet):
-    tmp_file = tempfile.mktemp()
-    cmd = 'wget --load-cookie {tmp_file}'
+def wget_download(url, cookie_fname, out_fname, be_quiet):
+    cmd = 'wget --load-cookie {cookie}'
     if be_quiet:
         cmd += ' --quiet'
-    cmd += ' --save-cookie {tmp_file} "{url}"'
-    cmd = cmd.format(tmp_file=tmp_file, url=url)
-    if filename:
-        cmd += ' -O {fname}'.format(fname=filename)
+    cmd += ' --save-cookie {cookie} "{url}"'
+    cmd = cmd.format(cookie=cookie_fname, url=url)
+    if out_fname:
+        cmd += ' -O {out}'.format(out=out_fname)
     subprocess.call(cmd, shell=True)
 
 
@@ -60,8 +59,10 @@ def main():
     if filename is None:
         query = urlparse(url).query
         filename = parse_qs(query)['id'][0]
+    cookie_fname = tempfile.mktemp()
 
-    wget_download(url, filename, be_quiet)
+    wget_download(url=url, cookie_fname=cookie_fname,
+                  out_fname=filename, be_quiet=be_quiet)
 
     while os.stat(filename).st_size < 100000:
         with codecs.open(filename, 'r', encoding='latin-1') as f:
@@ -90,7 +91,8 @@ def main():
         if confirm:
             url = re.sub(r'confirm=([^;&]+)', r'confirm='+confirm, url)
 
-        wget_download(url=url, filename=filename, be_quiet=be_quiet)
+        wget_download(url=url, cookie_fname=cookie_fname,
+                      out_fname=filename, be_quiet=be_quiet)
 
 
 if __name__ == '__main__':
