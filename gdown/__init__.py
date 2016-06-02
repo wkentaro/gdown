@@ -51,11 +51,13 @@ def main():
     parser.add_argument('url')
     parser.add_argument('-O', '--output', default=None)
     parser.add_argument('-q', '--quiet', action='store_true')
+    parser.add_argument('--max-trial', type=int, default=10)
     args = parser.parse_args()
 
     url = args.url
     filename = args.output
     be_quiet = args.quiet
+    max_trial = 10
     if filename is None:
         query = urlparse(url).query
         filename = parse_qs(query)['id'][0]
@@ -64,7 +66,8 @@ def main():
     wget_download(url=url, cookie_fname=cookie_fname,
                   out_fname=filename, be_quiet=be_quiet)
 
-    while os.stat(filename).st_size < 100000:
+    count = 0
+    while (count < max_trial) and (os.stat(filename).st_size < 100000):
         with codecs.open(filename, 'r', encoding='latin-1') as f:
             for line in f.readlines():
                 m = re.search('href="(\/uc\?export=download[^"]+)', line)
@@ -93,6 +96,8 @@ def main():
 
         wget_download(url=url, cookie_fname=cookie_fname,
                       out_fname=filename, be_quiet=be_quiet)
+
+        count += 1
 
 
 if __name__ == '__main__':
