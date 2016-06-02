@@ -6,7 +6,7 @@ import subprocess
 from setuptools import setup, find_packages
 
 
-version = '2.1.1'
+version = '2.2.0'
 
 
 # publish helper
