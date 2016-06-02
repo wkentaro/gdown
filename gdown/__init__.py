@@ -21,6 +21,9 @@ __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
 __version__ = pkg_resources.get_distribution('gdown').version
 
 
+this_dir = os.path.dirname(os.path.realpath(__file__))
+
+
 def wget_download(url, filename, be_quiet):
     tmp_file = tempfile.mktemp()
     cmd = 'wget --load-cookie /tmp/{tmp_file}'
@@ -34,11 +37,23 @@ def wget_download(url, filename, be_quiet):
 
 
 def main():
+    class ShowVersionAction(argparse.Action):
+        def __init__(self, *args, **kwargs):
+            kwargs['nargs'] = 0
+            self.version = kwargs.pop('version')
+            super(self.__class__, self).__init__(*args, **kwargs)
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            print('gdown {ver} at {pos}'.format(ver=self.version, pos=this_dir))
+            parser.exit()
+
     parser = argparse.ArgumentParser()
+    parser.add_argument('-V', '--version', version=__version__, action=ShowVersionAction)
     parser.add_argument('url')
     parser.add_argument('-O', '--output', default=None)
     parser.add_argument('-q', '--quiet', action='store_true')
     args = parser.parse_args()
+
     url = args.url
     filename = args.output
     be_quiet = args.quiet
