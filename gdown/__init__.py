@@ -10,8 +10,8 @@ import re
 import subprocess
 import tempfile
 
-from six.moves.url_parse import parse_qs
-from six.moves.url_parse import urlparse
+from six.moves.urllib_parse import parse_qs
+from six.moves.urllib_parse import urlparse
 
 
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
