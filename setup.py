@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys
+
+from setuptools import find_packages
+from setuptools import setup
 import subprocess
-from setuptools import setup, find_packages
+import sys
 
 
 version = '2.3.0'

@@ -7,14 +7,13 @@ import os
 import pkg_resources
 import re
 import subprocess
-import sys
 import tempfile
 try:
-    from urlparse import urlparse
     from urlparse import parse_qs
+    from urlparse import urlparse
 except ImportError:
-    from urllib.parse import urlparse
     from urllib.parse import parse_qs
+    from urllib.parse import urlparse
 
 
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
@@ -43,11 +42,13 @@ def main():
             super(self.__class__, self).__init__(*args, **kwargs)
 
         def __call__(self, parser, namespace, values, option_string=None):
-            print('gdown {ver} at {pos}'.format(ver=self.version, pos=this_dir))
+            print('gdown {ver} at {pos}'
+                  .format(ver=self.version, pos=this_dir))
             parser.exit()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-V', '--version', version=__version__, action=ShowVersionAction)
+    parser.add_argument('-V', '--version', version=__version__,
+                        action=ShowVersionAction)
     parser.add_argument('url')
     parser.add_argument('-O', '--output', default=None)
     parser.add_argument('-q', '--quiet', action='store_true')
