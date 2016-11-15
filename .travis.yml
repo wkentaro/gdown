@@ -15,6 +15,10 @@ install:
   - python setup.py install
 
 script:
+  # other than google drive
+  - output=/tmp/gdown_r
+  - gdown 'https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py' -O $output --quiet
+  - test $(md5sum $output | awk '{print $1}') = 2a51927dde6b146ce56b4d89ebbb5268
   # small file
   - output=/tmp/spam.txt
   - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c" -O $output --quiet
