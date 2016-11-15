@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import unicode_literals
+
 import argparse
 import codecs
 import os
@@ -8,12 +9,9 @@ import pkg_resources
 import re
 import subprocess
 import tempfile
-try:
-    from urlparse import parse_qs
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import parse_qs
-    from urllib.parse import urlparse
+
+from six.moves.url_parse import parse_qs
+from six.moves.url_parse import urlparse
 
 
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
