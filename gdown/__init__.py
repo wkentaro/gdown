@@ -62,6 +62,7 @@ def main():
         query = urlparse(url).query
         filename = parse_qs(query)['id'][0]
     cookie_fname = tempfile.mktemp()
+    open(cookie_fname, 'w').close()
 
     wget_download(url=url, cookie_fname=cookie_fname,
                   out_fname=filename, be_quiet=be_quiet)
