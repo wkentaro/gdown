@@ -21,9 +21,9 @@ script:
   - test $(md5sum $output | awk '{print $1}') = 2a51927dde6b146ce56b4d89ebbb5268
   # small file
   - output=/tmp/spam.txt
-  - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c" -O $output --quiet
+  - gdown 'https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c' -O $output --quiet
   - test $(cat $output) = spam
   # large file
   - output=/tmp/apc2015_object_images.tgz
-  - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU" -O $output --quiet
+  - gdown 'https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU' -O $output --quiet
   - test $(md5sum $output | awk '{print $1}') = fa837a88f0c40c513d975104edf3da17

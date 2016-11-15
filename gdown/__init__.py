@@ -18,6 +18,7 @@ this_dir = osp.dirname(osp.realpath(__file__))
 
 
 def get_url_from_gdrive_confirmation(contents):
+    url = ''
     for line in contents.splitlines():
         m = re.search('href="(\/uc\?export=download[^"]+)', line)
         if m:
@@ -45,6 +46,8 @@ def _is_google_drive_url(url):
 def download(url, output, quiet):
     sess = requests.session()
 
+    is_gdrive = _is_google_drive_url(url)
+
     spinner = itertools.cycle(list('|/-\\'))
     msg = 'Downloading from: {}'.format(url)
     while True:
@@ -57,12 +60,13 @@ def download(url, output, quiet):
         if 'Content-Disposition' in res.headers:
             # This is the file
             break
-        if not _is_google_drive_url(url):
+        if not is_gdrive:
             break
+
         # Need to redirect with confiramtion
         url = get_url_from_gdrive_confirmation(res.text)
 
-    if output is None and _is_google_drive_url(url):
+    if output is None and is_gdrive:
         m = re.search('filename="(.*)"', res.headers['Content-Disposition'])
         output = m.groups()[0]
     else:
