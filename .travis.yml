@@ -3,15 +3,19 @@ sudo: false
 language: python
 
 python:
-- '2.7'
-- '3.3'
-- pypy
+  - '2.7'
+  - '3.3'
+  - pypy
+
+before_install:
+  - pip install flake8 hacking
+  - flake8 .
 
 install:
-- python setup.py install
+  - python setup.py install
 
 script:
-- gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c" -O /tmp/spam.txt
-- test $(cat /tmp/spam.txt) = spam
-- gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vT3Zxem1OdTMtWU0" -O /tmp/gdown-1.0.2.tgz
-- test $(md5sum /tmp/gdown-1.0.2.tgz | awk '{print $1}') = 114e72cc9925a97939a297d296a44ab0
+  - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c" -O /tmp/spam.txt
+  - test $(cat /tmp/spam.txt) = spam
+  - gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vT3Zxem1OdTMtWU0" -O /tmp/gdown-1.0.2.tgz
+  - test $(md5sum /tmp/gdown-1.0.2.tgz | awk '{print $1}') = 114e72cc9925a97939a297d296a44ab0
