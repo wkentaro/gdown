@@ -66,7 +66,7 @@ class _ShowVersionAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         print('gdown {ver} at {pos}'
-                .format(ver=self.version, pos=this_dir))
+              .format(ver=self.version, pos=this_dir))
         parser.exit()
 
 
@@ -75,7 +75,7 @@ def main():
     parser.add_argument('-V', '--version', version=__version__,
                         action=_ShowVersionAction)
     parser.add_argument('url', help='URL to download file from.')
-    parser.add_argument('-O', '--output', default=None
+    parser.add_argument('-O', '--output', default=None,
                         help='Output filename.')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='Suppress standard output.')
