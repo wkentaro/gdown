@@ -1,103 +1,91 @@
 #!/usr/bin/env python
 
-from __future__ import unicode_literals
-
 import argparse
-import codecs
-import os
+import os.path as osp
 import pkg_resources
 import re
-import subprocess
-import tempfile
 
-from six.moves.urllib_parse import parse_qs
-from six.moves.urllib_parse import urlparse
+import requests
 
 
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
 __version__ = pkg_resources.get_distribution('gdown').version
 
 
-this_dir = os.path.dirname(os.path.realpath(__file__))
+this_dir = osp.dirname(osp.realpath(__file__))
 
 
-def wget_download(url, cookie_fname, out_fname, be_quiet):
-    cmd = 'wget --load-cookie {cookie}'
-    if be_quiet:
-        cmd += ' --quiet'
-    cmd += ' --save-cookie {cookie} "{url}"'
-    cmd = cmd.format(cookie=cookie_fname, url=url)
-    if out_fname:
-        cmd += ' -O {out}'.format(out=out_fname)
-    subprocess.call(cmd, shell=True)
+def get_url_from_gdrive_confirmation(contents):
+    for line in contents.splitlines():
+        m = re.search('href="(\/uc\?export=download[^"]+)', line)
+        if m:
+            url = 'https://docs.google.com' + m.groups()[0]
+            url = url.replace('&amp;', '&')
+            return url
+        m = re.search('confirm=([^;&]+)', line)
+        if m:
+            confirm = m.groups()[0]
+            url = re.sub(r'confirm=([^;&]+)', r'confirm='+confirm, url)
+            return url
+        m = re.search('"downloadUrl":"([^"]+)', line)
+        if m:
+            url = m.groups()[0]
+            url = url.replace('\\u003d', '=')
+            url = url.replace('\\u0026', '&')
+            return url
+
+
+def download(url, output, quiet):
+    sess = requests.session()
+
+    if not quiet:
+        print('Downloading from [{}] to [{}]'.format(url, output))
+
+    while True:
+        res = sess.get(url, stream=True)
+        if 'Content-Disposition' in res.headers:
+            # This is the file
+            break
+        # Need to redirect with confiramtion
+        url = get_url_from_gdrive_confirmation(res.text)
+
+    if output is None:
+        m = re.search('filename="(.*)"', res.headers['Content-Disposition'])
+        output = m.groups()[0]
+
+    with open(output, 'wb') as f:
+        for chunk in res.iter_content(chunk_size=256):
+            f.write(chunk)
+
+
+class _ShowVersionAction(argparse.Action):
+    def __init__(self, *args, **kwargs):
+        kwargs['nargs'] = 0
+        self.version = kwargs.pop('version')
+        super(self.__class__, self).__init__(*args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print('gdown {ver} at {pos}'
+              .format(ver=self.version, pos=this_dir))
+        parser.exit()
 
 
 def main():
-    class ShowVersionAction(argparse.Action):
-        def __init__(self, *args, **kwargs):
-            kwargs['nargs'] = 0
-            self.version = kwargs.pop('version')
-            super(self.__class__, self).__init__(*args, **kwargs)
-
-        def __call__(self, parser, namespace, values, option_string=None):
-            print('gdown {ver} at {pos}'
-                  .format(ver=self.version, pos=this_dir))
-            parser.exit()
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-V', '--version', version=__version__,
-                        action=ShowVersionAction)
-    parser.add_argument('url')
-    parser.add_argument('-O', '--output', default=None)
-    parser.add_argument('-q', '--quiet', action='store_true')
-    parser.add_argument('--max-trial', type=int, default=10)
+                        action=_ShowVersionAction)
+    parser.add_argument('url', help='URL to download file from.')
+    parser.add_argument('-O', '--output', default=None,
+                        help='Output filename.')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Suppress standard output.')
     args = parser.parse_args()
 
     url = args.url
-    filename = args.output
-    be_quiet = args.quiet
-    max_trial = 10
-    if filename is None:
-        query = urlparse(url).query
-        filename = parse_qs(query)['id'][0]
-    cookie_fname = tempfile.mktemp()
-    open(cookie_fname, 'w').close()
+    output = args.output
+    quiet = args.quiet
 
-    wget_download(url=url, cookie_fname=cookie_fname,
-                  out_fname=filename, be_quiet=be_quiet)
-
-    count = 0
-    while (count < max_trial) and (os.stat(filename).st_size < 100000):
-        with codecs.open(filename, 'r', encoding='latin-1') as f:
-            for line in f.readlines():
-                m = re.search('href="(\/uc\?export=download[^"]+)', line)
-                if m:
-                    url = 'https://docs.google.com' + m.groups()[0]
-                    url = url.replace('&amp;', '&')
-                    confirm = ''
-                    break
-                m = re.search('confirm=([^;&]+)', line)
-                if m:
-                    confirm = m.groups()[0]
-                    break
-                m = re.search('"downloadUrl":"([^"]+)', line)
-                if m:
-                    url = m.groups()[0]
-                    url = url.replace('\\u003d', '=')
-                    url = url.replace('\\u0026', '&')
-                    confirm = ''
-                    break
-            else:
-                print('Small size file or invalid url.')
-                quit()
-
-        if confirm:
-            url = re.sub(r'confirm=([^;&]+)', r'confirm='+confirm, url)
-
-        wget_download(url=url, cookie_fname=cookie_fname,
-                      out_fname=filename, be_quiet=be_quiet)
-
-        count += 1
+    download(url, output, quiet)
 
 
 if __name__ == '__main__':
