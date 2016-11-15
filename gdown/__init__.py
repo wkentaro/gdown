@@ -51,9 +51,9 @@ def download(url, output, quiet):
 
     if output is None:
         m = re.search('filename="(.*)"', res.headers['Content-Disposition'])
-        path = m.groups()[0]
+        output = m.groups()[0]
 
-    with open(path, 'wb') as f:
+    with open(output, 'wb') as f:
         for chunk in res.iter_content(chunk_size=256):
             f.write(chunk)
 
