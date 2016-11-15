@@ -66,11 +66,12 @@ def download(url, output, quiet):
         # Need to redirect with confiramtion
         url = get_url_from_gdrive_confirmation(res.text)
 
-    if output is None and is_gdrive:
-        m = re.search('filename="(.*)"', res.headers['Content-Disposition'])
-        output = m.groups()[0]
-    else:
-        output = osp.basename(url)
+    if output is None
+        if is_gdrive:
+            m = re.search('filename="(.*)"', res.headers['Content-Disposition'])
+            output = m.groups()[0]
+        else:
+            output = osp.basename(url)
 
     with open(output, 'wb') as f:
         for chunk in res.iter_content(chunk_size=256):
