@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
+import itertools
 import os.path as osp
 import pkg_resources
 import re
+import sys
 
 import requests
 
@@ -38,10 +40,14 @@ def get_url_from_gdrive_confirmation(contents):
 def download(url, output, quiet):
     sess = requests.session()
 
-    if not quiet:
-        print('Downloading from [{}] to [{}]'.format(url, output))
-
+    spinner = itertools.cycle(list('|/-\\'))
+    msg = 'Downloading from: {}'.format(url)
     while True:
+        if not quiet:
+            sys.stdout.write(msg + ' ' + next(spinner))
+            sys.stdout.flush()
+            sys.stdout.write('\r')
+
         res = sess.get(url, stream=True)
         if 'Content-Disposition' in res.headers:
             # This is the file
@@ -55,7 +61,15 @@ def download(url, output, quiet):
 
     with open(output, 'wb') as f:
         for chunk in res.iter_content(chunk_size=256):
+            if not quiet:
+                sys.stdout.write(msg + ' ' + next(spinner))
+                sys.stdout.flush()
+                sys.stdout.write('\r')
             f.write(chunk)
+
+    if not quiet:
+        sys.stdout.write('\n')
+        sys.stdout.write('Saved as: {}\n'.format(output))
 
 
 class _ShowVersionAction(argparse.Action):
