@@ -6,6 +6,7 @@ import os.path as osp
 import pkg_resources
 import re
 import sys
+import time
 
 import requests
 
@@ -74,12 +75,16 @@ def download(url, output, quiet):
         else:
             output = osp.basename(url)
 
+    min_interval_print = 0.1
+    last_print = time.time()
     with open(output, 'wb') as f:
         for chunk in res.iter_content(chunk_size=256):
-            if not quiet:
+            now = time.time()
+            if not quiet and (now - last_print) > min_interval_print:
                 sys.stdout.write(msg + ' ' + next(spinner))
                 sys.stdout.flush()
                 sys.stdout.write('\r')
+                last_print = now
             f.write(chunk)
 
     if not quiet:
