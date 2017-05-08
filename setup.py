@@ -39,5 +39,5 @@ setup(
         'Operating System :: POSIX',
         'Topic :: Internet :: WWW/HTTP',
         ],
-    entry_points={'console_scripts': ['gdown=gdown:main']},
+    scripts=['scripts/gdown'],
 )
