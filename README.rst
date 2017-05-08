@@ -15,7 +15,7 @@ Usage
 
 .. code-block:: bash
 
-  gdown "[URL]" -O [FILENAME]
+  gdown '[URL]' -O [FILENAME]
 
 
 **Example**
