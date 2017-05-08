@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>gdown</name>
-  <version>3.2.5</version>
+  <version>3.2.6</version>
   <description>Wget for files at Google Drive.</description>
   <maintainer email="www.kentaro.wada@gmailc.om">Kentaro Wada</maintainer>
   <license>MIT</license>
