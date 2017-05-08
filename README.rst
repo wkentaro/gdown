@@ -28,6 +28,17 @@ Usage
 Installation
 ------------
 
+**By apt**
+
+.. code-block:: bash
+
+  sudo add-apt-repository ppa:wkentaro/gdown
+  sudo apt-get update
+  sudo apt-get install python-gdown
+
+**By pip**
+
 .. code-block:: bash
 
   pip install gdown
+
