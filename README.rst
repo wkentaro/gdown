@@ -22,7 +22,8 @@ Usage
 
 .. code-block:: bash
 
-  gdown "https://drive.google.com/uc?id=0B9P1L--7Wd2vVlpzRkwzYUladms" -O hoge.txt
+  gdown 'https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c'
+  cat spam.txt  # spam
 
 
 Installation
