@@ -7,7 +7,7 @@ gdown
     :target: https://badge.fury.io/py/gdown
 
 
-wget for files in Google Drive.
+Wget for files at Google Drive.
 
 
 Usage
