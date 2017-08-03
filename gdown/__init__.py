@@ -61,6 +61,10 @@ def download(url, output, quiet):
         # Need to redirect with confiramtion
         url = get_url_from_gdrive_confirmation(res.text)
 
+        if url is None:
+            sys.stderr.write('Permission denied: %s\n' % url_origin)
+            return
+
     if output is None:
         if is_gdrive:
             m = re.search('filename="(.*)"',
