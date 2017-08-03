@@ -80,6 +80,8 @@ def download(url, output, quiet):
 
     with open(output, 'wb') as f:
         total = res.headers.get('Content-Length')
+        if total is not None:
+            total = int(total)
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
         chunk_size = 1024  # bytes
@@ -87,6 +89,8 @@ def download(url, output, quiet):
             f.write(chunk)
             if not quiet:
                 pbar.update(len(chunk))
+        if not quiet:
+            pbar.close()
 
 
 class _ShowVersionAction(argparse.Action):
