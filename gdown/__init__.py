@@ -6,9 +6,9 @@ import os.path as osp
 import pkg_resources
 import re
 import sys
-import time
 
 import requests
+import tqdm
 
 
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
@@ -45,18 +45,12 @@ def _is_google_drive_url(url):
 
 
 def download(url, output, quiet):
+    url_origin = url
     sess = requests.session()
 
     is_gdrive = _is_google_drive_url(url)
 
-    spinner = itertools.cycle(list('|/-\\'))
-    msg = 'Downloading from: {}'.format(url)
     while True:
-        if not quiet:
-            sys.stdout.write(msg + ' ' + next(spinner))
-            sys.stdout.flush()
-            sys.stdout.write('\r')
-
         res = sess.get(url, stream=True)
         if 'Content-Disposition' in res.headers:
             # This is the file
@@ -75,21 +69,20 @@ def download(url, output, quiet):
         else:
             output = osp.basename(url)
 
-    min_interval_print = 0.1
-    last_print = time.time()
-    with open(output, 'wb') as f:
-        for chunk in res.iter_content(chunk_size=256):
-            now = time.time()
-            if not quiet and (now - last_print) > min_interval_print:
-                sys.stdout.write(msg + ' ' + next(spinner))
-                sys.stdout.flush()
-                sys.stdout.write('\r')
-                last_print = now
-            f.write(chunk)
-
     if not quiet:
-        sys.stdout.write('\n')
-        sys.stdout.write('Saved as: {}\n'.format(output))
+        print('Downloading...')
+        print('From: %s' % url_origin)
+        print('To: %s' % output)
+
+    with open(output, 'wb') as f:
+        total = res.headers.get('Content-Length')
+        if not quiet:
+            pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
+        chunk_size = 1024  # bytes
+        for chunk in res.iter_content(chunk_size=chunk_size):
+            f.write(chunk)
+            if not quiet:
+                pbar.update(len(chunk))
 
 
 class _ShowVersionAction(argparse.Action):
