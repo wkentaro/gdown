@@ -92,6 +92,8 @@ def download(url, output, quiet):
         if not quiet:
             pbar.close()
 
+    return output
+
 
 class _ShowVersionAction(argparse.Action):
     def __init__(self, *args, **kwargs):
