@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 
-version = '3.3.0'
+version = '3.3.1'
 
 
 # publish helper
