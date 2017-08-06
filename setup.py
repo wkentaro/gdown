@@ -11,13 +11,16 @@ import sys
 version = '3.3.1'
 
 
-# publish helper
-if sys.argv[-1] == 'publish':
-    for cmd in [
-            'python setup.py sdist upload',
-            'git tag {}'.format(version),
-            'git push origin master --tag']:
-        subprocess.check_call(cmd, shell=True)
+# release helper
+if sys.argv[-1] == 'release':
+    commands = [
+        'python setup.py sdist',
+        'twine upload dist/gdown-{0}.tar.gz'.format(version),
+        'git tag v{0}'.format(version),
+        'git push origin master --tag',
+    ]
+    for cmd in commands:
+        subprocess.call(shlex.split(cmd))
     sys.exit(0)
 
 setup(
