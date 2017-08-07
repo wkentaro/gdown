@@ -76,7 +76,7 @@ def download(url, output, quiet):
     if not quiet:
         print('Downloading...')
         print('From: %s' % url_origin)
-        print('To: %s' % output)
+        print('To: %s' % osp.abspath(output))
 
     with open(output, 'wb') as f:
         total = res.headers.get('Content-Length')
