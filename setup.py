@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from setuptools import find_packages
 from setuptools import setup
+import shlex
 import subprocess
 import sys
 
