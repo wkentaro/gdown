@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import itertools
 import os.path as osp
 import pkg_resources
 import re
