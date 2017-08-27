@@ -1,10 +1,10 @@
 gdown
 =====
 
-.. image:: https://travis-ci.org/wkentaro/gdown.svg?branch=master
-    :target: https://travis-ci.org/wkentaro/gdown
 .. image:: https://badge.fury.io/py/gdown.svg
     :target: https://badge.fury.io/py/gdown
+.. image:: https://travis-ci.org/wkentaro/gdown.svg?branch=master
+    :target: https://travis-ci.org/wkentaro/gdown
 
 
 Wget for files at Google Drive.
