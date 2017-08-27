@@ -1,8 +1,8 @@
 gdown
 =====
 
-.. image:: https://badge.fury.io/py/gdown.svg
-    :target: https://badge.fury.io/py/gdown
+.. image:: https://img.shields.io/pypi/v/gdown.svg
+    :target: https://pypi.python.org/pypi/gdown
 .. image:: https://travis-ci.org/wkentaro/gdown.svg?branch=master
     :target: https://travis-ci.org/wkentaro/gdown
 
