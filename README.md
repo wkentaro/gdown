@@ -6,6 +6,13 @@
 Wget for files at Google Drive.
 
 
+## Installation
+
+```bash
+pip install gdown
+```
+
+
 ## Usage
 
 ```bash
@@ -17,11 +24,4 @@ gdown '[URL]' -O [FILENAME]
 ```bash
 gdown 'https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c'
 cat spam.txt  # spam
-```
-
-
-## Installation
-
-```bash
-pip install gdown
 ```
