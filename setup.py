@@ -30,7 +30,7 @@ setup(
     packages=find_packages(),
     install_requires=['requests', 'tqdm'],
     description='Google Drive direct download of big files.',
-    long_description=open('README.rst').read(),
+    long_description=open('README.md').read(),
     author='Kentaro Wada',
     author_email='www.kentaro.wada@gmail.com',
     url='http://github.com/wkentaro/gdown',
