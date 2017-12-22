@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import argparse
+import os
 import os.path as osp
 import pkg_resources
 import re
+import shutil
 import sys
+import tempfile
 
 import requests
 import tqdm
@@ -43,7 +48,10 @@ def _is_google_drive_url(url):
     return m is not None
 
 
-def download(url, output, quiet):
+def download(url, output, quiet, with_id=False):
+    if with_id:
+        url = 'https://drive.google.com/uc?id={id}'.format(id=url)
+
     url_origin = url
     sess = requests.session()
 
@@ -61,7 +69,9 @@ def download(url, output, quiet):
         url = get_url_from_gdrive_confirmation(res.text)
 
         if url is None:
-            sys.stderr.write('Permission denied: %s\n' % url_origin)
+            print('Permission denied: %s' % url_origin, file=sys.stderr)
+            print("Maybe you need to change permission over "
+                  "'Anyone with the link'?", file=sys.stderr)
             return
 
     if output is None:
@@ -77,19 +87,24 @@ def download(url, output, quiet):
         print('From: %s' % url_origin)
         print('To: %s' % osp.abspath(output))
 
-    with open(output, 'wb') as f:
-        total = res.headers.get('Content-Length')
-        if total is not None:
-            total = int(total)
-        if not quiet:
-            pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
-        chunk_size = 1024  # bytes
-        for chunk in res.iter_content(chunk_size=chunk_size):
-            f.write(chunk)
+    tmp_file = tempfile.mktemp(output)
+    try:
+        with open(tmp_file, 'wb') as f:
+            total = res.headers.get('Content-Length')
+            if total is not None:
+                total = int(total)
             if not quiet:
-                pbar.update(len(chunk))
-        if not quiet:
-            pbar.close()
+                pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
+            chunk_size = 1024  # bytes
+            for chunk in res.iter_content(chunk_size=chunk_size):
+                f.write(chunk)
+                if not quiet:
+                    pbar.update(len(chunk))
+            if not quiet:
+                pbar.close()
+        shutil.copy(tmp_file, output)
+    finally:
+        os.remove(tmp_file)
 
     return output
 
@@ -115,13 +130,15 @@ def main():
                         help='Output filename.')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='Suppress standard output.')
+    parser.add_argument('--id', action='store_true')
     args = parser.parse_args()
 
-    url = args.url
-    output = args.output
-    quiet = args.quiet
-
-    download(url, output, quiet)
+    download(
+        url=args.url,
+        output=args.output,
+        quiet=args.quiet,
+        with_id=args.id,
+    )
 
 
 if __name__ == '__main__':
