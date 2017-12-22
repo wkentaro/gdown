@@ -87,7 +87,11 @@ def download(url, output, quiet, with_id=False):
         print('From: %s' % url_origin)
         print('To: %s' % osp.abspath(output))
 
-    tmp_file = tempfile.mktemp(output)
+    tmp_file = tempfile.mktemp(
+        suffix=tempfile.template,
+        prefix=output,
+        dir=osp.dirname(output),
+    )
     try:
         with open(tmp_file, 'wb') as f:
             total = res.headers.get('Content-Length')
