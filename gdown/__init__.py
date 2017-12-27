@@ -126,15 +126,17 @@ class _ShowVersionAction(argparse.Action):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-V', '--version', version=__version__,
-                        action=_ShowVersionAction)
-    parser.add_argument('url', help='URL to download file from.')
-    parser.add_argument('-O', '--output', default=None,
-                        help='Output filename.')
+                        action=_ShowVersionAction, help='display version')
+    parser.add_argument(
+        'url_or_id', help='url or file id (with --id) to download file from')
+    parser.add_argument('-O', '--output', help='output filename')
     parser.add_argument('-q', '--quiet', action='store_true',
-                        help='Suppress standard output.')
-    parser.add_argument('--id', action='store_true')
+                        help='suppress standard output')
+    parser.add_argument('--id', action='store_true',
+                        help='flag to specify file id instead of url')
     args = parser.parse_args()
 
     download(
