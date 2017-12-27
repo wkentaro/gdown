@@ -48,10 +48,7 @@ def _is_google_drive_url(url):
     return m is not None
 
 
-def download(url, output, quiet, with_id=False):
-    if with_id:
-        url = 'https://drive.google.com/uc?id={id}'.format(id=url)
-
+def download(url, output, quiet):
     url_origin = url
     sess = requests.session()
 
@@ -139,11 +136,15 @@ def main():
                         help='flag to specify file id instead of url')
     args = parser.parse_args()
 
+    if args.id:
+        url = 'https://drive.google.com/uc?id={id}'.format(id=args.url_or_id)
+    else:
+        url = args.url_or_id
+
     download(
-        url=args.url,
+        url=url,
         output=args.output,
         quiet=args.quiet,
-        with_id=args.id,
     )
 
 
