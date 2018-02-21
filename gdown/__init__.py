@@ -84,6 +84,10 @@ def download(url, output, quiet):
         print('From: %s' % url_origin)
         print('To: %s' % osp.abspath(output))
 
+    if not osp.isdir(osp.dirname(output)):
+        print('Cannot access to directory %s: no such directory' % osp.dirname(output),
+              file=sys.stderr)
+        return
     tmp_file = tempfile.mktemp(
         suffix=tempfile.template,
         prefix=osp.basename(output),
