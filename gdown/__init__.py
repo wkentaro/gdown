@@ -86,7 +86,7 @@ def download(url, output, quiet):
 
     tmp_file = tempfile.mktemp(
         suffix=tempfile.template,
-        prefix=output,
+        prefix=osp.basename(output),
         dir=osp.dirname(output),
     )
     try:
