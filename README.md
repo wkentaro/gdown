@@ -21,7 +21,7 @@ pip install gdown
 $ # gdown URL [-O FILENAME]
 
 $ # a large file (~400MB)
-$ gdown https://drive.google.com/open?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ
+$ gdown https://drive.google.com/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ
 $ # gdown --id 0B_NiLAzvehC9R2stRmQyM3ZiVjQ
 $ md5sum pose_estimation_2d_chainermodel.pkl
 587933c2c0adf335ebed0486c183541f
