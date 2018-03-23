@@ -15,8 +15,7 @@ version = '3.4.6'
 # release helper
 if sys.argv[-1] == 'release':
     commands = [
-        'python setup.py sdist',
-        'twine upload dist/gdown-{0}.tar.gz'.format(version),
+        'python setup.py sdist upload',
         'git tag v{0}'.format(version),
         'git push origin master --tag',
     ]
