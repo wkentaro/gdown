@@ -20,14 +20,18 @@ pip install gdown
 ```bash
 $ # gdown URL [-O FILENAME]
 
+$ # a large file (~400MB)
+$ gdown https://drive.google.com/open?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ
+$ # gdown --id 0B_NiLAzvehC9R2stRmQyM3ZiVjQ
+$ md5sum pose_estimation_2d_chainermodel.pkl
+587933c2c0adf335ebed0486c183541f
+
+$ # a small file
 $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
 $ cat spam.txt
 spam
 
-$ gdown --id 0B9P1L--7Wd2vU3VUVlFnbTgtS2c
-$ cat spam.txt
-spam
-
+$ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
 $ cat ip.json
 % cat ip
