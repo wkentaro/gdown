@@ -42,6 +42,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: POSIX',
         'Topic :: Internet :: WWW/HTTP',
-        ],
-    scripts=['scripts/gdown'],
+    ],
+    entry_points={'console_scripts': ['gdown=gdown:main']},
 )
