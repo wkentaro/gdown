@@ -3,7 +3,7 @@
 [![PyPi Version](https://img.shields.io/pypi/v/gdown.svg)](https://pypi.python.org/pypi/gdown)
 [![Travis Status](https://travis-ci.org/wkentaro/gdown.svg?branch=master)](https://travis-ci.org/wkentaro/gdown)
 
-Download large files from Google Drive.  
+Download a large file from Google Drive.  
 If you use curl/wget, it fails with a large file because of
 the security warning from Google Drive.
 
