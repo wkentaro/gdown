@@ -39,3 +39,8 @@ $ cat ip.json
   "origin": "126.169.213.247"
 }
 ```
+
+
+## License
+
+See [LICENSE](LICENSE).
