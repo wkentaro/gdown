@@ -1,12 +1,9 @@
-#!/usr/bin/env python
-
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import argparse
 import os
 import os.path as osp
 import pkg_resources
-import re
 import shutil
 import sys
 import tempfile
@@ -18,102 +15,100 @@ import tqdm
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
 __version__ = pkg_resources.get_distribution('gdown').version
 
+GDRIVE_TLD="https://drive.google.com/"
+CHUNK_SIZE = 1048576  # 1MB
+
 
 this_dir = osp.dirname(osp.realpath(__file__))
 
+def get_current_state(res):
+    if res.headers.get('Location'):
+        # Final download URL is here!
+        state = res.headers.get('Location')
+    elif res.headers.get('Set-Cookie'):
+        headers = res.headers.get('Set-Cookie')
+        header_parts = headers.split(';')
+        state = header_parts[0]
+        # Looks like: download_warning_13058876669334088843_1cKq-rgSNCYPCUJ38pCi_xy6_PJH-FZWD=p8lf
 
-def get_url_from_gdrive_confirmation(contents):
-    url = ''
-    for line in contents.splitlines():
-        m = re.search('href="(\/uc\?export=download[^"]+)', line)
-        if m:
-            url = 'https://docs.google.com' + m.groups()[0]
-            url = url.replace('&amp;', '&')
-            return url
-        m = re.search('confirm=([^;&]+)', line)
-        if m:
-            confirm = m.groups()[0]
-            url = re.sub(r'confirm=([^;&]+)', r'confirm='+confirm, url)
-            return url
-        m = re.search('"downloadUrl":"([^"]+)', line)
-        if m:
-            url = m.groups()[0]
-            url = url.replace('\\u003d', '=')
-            url = url.replace('\\u0026', '&')
-            return url
+    return state
 
+def get_confirm_cookie(res):
+    state_cookie = get_current_state(res)
+    cookie = state_cookie.split('=')[1]
+    # Looks like: p8lf
 
-def _is_google_drive_url(url):
-    m = re.match('^https?://drive.google.com/uc\?id=.*$', url)
-    return m is not None
+    return cookie
+
+def get_gdrive_documenthash(url):
+    return url.split('?id=')[1]
+    # Looks like: 0B_NiLAzvehC9R2stRmQyM3ZiVjQ
 
 
-def download(url, output, quiet):
+def download(url, output, quiet, stream_stdout):
     url_origin = url
-    sess = requests.session()
+    gdoc = get_gdrive_documenthash(url_origin)
+    sess = requests.Session()
 
-    is_gdrive = _is_google_drive_url(url)
+    with sess.get(url) as res:
+        state = get_current_state(res)
+        cookie = get_confirm_cookie(res)
 
-    while True:
-        res = sess.get(url, stream=True)
-        if 'Content-Disposition' in res.headers:
-            # This is the file
-            break
-        if not is_gdrive:
-            break
+        if 'download_warning' in state:
+            url = "{}uc?export=download&confirm={}&id={}".format(GDRIVE_TLD, cookie, gdoc)
+            res = sess.get(url, allow_redirects=False)
 
-        # Need to redirect with confiramtion
-        url = get_url_from_gdrive_confirmation(res.text)
+            state = get_current_state(res)
+            cookie = get_confirm_cookie(res)
 
-        if url is None:
-            print('Permission denied: %s' % url_origin, file=sys.stderr)
-            print("Maybe you need to change permission over "
-                  "'Anyone with the link'?", file=sys.stderr)
-            return
+            if 'googleusercontent' in state:
+                # We got the file Location! Ready to download
+                url = state
+                res = sess.get(url, stream=True)
 
-    if output is None:
-        if is_gdrive:
-            m = re.search('filename="(.*)"',
-                          res.headers['Content-Disposition'])
-            output = m.groups()[0]
-        else:
-            output = osp.basename(url)
+            if stream_stdout is not None:
+                for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+                # https://stackoverflow.com/a/908440/457116
+                    sys.stdout.buffer.write(chunk)
+                return
 
-    if not quiet:
-        print('Downloading...')
-        print('From: %s' % url_origin)
-        print('To: %s' % osp.abspath(output))
+        if not quiet:
+            if not stream_stdout:
+                print('Downloading...')
+                print('From: %s' % url_origin)
+                print('To: %s' % osp.abspath(output))
 
-    tmp_file = tempfile.mktemp(
-        suffix=tempfile.template,
-        prefix=osp.basename(output),
-        dir=osp.dirname(output),
-    )
-    try:
-        with open(tmp_file, 'wb') as f:
-            total = res.headers.get('Content-Length')
-            if total is not None:
-                total = int(total)
-            if not quiet:
-                pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
-            chunk_size = 1024  # bytes
-            for chunk in res.iter_content(chunk_size=chunk_size):
-                f.write(chunk)
-                if not quiet:
-                    pbar.update(len(chunk))
-            if not quiet:
-                pbar.close()
-        shutil.copy(tmp_file, output)
-    except IOError as e:
-        print(e, file=sys.stderr)
-        return
-    finally:
-        try:
-            os.remove(tmp_file)
-        except OSError:
-            pass
+            else:
+                tmp_file = tempfile.mktemp(
+                    suffix=tempfile.template,
+                    prefix=osp.basename(output),
+                    dir=osp.dirname(output),
+                )
 
-    return output
+                try:
+                    with open(tmp_file, 'wb') as f:
+                        total = res.headers.get('Content-Length')
+                        if total is not None:
+                            total = int(total)
+                        if not quiet:
+                            pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
+                        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+                            f.write(chunk)
+                            if not quiet:
+                                pbar.update(len(chunk))
+                        if not quiet:
+                            pbar.close()
+                    shutil.copy(tmp_file, output)
+                except IOError as e:
+                    print(e, file=sys.stderr)
+                    return
+                finally:
+                    try:
+                        os.remove(tmp_file)
+                    except OSError:
+                        pass
+
+                return output
 
 
 class _ShowVersionAction(argparse.Action):
@@ -136,6 +131,7 @@ def main():
     parser.add_argument(
         'url_or_id', help='url or file id (with --id) to download file from')
     parser.add_argument('-O', '--output', help='output filename')
+    parser.add_argument('-s', '--stream_stdout', action='store_true', help='streams the download file directly to stdout for easy piping')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='suppress standard output')
     parser.add_argument('--id', action='store_true',
@@ -151,6 +147,7 @@ def main():
         url=url,
         output=args.output,
         quiet=args.quiet,
+        stream_stdout=args.stream_stdout
     )
 
 
