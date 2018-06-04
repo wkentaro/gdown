@@ -41,6 +41,18 @@ $ cat ip.json
 }
 ```
 
+And with the `-s` flag, UNIX pipes are now also possible:
+
+```
+$ time gdown https://drive.google.com/uc?id=1cKq-rgSNCYPCUJ38pCi_xy6_PJH-FZWD -s | tar xvfz -
+real    18m19.087s
+user    1m1.682s
+sys    1m25.540s
+
+$ du -hs data/
+9.5G    data/
+```
+
 
 ## License
 
