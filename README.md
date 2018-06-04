@@ -3,9 +3,10 @@
 [![PyPi Version](https://img.shields.io/pypi/v/gdown.svg)](https://pypi.python.org/pypi/gdown)
 [![Travis Status](https://travis-ci.org/wkentaro/gdown.svg?branch=master)](https://travis-ci.org/wkentaro/gdown)
 
-Download a large file from Google Drive.  
+Download a large file from Google Drive.
+
 If you use curl/wget, it fails with a large file because of
-the security warning from Google Drive.
+the security warning from Google Drive. This python package solves that.
 
 
 ## Installation
@@ -38,6 +39,18 @@ $ cat ip.json
 {
   "origin": "126.169.213.247"
 }
+```
+
+And with the `-s` flag, UNIX pipes are now also possible:
+
+```
+$ time gdown https://drive.google.com/uc?id=1cKq-rgSNCYPCUJ38pCi_xy6_PJH-FZWD -s | tar xvfz -
+real    18m19.087s
+user    1m1.682s
+sys    1m25.540s
+
+$ du -hs data/
+9.5G    data/
 ```
 
 

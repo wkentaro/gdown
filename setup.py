@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
-from setuptools import find_packages
-from setuptools import setup
 import shlex
 import subprocess
 import sys
 
+from setuptools import find_packages
+from setuptools import setup
 
-version = '3.4.6'
+
+version = '3.4.7'
 
 
 # release helper

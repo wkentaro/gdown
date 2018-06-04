@@ -3,9 +3,8 @@ sudo: false
 language: python
 
 python:
-  - '2.7'
-  - '3.3'
-  - pypy
+  - '3.6.5'
+  - pypy3
 
 before_install:
   - pip install hacking
@@ -27,3 +26,8 @@ script:
   - output=/tmp/apc2015_object_images.tgz
   - gdown 'https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU' -O $output --quiet
   - test $(md5sum $output | awk '{print $1}') = fa837a88f0c40c513d975104edf3da17
+  # streaming/piping files
+  - output=/tmp/spam.txt
+  - gdown 'https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c' -s > spam_pipe.txt
+  - md5sum spam_pipe.txt > /tmp/spam_pipe.txt.md5
+  - cat $output | md5sum --check /tmp/spam_pipe.txt.md5
