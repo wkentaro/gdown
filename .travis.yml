@@ -11,7 +11,7 @@ python:
   - pypy
 
 before_install:
-  - pip install hacking
+  - pip install flake8
   - flake8 .
 
 install:
