@@ -15,7 +15,7 @@ before_install:
   - flake8 .
 
 install:
-  - python setup.py install
+  - pip install .
 
 script:
   # other than google drive
