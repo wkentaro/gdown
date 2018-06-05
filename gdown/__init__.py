@@ -155,7 +155,10 @@ def main():
     args = parser.parse_args()
 
     if args.output == '-':
-        args.output = sys.stdout.buffer
+        if six.PY3:
+            args.output = sys.stdout.buffer
+        else:
+            args.output = sys.stdout
 
     if args.id:
         url = 'https://drive.google.com/uc?id={id}'.format(id=args.url_or_id)
