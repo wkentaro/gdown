@@ -20,6 +20,9 @@ __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
 __version__ = pkg_resources.get_distribution('gdown').version
 
 
+CHUNK_SIZE = 512 * 1024  # 512KB
+
+
 this_dir = osp.dirname(osp.realpath(__file__))
 
 
@@ -105,8 +108,7 @@ def download(url, output, quiet):
             total = int(total)
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
-        chunk_size = 1024  # bytes
-        for chunk in res.iter_content(chunk_size=chunk_size):
+        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
             if not quiet:
                 pbar.update(len(chunk))
