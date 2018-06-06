@@ -5,25 +5,23 @@ from __future__ import print_function
 import argparse
 import os
 import os.path as osp
-import pkg_resources
 import re
 import shutil
 import sys
 import tempfile
 
+import pkg_resources
 import requests
 import six
 import tqdm
 
 
+dist = pkg_resources.get_distribution('gdown')
 __author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
-__version__ = pkg_resources.get_distribution('gdown').version
+__version__ = dist.version
 
 
 CHUNK_SIZE = 512 * 1024  # 512KB
-
-
-this_dir = osp.dirname(osp.realpath(__file__))
 
 
 def get_url_from_gdrive_confirmation(contents):
@@ -47,7 +45,7 @@ def get_url_from_gdrive_confirmation(contents):
             return url
 
 
-def _is_google_drive_url(url):
+def is_google_drive_url(url):
     m = re.match('^https?://drive.google.com/uc\?id=.*$', url)
     return m is not None
 
@@ -56,7 +54,7 @@ def download(url, output, quiet):
     url_origin = url
     sess = requests.session()
 
-    is_gdrive = _is_google_drive_url(url)
+    is_gdrive = is_google_drive_url(url)
 
     while True:
         res = sess.get(url, stream=True)
@@ -131,6 +129,7 @@ def download(url, output, quiet):
 
 
 class _ShowVersionAction(argparse.Action):
+
     def __init__(self, *args, **kwargs):
         kwargs['nargs'] = 0
         self.version = kwargs.pop('version')
@@ -138,7 +137,7 @@ class _ShowVersionAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         print('gdown {ver} at {pos}'
-              .format(ver=self.version, pos=this_dir))
+              .format(ver=self.version, pos=dist.location))
         parser.exit()
 
 
