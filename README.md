@@ -34,7 +34,6 @@ spam
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
 $ cat ip.json
-% cat ip
 {
   "origin": "126.169.213.247"
 }
