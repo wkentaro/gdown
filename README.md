@@ -38,6 +38,10 @@ $ cat ip.json
 {
   "origin": "126.169.213.247"
 }
+
+$ # write stdout and pipe to extract
+$ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O - --quiet | tar zxvf -
+$ ls 20150428_collected_images/
 ```
 
 
