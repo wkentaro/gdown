@@ -18,7 +18,7 @@ pip install gdown
 ## Usage
 
 ```bash
-$ # gdown URL [-O FILENAME]
+$ # gdown [-h] [-V] [-O OUTPUT] [-q] [--id] url_or_id
 
 $ # a large file (~400MB)
 $ gdown https://drive.google.com/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ
