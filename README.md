@@ -17,6 +17,8 @@ pip install gdown
 
 ## Usage
 
+### From Command Line
+
 ```bash
 $ # gdown [-h] [-V] [-O OUTPUT] [-q] [--id] url_or_id
 
@@ -41,6 +43,16 @@ $ cat ip.json
 $ # write stdout and pipe to extract
 $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O - --quiet | tar zxvf -
 $ ls 20150428_collected_images/
+```
+
+### From Python
+
+```python
+import gdown
+
+url = 'https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c'
+output = 'spam.txt'
+gdown.download(url, output, quiet=False)
 ```
 
 
