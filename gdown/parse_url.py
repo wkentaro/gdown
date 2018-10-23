@@ -1,7 +1,7 @@
 import re
-from urllib.parse import parse_qs
-from urllib.parse import urlparse
 import warnings
+
+from six.moves import urllib_parse
 
 
 def parse_url(url, warning=True):
@@ -10,8 +10,8 @@ def parse_url(url, warning=True):
     file_id: ID of file on Google Drive.
     is_download_link: Flag if it is download link of Google Drive.
     """
-    parsed = urlparse(url)
-    query = parse_qs(parsed.query)
+    parsed = urllib_parse.urlparse(url)
+    query = urllib_parse.parse_qs(parsed.query)
     is_gdrive = parsed.hostname == 'drive.google.com'
     is_download_link = parsed.path.endswith('/uc')
 
