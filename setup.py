@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 
-version = '3.5.0'
+version = '3.6.0'
 
 
 # release helper
