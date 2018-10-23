@@ -28,7 +28,7 @@ setup(
     name='gdown',
     version=version,
     packages=find_packages(),
-    install_requires=['requests', 'tqdm'],
+    install_requires=['requests', 'six', 'tqdm'],
     description='Google Drive direct download of big files.',
     long_description=open('README.md').read(),
     author='Kentaro Wada',
