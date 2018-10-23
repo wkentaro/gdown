@@ -20,8 +20,9 @@ if sys.argv[-1] == 'release':
         'git push origin master --tag',
     ]
     for cmd in commands:
-        subprocess.call(shlex.split(cmd))
+        subprocess.check_call(shlex.split(cmd))
     sys.exit(0)
+
 
 setup(
     name='gdown',
@@ -42,5 +43,5 @@ setup(
         'Operating System :: POSIX',
         'Topic :: Internet :: WWW/HTTP',
     ],
-    entry_points={'console_scripts': ['gdown=gdown:main']},
+    entry_points={'console_scripts': ['gdown=gdown.cli:main']},
 )
