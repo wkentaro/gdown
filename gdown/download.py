@@ -20,7 +20,7 @@ CHUNK_SIZE = 512 * 1024  # 512KB
 def get_url_from_gdrive_confirmation(contents):
     url = ''
     for line in contents.splitlines():
-        m = re.search('href="(\/uc\?export=download[^"]+)', line)
+        m = re.search(r'href="(\/uc\?export=download[^"]+)', line)
         if m:
             url = 'https://docs.google.com' + m.groups()[0]
             url = url.replace('&amp;', '&')
