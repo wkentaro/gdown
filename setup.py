@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import distutils.spawn
 from setuptools import find_packages
 from setuptools import setup
 import shlex
@@ -12,12 +13,19 @@ import sys
 version = '3.6.0'
 
 
-# release helper
-if sys.argv[-1] == 'release':
+if sys.argv[1] == 'release':
+    if not distutils.spawn.find_executable('twine'):
+        print(
+            'Please install twine:\n\n\tpip install twine\n',
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     commands = [
-        'python setup.py sdist upload',
-        'git tag v{0}'.format(version),
+        'git tag v{:s}'.format(version),
         'git push origin master --tag',
+        'python setup.py sdist',
+        'twine upload dist/gdown-{:s}.tar.gz'.format(version),
     ]
     for cmd in commands:
         subprocess.check_call(shlex.split(cmd))
