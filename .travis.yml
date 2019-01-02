@@ -12,8 +12,12 @@ python:
   - pypy
 
 before_install:
-  - pip install flake8
-  - flake8 .
+  - |
+    if [ "$TRAVIS_PYTHON_VERSION" != "3.3" ]; then
+      # https://github.com/CiscoDevNet/virlutils/issues/73
+      pip install flake8
+      flake8 .
+    fi
 
 install:
   - pip install .
