@@ -32,24 +32,31 @@ if sys.argv[1] == 'release':
     sys.exit(0)
 
 
+with open('README.md') as f:
+    long_description = f.read()
+
+
 setup(
     name='gdown',
     version=version,
     packages=find_packages(),
     install_requires=['requests', 'six', 'tqdm'],
     description='Google Drive direct download of big files.',
-    long_description=open('README.md').read(),
+    long_description=long_description,
     author='Kentaro Wada',
     author_email='www.kentaro.wada@gmail.com',
     url='http://github.com/wkentaro/gdown',
     license='MIT',
-    keywords='utility',
+    keywords='Data Download',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: POSIX',
-        'Topic :: Internet :: WWW/HTTP',
+        'Natural Language :: English',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Programming Language :: Python :: Implementation :: PyPy',
     ],
     entry_points={'console_scripts': ['gdown=gdown.cli:main']},
 )
