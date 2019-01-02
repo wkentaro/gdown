@@ -47,6 +47,7 @@ setup(
     install_requires=['requests', 'six', 'tqdm'],
     description='Google Drive direct download of big files.',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     author='Kentaro Wada',
     author_email='www.kentaro.wada@gmail.com',
     url='http://github.com/wkentaro/gdown',
