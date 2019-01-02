@@ -9,6 +9,8 @@ import shlex
 import subprocess
 import sys
 
+import github2pypi
+
 
 version = '3.6.2'
 
@@ -33,7 +35,9 @@ if sys.argv[1] == 'release':
 
 
 with open('README.md') as f:
-    long_description = f.read()
+    long_description = github2pypi.replace_url(
+        slug='wkentaro/gdown', content=f.read()
+    )
 
 
 setup(
