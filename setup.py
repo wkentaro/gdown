@@ -12,7 +12,7 @@ import sys
 import github2pypi
 
 
-version = '3.6.3'
+version = '3.6.4'
 
 
 if sys.argv[1] == 'release':
