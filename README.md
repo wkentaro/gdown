@@ -1,6 +1,7 @@
 # gdown
 
 [![PyPi Version](https://img.shields.io/pypi/v/gdown.svg)](https://pypi.python.org/pypi/gdown)
+[![Python Versions](https://img.shields.io/pypi/pyversions/gdown.svg)](https://pypi.org/project/gdown)
 [![Travis Status](https://travis-ci.org/wkentaro/gdown.svg?branch=master)](https://travis-ci.org/wkentaro/gdown)
 
 Download a large file from Google Drive.  
