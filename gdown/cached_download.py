@@ -11,6 +11,11 @@ from .download import download
 
 
 cache_root = osp.join(osp.expanduser('~'), '.cache/gdown')
+if not osp.exists(cache_root):
+    try:
+        os.makedirs(cache_root)
+    except OSError:
+        pass
 
 
 def md5sum(file):
