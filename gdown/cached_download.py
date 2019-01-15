@@ -31,6 +31,9 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
                   .replace('?', '-QUESTION-')
         path = osp.join(cache_root, path)
 
+    if md5 is not None and not (isinstance(md5, str) and len(md5) == 32):
+        raise ValueError('md5 must be 32 chars')
+
     # check existence
     if osp.exists(path) and not md5:
         if not quiet:
@@ -56,6 +59,13 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
     except Exception:
         shutil.rmtree(temp_root)
         raise
+
+    if md5:
+        md5_actual = md5sum(path)
+        assert md5_actual == md5, \
+            'md5 is different:\nactual: {}\nexpected: {}'.format(
+                md5_actual, md5
+            )
 
     # postprocess
     if postprocess is not None:
