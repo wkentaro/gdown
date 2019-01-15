@@ -18,9 +18,12 @@ if not osp.exists(cache_root):
         pass
 
 
-def md5sum(file):
-    with open(file, 'rb') as f:
-        return hashlib.md5(f.read()).hexdigest()
+def md5sum(filename, blocksize=65536):
+    hash = hashlib.md5()
+    with open(filename, 'rb') as f:
+        for block in iter(lambda: f.read(blocksize), b''):
+            hash.update(block)
+    return hash.hexdigest()
 
 
 def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
