@@ -18,14 +18,34 @@ if not osp.exists(cache_root):
         pass
 
 
-def md5sum(filename, blocksize=65536, quiet=False):
-    if not quiet:
-        print('Computing md5: {}'.format(filename))
+def md5sum(filename, blocksize=None):
+    if blocksize is None:
+        blocksize = 65536
+
     hash = hashlib.md5()
     with open(filename, 'rb') as f:
         for block in iter(lambda: f.read(blocksize), b''):
             hash.update(block)
     return hash.hexdigest()
+
+
+def assert_md5sum(filename, md5, quiet=False, blocksize=None):
+    if not (isinstance(md5, str) and len(md5) == 32):
+        raise ValueError('MD5 must be 32 chars: {}'.format(md5))
+
+    if not quiet:
+        print('Computing MD5: {}'.format(filename))
+    md5_actual = md5sum(filename)
+
+    if md5_actual == md5:
+        if not quiet:
+            print('MD5 matches: {}'.format(filename))
+        return True
+
+    raise AssertionError(
+        "MD5 doesn't match:\nactual: {}\nexpected: {}"
+        .format(md5_actual, md5)
+    )
 
 
 def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
@@ -36,16 +56,17 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
                   .replace('?', '-QUESTION-')
         path = osp.join(cache_root, path)
 
-    if md5 is not None and not (isinstance(md5, str) and len(md5) == 32):
-        raise ValueError('md5 must be 32 chars')
-
     # check existence
     if osp.exists(path) and not md5:
         if not quiet:
             print('File exists: {}'.format(path))
         return path
-    elif osp.exists(path) and md5 and md5sum(path, quiet=quiet) == md5:
-        return path
+    elif osp.exists(path) and md5:
+        try:
+            assert_md5sum(path, md5, quiet=quiet)
+            return path
+        except AssertionError as e:
+            print(e)
 
     # download
     lock_path = osp.join(cache_root, '_dl_lock')
@@ -66,11 +87,7 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
         raise
 
     if md5:
-        md5_actual = md5sum(path)
-        assert md5_actual == md5, \
-            'md5 is different:\nactual: {}\nexpected: {}'.format(
-                md5_actual, md5
-            )
+        assert_md5sum(path, md5, quiet=quiet)
 
     # postprocess
     if postprocess is not None:
