@@ -18,7 +18,9 @@ if not osp.exists(cache_root):
         pass
 
 
-def md5sum(filename, blocksize=65536):
+def md5sum(filename, blocksize=65536, quiet=False):
+    if not quiet:
+        print('Computing md5: {}'.format(filename))
     hash = hashlib.md5()
     with open(filename, 'rb') as f:
         for block in iter(lambda: f.read(blocksize), b''):
@@ -40,9 +42,9 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
     # check existence
     if osp.exists(path) and not md5:
         if not quiet:
-            print('[%s] File exists.' % path)
+            print('File exists: {}'.format(path))
         return path
-    elif osp.exists(path) and md5 and md5sum(path) == md5:
+    elif osp.exists(path) and md5 and md5sum(path, quiet=quiet) == md5:
         return path
 
     # download
