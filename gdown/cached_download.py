@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import hashlib
 import os
 import os.path as osp
@@ -66,7 +68,7 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
             assert_md5sum(path, md5, quiet=quiet)
             return path
         except AssertionError as e:
-            print(e)
+            print(e, file=sys.stderr)
 
     # download
     lock_path = osp.join(cache_root, '_dl_lock')
