@@ -12,11 +12,6 @@ import sys
 import github2pypi
 
 
-if github2pypi.__file__ is None:
-    print('Please update submodule:\n\n\tgit submodule update --init')
-    sys.exit(1)
-
-
 version = '3.7.1'
 
 
@@ -39,6 +34,10 @@ if sys.argv[1] == 'release':
         subprocess.check_call(shlex.split(cmd))
     sys.exit(0)
 
+
+if not hasattr(github2pypi, '__file__'):
+    print('Please update submodule:\n\n\tgit submodule update --init')
+    sys.exit(1)
 
 with open('README.md') as f:
     long_description = github2pypi.replace_url(
