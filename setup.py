@@ -12,6 +12,11 @@ import sys
 import github2pypi
 
 
+if github2pypi.__file__ is None:
+    print('Please update submodule:\n\n\tgit submodule update --init')
+    sys.exit(1)
+
+
 version = '3.7.1'
 
 
@@ -24,6 +29,7 @@ if sys.argv[1] == 'release':
         sys.exit(1)
 
     commands = [
+        'git pull origin master',
         'git tag v{:s}'.format(version),
         'git push origin master --tag',
         'python setup.py sdist',
