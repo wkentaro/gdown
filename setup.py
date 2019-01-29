@@ -15,6 +15,17 @@ import github2pypi
 version = '3.7.2'
 
 
+if not hasattr(github2pypi, '__file__'):
+    print('Please update submodule:\n\n\tgit submodule update --init')
+    sys.exit(1)
+
+
+with open('README.md') as f:
+    long_description = github2pypi.replace_url(
+        slug='wkentaro/gdown', content=f.read()
+    )
+
+
 if sys.argv[1] == 'release':
     if not distutils.spawn.find_executable('twine'):
         print(
@@ -33,16 +44,6 @@ if sys.argv[1] == 'release':
     for cmd in commands:
         subprocess.check_call(shlex.split(cmd))
     sys.exit(0)
-
-
-if not hasattr(github2pypi, '__file__'):
-    print('Please update submodule:\n\n\tgit submodule update --init')
-    sys.exit(1)
-
-with open('README.md') as f:
-    long_description = github2pypi.replace_url(
-        slug='wkentaro/gdown', content=f.read()
-    )
 
 
 setup(
