@@ -12,7 +12,7 @@ import sys
 import github2pypi
 
 
-version = '3.7.2'
+version = '3.7.3'
 
 
 if not hasattr(github2pypi, '__file__'):
