@@ -9,21 +9,8 @@ import shlex
 import subprocess
 import sys
 
-import github2pypi
-
 
 version = '3.7.3'
-
-
-if not hasattr(github2pypi, '__file__'):
-    print('Please update submodule:\n\n\tgit submodule update --init')
-    sys.exit(1)
-
-
-with open('README.md') as f:
-    long_description = github2pypi.replace_url(
-        slug='wkentaro/gdown', content=f.read()
-    )
 
 
 if sys.argv[1] == 'release':
@@ -46,13 +33,27 @@ if sys.argv[1] == 'release':
     sys.exit(0)
 
 
+def get_long_description():
+    with open('README.md') as f:
+        long_description = f.read()
+
+    try:
+        import github2pypi
+    except ImportError:
+        return long_description
+
+    return github2pypi.replace_url(
+        slug='wkentaro/gdown', content=long_description
+    )
+
+
 setup(
     name='gdown',
     version=version,
     packages=find_packages(),
     install_requires=['filelock', 'requests', 'six', 'tqdm'],
     description='Google Drive direct download of big files.',
-    long_description=long_description,
+    long_description=get_long_description(),
     long_description_content_type='text/markdown',
     author='Kentaro Wada',
     author_email='www.kentaro.wada@gmail.com',
