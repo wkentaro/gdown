@@ -11,6 +11,13 @@ python:
   - '3.7-dev'
   - pypy
 
+branches:
+  only:
+    - master
+
+notifications:
+  email: false
+
 before_install:
   - |
     if [ "$TRAVIS_PYTHON_VERSION" != "3.3" ]; then
@@ -45,9 +52,7 @@ script:
   - gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O - --quiet | tar zxvf -
   - rm -rf 20150428_collected_images/
 
-branches:
-  only:
-    - master
-
-notifications:
-  email: false
+after_success:
+  - rm -f dist/*.tar.gz
+  - python setup.py sdist
+  - pip install dist/*.tar.gz
