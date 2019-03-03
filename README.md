@@ -13,8 +13,8 @@
 </div>
 
 <div align="center">
-  <img src=".readme/cli.png">
-  <img src=".readme/python.png">
+  <img src=".readme/cli.png" width="90%">
+  <img src=".readme/python.png" width="90%">
 </div>
 
 <br/>
