@@ -1,8 +1,26 @@
-# gdown
+<h1 align="center">
+  gdown
+</h1>
 
-[![PyPi Version](https://img.shields.io/pypi/v/gdown.svg)](https://pypi.python.org/pypi/gdown)
-[![Python Versions](https://img.shields.io/pypi/pyversions/gdown.svg)](https://pypi.org/project/gdown)
-[![Travis Status](https://travis-ci.org/wkentaro/gdown.svg?branch=master)](https://travis-ci.org/wkentaro/gdown)
+<h4 align="center">
+  Download a large file from Google Drive.
+</h4>
+
+<div align="center">
+  <a href="https://pypi.python.org/pypi/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
+  <a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/pyversions/gdown.svg"></a>
+  <a href="https://travis-ci.org/wkentaro/gdown"><img src="https://travis-ci.org/wkentaro/gdown.svg?branch=master"></a>
+</div>
+
+<div align="center">
+  <img src=".readme/cli.png">
+  <img src=".readme/python.png">
+</div>
+
+<br/>
+
+
+## Description
 
 Download a large file from Google Drive.  
 If you use curl/wget, it fails with a large file because of
