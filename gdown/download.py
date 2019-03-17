@@ -106,7 +106,7 @@ def download(url, output, quiet):
             pbar.close()
         if tmp_file:
             f.close()
-            shutil.copy(tmp_file, output)
+            shutil.move(tmp_file, output)
     except IOError as e:
         print(e, file=sys.stderr)
         return
