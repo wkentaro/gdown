@@ -1,0 +1,16 @@
+[tool.black]
+line-length = 79
+skip-string-normalization = true
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | \.anaconda.*
+  | build
+  | dist
+)/
+'''

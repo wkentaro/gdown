@@ -18,12 +18,16 @@ def test_parse_url():
             False,
         ),
         (
-            'https://drive.google.com/file/d/{}/view?usp=sharing'.format(file_id),  # NOQA
+            'https://drive.google.com/file/d/{}/view?usp=sharing'.format(
+                file_id
+            ),  # NOQA
             (file_id, False),
             True,
         ),
         (
-            'https://drive.google.com/a/jsk.imi.i.u-tokyo.ac.jp/uc?id={}&export=download'.format(file_id),  # NOQA
+            'https://drive.google.com/a/jsk.imi.i.u-tokyo.ac.jp/uc?id={}&export=download'.format(  # NOQA
+                file_id
+            ),
             (file_id, True),
             False,
         ),

@@ -29,9 +29,7 @@ def get_url_from_gdrive_confirmation(contents):
         if m:
             confirm = m.groups()[0]
             url = re.sub(
-                r'confirm=([^;&]+)',
-                r'confirm={}'.format(confirm),
-                url,
+                r'confirm=([^;&]+)', r'confirm={}'.format(confirm), url
             )
             return url
         m = re.search('"downloadUrl":"([^"]+)', line)
@@ -61,14 +59,18 @@ def download(url, output, quiet):
 
         if url is None:
             print('Permission denied: %s' % url_origin, file=sys.stderr)
-            print("Maybe you need to change permission over "
-                  "'Anyone with the link'?", file=sys.stderr)
+            print(
+                "Maybe you need to change permission over "
+                "'Anyone with the link'?",
+                file=sys.stderr,
+            )
             return
 
     if output is None:
         if file_id and is_download_link:
-            m = re.search('filename="(.*)"',
-                          res.headers['Content-Disposition'])
+            m = re.search(
+                'filename="(.*)"', res.headers['Content-Disposition']
+            )
             output = m.groups()[0]
         else:
             output = osp.basename(url)
@@ -78,8 +80,11 @@ def download(url, output, quiet):
     if not quiet:
         print('Downloading...', file=sys.stderr)
         print('From:', url_origin, file=sys.stderr)
-        print('To:', osp.abspath(output) if output_is_path else output,
-              file=sys.stderr)
+        print(
+            'To:',
+            osp.abspath(output) if output_is_path else output,
+            file=sys.stderr,
+        )
 
     if output_is_path:
         tmp_file = tempfile.mktemp(

@@ -27,8 +27,9 @@ def parse_url(url, warning=True):
     if is_gdrive and not is_download_link:
         warnings.warn(
             'You specified Google Drive Link but it is not the correct link '
-            "to download the file. Maybe you should try: {url}"
-            .format(url='https://drive.google.com/uc?id={}'.format(file_id))
+            "to download the file. Maybe you should try: {url}".format(
+                url='https://drive.google.com/uc?id={}'.format(file_id)
+            )
         )
 
     return file_id, is_download_link

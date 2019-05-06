@@ -16,8 +16,7 @@ version = '3.8.1'
 if sys.argv[1] == 'release':
     if not distutils.spawn.find_executable('twine'):
         print(
-            'Please install twine:\n\n\tpip install twine\n',
-            file=sys.stderr,
+            'Please install twine:\n\n\tpip install twine\n', file=sys.stderr
         )
         sys.exit(1)
 
@@ -39,6 +38,7 @@ def get_long_description():
 
     try:
         import github2pypi
+
         return github2pypi.replace_url(
             slug='wkentaro/gdown', content=long_description
         )

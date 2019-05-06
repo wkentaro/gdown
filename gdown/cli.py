@@ -13,21 +13,24 @@ distribution = pkg_resources.get_distribution('gdown')
 
 
 class _ShowVersionAction(argparse.Action):
-
     def __init__(self, *args, **kwargs):
         kwargs['nargs'] = 0
         self.version = kwargs.pop('version')
         super(self.__class__, self).__init__(*args, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        print('gdown {ver} at {pos}'
-              .format(ver=self.version, pos=distribution.location))
+        print(
+            'gdown {ver} at {pos}'.format(
+                ver=self.version, pos=distribution.location
+            )
+        )
         parser.exit()
 
 
 def main():
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument(
         '-V',
         '--version',
@@ -36,12 +39,17 @@ def main():
         help='display version',
     )
     parser.add_argument(
-        'url_or_id', help='url or file id (with --id) to download file from')
+        'url_or_id', help='url or file id (with --id) to download file from'
+    )
     parser.add_argument('-O', '--output', help='output filename')
-    parser.add_argument('-q', '--quiet', action='store_true',
-                        help='suppress standard output')
-    parser.add_argument('--id', action='store_true',
-                        help='flag to specify file id instead of url')
+    parser.add_argument(
+        '-q', '--quiet', action='store_true', help='suppress standard output'
+    )
+    parser.add_argument(
+        '--id',
+        action='store_true',
+        help='flag to specify file id instead of url',
+    )
     args = parser.parse_args()
 
     if args.output == '-':
@@ -55,11 +63,7 @@ def main():
     else:
         url = args.url_or_id
 
-    download(
-        url=url,
-        output=args.output,
-        quiet=args.quiet,
-    )
+    download(url=url, output=args.output, quiet=args.quiet)
 
 
 if __name__ == '__main__':

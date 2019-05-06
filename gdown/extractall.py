@@ -26,8 +26,10 @@ def extractall(path, to=None):
     elif path.endswith('.tar.bz2') or path.endswith('.tbz'):
         opener, mode = tarfile.open, 'r:bz2'
     else:
-        raise ValueError("Could not extract '%s' as no appropriate "
-                         "extractor is found" % path)
+        raise ValueError(
+            "Could not extract '%s' as no appropriate "
+            "extractor is found" % path
+        )
 
     def namelist(f):
         if isinstance(f, zipfile.ZipFile):
