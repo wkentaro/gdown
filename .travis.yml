@@ -21,9 +21,6 @@ notifications:
 before_install:
   - |
     if [ "$TRAVIS_PYTHON_VERSION" != "3.3" ]; then
-      pip install black
-      black --check .
-
       # https://github.com/CiscoDevNet/virlutils/issues/73
       pip install flake8
       flake8 .
