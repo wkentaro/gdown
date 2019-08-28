@@ -1,0 +1,70 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [2.7, 3.5, 3.6, 3.7]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: Install main
+      run: |
+        pip install .
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 .
+
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest tests
+
+    - name: Download from URL other than Gdrive
+      run: |
+        output=/tmp/gdown_r
+        gdown https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py -O $output --quiet
+        test $(md5sum $output | awk '{print $1}') = 2a51927dde6b146ce56b4d89ebbb5268
+        rm -rf $output
+
+    - name: Download small file from Gdrive
+      run: |
+        output=/tmp/spam.txt
+        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O $output --quiet
+        test $(cat $output) = spam
+        rm -rf $output
+
+    - name: Download large file from Gdrive
+      run: |
+        output=/tmp/apc2015_object_images.tgz
+        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O $output --quiet
+        test $(md5sum $output | awk '{print $1}') = fa837a88f0c40c513d975104edf3da17
+        rm -rf $output
+
+    - name: Download large file to stdout
+      run: |
+        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O - --quiet | tar zxvf -
+        rm -rf 20150428_collected_images/
+
+    - name: Install from dist
+      run: |
+        rm -f dist/*.tar.gz
+        python setup.py sdist
+        pip install dist/*.tar.gz
