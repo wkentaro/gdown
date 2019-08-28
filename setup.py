@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 
-version = '3.8.1'
+version = '3.8.2'
 
 
 if sys.argv[1] == 'release':
@@ -64,10 +64,11 @@ setup(
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
     ],
     entry_points={'console_scripts': ['gdown=gdown.cli:main']},
 )
