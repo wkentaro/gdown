@@ -9,7 +9,7 @@
 <div align="center">
   <a href="https://pypi.python.org/pypi/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
   <a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/pyversions/gdown.svg"></a>
-  <a href="https://travis-ci.org/wkentaro/gdown"><img src="https://travis-ci.org/wkentaro/gdown.svg?branch=master"></a>
+  <a href="https://github.com/wkentaro/gdown/actions"><img src="https://github.com/wkentaro/gdown/workflows/CI/badge.svg"></a>
 </div>
 
 <div align="center">
