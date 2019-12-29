@@ -13,7 +13,6 @@ import tqdm
 
 from .parse_url import parse_url
 
-
 CHUNK_SIZE = 512 * 1024  # 512KB
 
 
@@ -40,21 +39,36 @@ def get_url_from_gdrive_confirmation(contents):
             return url
 
 
-def download(url, output, quiet):
+# -- (CHANGED) modified function signature --
+def download(url, output, quiet, proxy):
     url_origin = url
     sess = requests.session()
+
+    # -- (ADDED) assign a proxy dictionary to the request session
+    if proxy is not None:
+        sess.proxies = {"http": proxy,
+                        "https": proxy}
+        print("Using proxy: ", proxy)
 
     file_id, is_download_link = parse_url(url)
 
     while True:
-        res = sess.get(url, stream=True)
+
+        # -- (CHANGED) cache proxy exception
+        try:
+            res = sess.get(url, stream=True)
+        except requests.exceptions.ProxyError as err:
+            print("An error has occurred using proxy %s" % proxy, file=sys.stderr)
+            print(str(err), file=sys.stderr)
+            return
+
         if 'Content-Disposition' in res.headers:
             # This is the file
             break
         if not (file_id and is_download_link):
             break
 
-        # Need to redirect with confiramtion
+        # Need to redirect with confirmation
         url = get_url_from_gdrive_confirmation(res.text)
 
         if url is None:
@@ -78,13 +92,9 @@ def download(url, output, quiet):
     output_is_path = isinstance(output, six.string_types)
 
     if not quiet:
-        print('Downloading...', file=sys.stderr)
-        print('From:', url_origin, file=sys.stderr)
-        print(
-            'To:',
-            osp.abspath(output) if output_is_path else output,
-            file=sys.stderr,
-        )
+        print('Downloading...')
+        print('From:', url_origin)
+        print('To:', osp.abspath(output) if output_is_path else output)
 
     if output_is_path:
         tmp_file = tempfile.mktemp(
