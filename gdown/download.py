@@ -39,12 +39,10 @@ def get_url_from_gdrive_confirmation(contents):
             return url
 
 
-# -- (CHANGED) modified function signature --
 def download(url, output, quiet, proxy):
     url_origin = url
     sess = requests.session()
 
-    # -- (ADDED) assign a proxy dictionary to the request session
     if proxy is not None:
         sess.proxies = {"http": proxy,
                         "https": proxy}
@@ -54,7 +52,6 @@ def download(url, output, quiet, proxy):
 
     while True:
 
-        # -- (CHANGED) cache proxy exception
         try:
             res = sess.get(url, stream=True)
         except requests.exceptions.ProxyError as err:

@@ -51,7 +51,6 @@ def main():
         help='flag to specify file id instead of url',
     )
 
-    # -- (ADDED) add proxy argument --
     parser.add_argument(
         '--proxy',
         help='<protocol://host:port> download using the specified proxy',
@@ -70,7 +69,6 @@ def main():
     else:
         url = args.url_or_id
 
-    # -- (CHANGED) pass proxy parameter as well --
     download(url=url, output=args.output, quiet=args.quiet, proxy=args.proxy)
 
 

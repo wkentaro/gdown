@@ -48,7 +48,6 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
         "MD5 doesn't match:\nactual: {}\nexpected: {}".format(md5_actual, md5)
     )
 
-# -- (CHANGED) modified function signature --
 def cached_download(url, path=None, md5=None, quiet=False, postprocess=None, proxy=None):
     if path is None:
         path = (
@@ -89,7 +88,6 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None, pro
                 msg = '{}...'.format(msg)
             print(msg, file=sys.stderr)
 
-        # -- (CHANGED) pass proxy parameter as well --
         download(url, temp_path, quiet=quiet, proxy=proxy)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
