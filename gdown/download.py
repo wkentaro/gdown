@@ -44,8 +44,7 @@ def download(url, output, quiet, proxy):
     sess = requests.session()
 
     if proxy is not None:
-        sess.proxies = {"http": proxy,
-                        "https": proxy}
+        sess.proxies = {"http": proxy, "https": proxy}
         print("Using proxy: ", proxy)
 
     file_id, is_download_link = parse_url(url)
