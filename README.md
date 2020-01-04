@@ -24,8 +24,7 @@
 
 Download a large file from Google Drive.  
 If you use curl/wget, it fails with a large file because of
-the security warning from Google Drive.  
-Proxy support has been added.
+the security warning from Google Drive.
 
 
 ## Installation
@@ -53,11 +52,6 @@ $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
 $ cat spam.txt
 spam
 
-$ # using a socks proxy
-$ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c --proxy socks5://127.0.0.1:9050
-$ cat spam.txt
-spam
-
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
 $ cat ip.json
@@ -80,7 +74,7 @@ import gdown
 
 url = 'https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c'
 output = 'spam.txt'
-gdown.download(url, output, quiet=False, proxy=None)
+gdown.download(url, output, quiet=False)
 ```
 
 

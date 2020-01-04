@@ -44,8 +44,8 @@ def download(url, output, quiet, proxy):
     sess = requests.session()
 
     if proxy is not None:
-        sess.proxies = {"http": proxy, "https": proxy}
-        print("Using proxy: ", proxy)
+        sess.proxies = {'http': proxy, 'https': proxy}
+        print('Using proxy:', proxy, file=sys.stderr)
 
     file_id, is_download_link = parse_url(url)
 
@@ -53,10 +53,10 @@ def download(url, output, quiet, proxy):
 
         try:
             res = sess.get(url, stream=True)
-        except requests.exceptions.ProxyError as err:
-            print("An error has occurred using proxy %s" % proxy,
+        except requests.exceptions.ProxyError as e:
+            print('An error has occurred using proxy:', proxy,
                   file=sys.stderr)
-            print(str(err), file=sys.stderr)
+            print(e, file=sys.stderr)
             return
 
         if 'Content-Disposition' in res.headers:
@@ -69,7 +69,7 @@ def download(url, output, quiet, proxy):
         url = get_url_from_gdrive_confirmation(res.text)
 
         if url is None:
-            print('Permission denied: %s' % url_origin, file=sys.stderr)
+            print('Permission denied:', url_origin, file=sys.stderr)
             print(
                 "Maybe you need to change permission over "
                 "'Anyone with the link'?",
@@ -89,9 +89,13 @@ def download(url, output, quiet, proxy):
     output_is_path = isinstance(output, six.string_types)
 
     if not quiet:
-        print('Downloading...')
-        print('From:', url_origin)
-        print('To:', osp.abspath(output) if output_is_path else output)
+        print('Downloading...', file=sys.stderr)
+        print('From:', url_origin, file=sys.stderr)
+        print(
+            'To:',
+            osp.abspath(output) if output_is_path else output,
+            file=sys.stderr,
+        )
 
     if output_is_path:
         tmp_file = tempfile.mktemp(

@@ -50,7 +50,6 @@ def main():
         action='store_true',
         help='flag to specify file id instead of url',
     )
-
     parser.add_argument(
         '--proxy',
         help='<protocol://host:port> download using the specified proxy',
