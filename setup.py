@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from __future__ import print_function
 
 import distutils.spawn
@@ -10,7 +8,7 @@ import subprocess
 import sys
 
 
-version = '3.8.3'
+version = '3.9.0'
 
 
 if sys.argv[1] == 'release':
