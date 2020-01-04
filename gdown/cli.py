@@ -50,6 +50,11 @@ def main():
         action='store_true',
         help='flag to specify file id instead of url',
     )
+    parser.add_argument(
+        '--proxy',
+        help='<protocol://host:port> download using the specified proxy',
+    )
+
     args = parser.parse_args()
 
     if args.output == '-':
@@ -63,7 +68,7 @@ def main():
     else:
         url = args.url_or_id
 
-    download(url=url, output=args.output, quiet=args.quiet)
+    download(url=url, output=args.output, quiet=args.quiet, proxy=args.proxy)
 
 
 if __name__ == '__main__':

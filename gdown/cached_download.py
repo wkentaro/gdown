@@ -49,7 +49,8 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
     )
 
 
-def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
+def cached_download(url, path=None, md5=None, quiet=False,
+                    postprocess=None, proxy=None):
     if path is None:
         path = (
             url.replace('/', '-SLASH-')
@@ -89,7 +90,7 @@ def cached_download(url, path=None, md5=None, quiet=False, postprocess=None):
                 msg = '{}...'.format(msg)
             print(msg, file=sys.stderr)
 
-        download(url, temp_path, quiet=quiet)
+        download(url, temp_path, quiet=quiet, proxy=proxy)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
     except Exception:

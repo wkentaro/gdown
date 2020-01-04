@@ -13,7 +13,6 @@ import tqdm
 
 from .parse_url import parse_url
 
-
 CHUNK_SIZE = 512 * 1024  # 512KB
 
 
@@ -40,25 +39,37 @@ def get_url_from_gdrive_confirmation(contents):
             return url
 
 
-def download(url, output, quiet):
+def download(url, output, quiet, proxy):
     url_origin = url
     sess = requests.session()
+
+    if proxy is not None:
+        sess.proxies = {'http': proxy, 'https': proxy}
+        print('Using proxy:', proxy, file=sys.stderr)
 
     file_id, is_download_link = parse_url(url)
 
     while True:
-        res = sess.get(url, stream=True)
+
+        try:
+            res = sess.get(url, stream=True)
+        except requests.exceptions.ProxyError as e:
+            print('An error has occurred using proxy:', proxy,
+                  file=sys.stderr)
+            print(e, file=sys.stderr)
+            return
+
         if 'Content-Disposition' in res.headers:
             # This is the file
             break
         if not (file_id and is_download_link):
             break
 
-        # Need to redirect with confiramtion
+        # Need to redirect with confirmation
         url = get_url_from_gdrive_confirmation(res.text)
 
         if url is None:
-            print('Permission denied: %s' % url_origin, file=sys.stderr)
+            print('Permission denied:', url_origin, file=sys.stderr)
             print(
                 "Maybe you need to change permission over "
                 "'Anyone with the link'?",

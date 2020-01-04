@@ -50,7 +50,7 @@ setup(
     name='gdown',
     version=version,
     packages=find_packages(),
-    install_requires=['filelock', 'requests', 'six', 'tqdm'],
+    install_requires=['filelock', 'requests[socks]', 'six', 'tqdm'],
     description='Google Drive direct download of big files.',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
