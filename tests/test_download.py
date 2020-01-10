@@ -1,5 +1,6 @@
-from gdown.download import download
 import os
+
+from gdown.download import download
 
 
 def test_download():
