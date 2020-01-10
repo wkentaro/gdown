@@ -39,7 +39,7 @@ def get_url_from_gdrive_confirmation(contents):
             return url
 
 
-def download(url, output, quiet, proxy):
+def download(url, output, quiet, proxy=None):
     url_origin = url
     sess = requests.session()
 
