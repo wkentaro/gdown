@@ -50,7 +50,31 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
 
 
 def cached_download(url, path=None, md5=None, quiet=False,
-                    postprocess=None, proxy=None):
+                    postprocess=None, proxy=None, speed=None):
+    '''Cached downlaod from URL.
+
+    Parameters
+    ----------
+    url: str
+        URL. Google Drive URL is also supported.
+    path: str, optional
+        Output filename. Default is basename of URL.
+    md5: str, optional
+        Expected MD5 for specified file.
+    quiet: bool
+        Suppress terminal output. Default is False.
+    postprocess: callable
+        Function called with filename as postprocess.
+    proxy: str
+        Proxy.
+    speed: float
+        Download byte size per second (e.g., 256KB/s = 256 * 1024).
+
+    Returns
+    -------
+    path: str
+        Output filename.
+    '''
     if path is None:
         path = (
             url.replace('/', '-SLASH-')
@@ -90,7 +114,7 @@ def cached_download(url, path=None, md5=None, quiet=False,
                 msg = '{}...'.format(msg)
             print(msg, file=sys.stderr)
 
-        download(url, temp_path, quiet=quiet, proxy=proxy)
+        download(url, temp_path, quiet=quiet, proxy=proxy, speed=speed)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
     except Exception:

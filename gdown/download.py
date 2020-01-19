@@ -6,12 +6,14 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 
 import requests
 import six
 import tqdm
 
 from .parse_url import parse_url
+
 
 CHUNK_SIZE = 512 * 1024  # 512KB
 
@@ -39,7 +41,27 @@ def get_url_from_gdrive_confirmation(contents):
             return url
 
 
-def download(url, output, quiet, proxy=None):
+def download(url, output=None, quiet=False, proxy=None, speed=None):
+    '''Download file from URL.
+
+    Parameters
+    ----------
+    url: str
+        URL. Google Drive URL is also supported.
+    output: str, optional
+        Output filename. Default is basename of URL.
+    quiet: bool
+        Suppress terminal output. Default is False.
+    proxy: str
+        Proxy.
+    speed: float
+        Download byte size per second (e.g., 256KB/s = 256 * 1024).
+
+    Returns
+    -------
+    output: str
+        Output filename.
+    '''
     url_origin = url
     sess = requests.session()
 
@@ -114,10 +136,16 @@ def download(url, output, quiet, proxy=None):
             total = int(total)
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
+        t_start = time.time()
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
             if not quiet:
                 pbar.update(len(chunk))
+            if speed is not None:
+                elapsed_time_expected = 1. * pbar.n / speed
+                elapsed_time = time.time() - t_start
+                if elapsed_time < elapsed_time_expected:
+                    time.sleep(elapsed_time_expected - elapsed_time)
         if not quiet:
             pbar.close()
         if tmp_file:
