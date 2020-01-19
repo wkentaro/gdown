@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import argparse
+import re
 import sys
 
 import pkg_resources
@@ -25,6 +26,24 @@ class _ShowVersionAction(argparse.Action):
             )
         )
         parser.exit()
+
+
+def file_size(argv):
+    if argv is not None:
+        m = re.match(r'([0-9]+)(GB|MB|KB|B)', argv)
+        if not m:
+            raise TypeError
+        size, unit = m.groups()
+        size = float(size)
+        if unit == 'KB':
+            size *= 1024
+        elif unit == 'MB':
+            size *= 1024 ** 2
+        elif unit == 'GB':
+            size *= 1024 ** 3
+        elif unit == 'B':
+            pass
+        return size
 
 
 def main():
@@ -54,6 +73,11 @@ def main():
         '--proxy',
         help='<protocol://host:port> download using the specified proxy',
     )
+    parser.add_argument(
+        '--speed',
+        type=file_size,
+        help="download speed limit in second (e.g., '10MB' -> 10MB/s).",
+    )
 
     args = parser.parse_args()
 
@@ -68,7 +92,13 @@ def main():
     else:
         url = args.url_or_id
 
-    download(url=url, output=args.output, quiet=args.quiet, proxy=args.proxy)
+    download(
+        url=url,
+        output=args.output,
+        quiet=args.quiet,
+        proxy=args.proxy,
+        speed=args.speed,
+    )
 
 
 if __name__ == '__main__':
