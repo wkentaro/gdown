@@ -47,7 +47,7 @@ def get_long_description():
 setup(
     name='gdown',
     version=version,
-    packages=find_packages(),
+    packages=find_packages(exclude=['github2pypi']),
     install_requires=['filelock', 'requests[socks]', 'six', 'tqdm'],
     description='Google Drive direct download of big files.',
     long_description=get_long_description(),
