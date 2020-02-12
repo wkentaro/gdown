@@ -34,8 +34,7 @@ jobs:
     - name: Lint
       run: |
         pip install -U black &&  black --check . || true
-        pip install -U flake8 isort
-        isort --check-only --recursive .
+        pip install -U hacking
         flake8 .
 
     - name: Test with pytest
