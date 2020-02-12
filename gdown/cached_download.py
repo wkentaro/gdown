@@ -11,8 +11,7 @@ import filelock
 
 from .download import download
 
-
-cache_root = osp.join(osp.expanduser('~'), '.cache/gdown')
+cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
 if not osp.exists(cache_root):
     try:
         os.makedirs(cache_root)
@@ -25,23 +24,23 @@ def md5sum(filename, blocksize=None):
         blocksize = 65536
 
     hash = hashlib.md5()
-    with open(filename, 'rb') as f:
-        for block in iter(lambda: f.read(blocksize), b''):
+    with open(filename, "rb") as f:
+        for block in iter(lambda: f.read(blocksize), b""):
             hash.update(block)
     return hash.hexdigest()
 
 
 def assert_md5sum(filename, md5, quiet=False, blocksize=None):
     if not (isinstance(md5, str) and len(md5) == 32):
-        raise ValueError('MD5 must be 32 chars: {}'.format(md5))
+        raise ValueError("MD5 must be 32 chars: {}".format(md5))
 
     if not quiet:
-        print('Computing MD5: {}'.format(filename))
+        print("Computing MD5: {}".format(filename))
     md5_actual = md5sum(filename)
 
     if md5_actual == md5:
         if not quiet:
-            print('MD5 matches: {}'.format(filename))
+            print("MD5 matches: {}".format(filename))
         return True
 
     raise AssertionError(
@@ -49,9 +48,16 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
     )
 
 
-def cached_download(url, path=None, md5=None, quiet=False,
-                    postprocess=None, proxy=None, speed=None):
-    '''Cached downlaod from URL.
+def cached_download(
+    url,
+    path=None,
+    md5=None,
+    quiet=False,
+    postprocess=None,
+    proxy=None,
+    speed=None,
+):
+    """Cached downlaod from URL.
 
     Parameters
     ----------
@@ -74,20 +80,20 @@ def cached_download(url, path=None, md5=None, quiet=False,
     -------
     path: str
         Output filename.
-    '''
+    """
     if path is None:
         path = (
-            url.replace('/', '-SLASH-')
-            .replace(':', '-COLON-')
-            .replace('=', '-EQUAL-')
-            .replace('?', '-QUESTION-')
+            url.replace("/", "-SLASH-")
+            .replace(":", "-COLON-")
+            .replace("=", "-EQUAL-")
+            .replace("?", "-QUESTION-")
         )
         path = osp.join(cache_root, path)
 
     # check existence
     if osp.exists(path) and not md5:
         if not quiet:
-            print('File exists: {}'.format(path))
+            print("File exists: {}".format(path))
         return path
     elif osp.exists(path) and md5:
         try:
@@ -97,21 +103,21 @@ def cached_download(url, path=None, md5=None, quiet=False,
             print(e, file=sys.stderr)
 
     # download
-    lock_path = osp.join(cache_root, '_dl_lock')
+    lock_path = osp.join(cache_root, "_dl_lock")
     try:
         os.makedirs(osp.dirname(path))
     except OSError:
         pass
     temp_root = tempfile.mkdtemp(dir=cache_root)
     try:
-        temp_path = osp.join(temp_root, 'dl')
+        temp_path = osp.join(temp_root, "dl")
 
         if not quiet:
-            msg = 'Cached Downloading'
+            msg = "Cached Downloading"
             if path:
-                msg = '{}: {}'.format(msg, path)
+                msg = "{}: {}".format(msg, path)
             else:
-                msg = '{}...'.format(msg)
+                msg = "{}...".format(msg)
             print(msg, file=sys.stderr)
 
         download(url, temp_path, quiet=quiet, proxy=proxy, speed=speed)

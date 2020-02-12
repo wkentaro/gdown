@@ -14,35 +14,34 @@ import tqdm
 
 from .parse_url import parse_url
 
-
 CHUNK_SIZE = 512 * 1024  # 512KB
 
 
 def get_url_from_gdrive_confirmation(contents):
-    url = ''
+    url = ""
     for line in contents.splitlines():
         m = re.search(r'href="(\/uc\?export=download[^"]+)', line)
         if m:
-            url = 'https://docs.google.com' + m.groups()[0]
-            url = url.replace('&amp;', '&')
+            url = "https://docs.google.com" + m.groups()[0]
+            url = url.replace("&amp;", "&")
             return url
-        m = re.search('confirm=([^;&]+)', line)
+        m = re.search("confirm=([^;&]+)", line)
         if m:
             confirm = m.groups()[0]
             url = re.sub(
-                r'confirm=([^;&]+)', r'confirm={}'.format(confirm), url
+                r"confirm=([^;&]+)", r"confirm={}".format(confirm), url
             )
             return url
         m = re.search('"downloadUrl":"([^"]+)', line)
         if m:
             url = m.groups()[0]
-            url = url.replace('\\u003d', '=')
-            url = url.replace('\\u0026', '&')
+            url = url.replace("\\u003d", "=")
+            url = url.replace("\\u0026", "&")
             return url
 
 
 def download(url, output=None, quiet=False, proxy=None, speed=None):
-    '''Download file from URL.
+    """Download file from URL.
 
     Parameters
     ----------
@@ -61,13 +60,13 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
     -------
     output: str
         Output filename.
-    '''
+    """
     url_origin = url
     sess = requests.session()
 
     if proxy is not None:
-        sess.proxies = {'http': proxy, 'https': proxy}
-        print('Using proxy:', proxy, file=sys.stderr)
+        sess.proxies = {"http": proxy, "https": proxy}
+        print("Using proxy:", proxy, file=sys.stderr)
 
     file_id, is_download_link = parse_url(url)
 
@@ -76,12 +75,11 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
         try:
             res = sess.get(url, stream=True)
         except requests.exceptions.ProxyError as e:
-            print('An error has occurred using proxy:', proxy,
-                  file=sys.stderr)
+            print("An error has occurred using proxy:", proxy, file=sys.stderr)
             print(e, file=sys.stderr)
             return
 
-        if 'Content-Disposition' in res.headers:
+        if "Content-Disposition" in res.headers:
             # This is the file
             break
         if not (file_id and is_download_link):
@@ -91,7 +89,7 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
         url = get_url_from_gdrive_confirmation(res.text)
 
         if url is None:
-            print('Permission denied:', url_origin, file=sys.stderr)
+            print("Permission denied:", url_origin, file=sys.stderr)
             print(
                 "Maybe you need to change permission over "
                 "'Anyone with the link'?",
@@ -102,7 +100,7 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
     if output is None:
         if file_id and is_download_link:
             m = re.search(
-                'filename="(.*)"', res.headers['Content-Disposition']
+                'filename="(.*)"', res.headers["Content-Disposition"]
             )
             output = m.groups()[0]
         else:
@@ -111,10 +109,10 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
     output_is_path = isinstance(output, six.string_types)
 
     if not quiet:
-        print('Downloading...', file=sys.stderr)
-        print('From:', url_origin, file=sys.stderr)
+        print("Downloading...", file=sys.stderr)
+        print("From:", url_origin, file=sys.stderr)
         print(
-            'To:',
+            "To:",
             osp.abspath(output) if output_is_path else output,
             file=sys.stderr,
         )
@@ -125,24 +123,24 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
             prefix=osp.basename(output),
             dir=osp.dirname(output),
         )
-        f = open(tmp_file, 'wb')
+        f = open(tmp_file, "wb")
     else:
         tmp_file = None
         f = output
 
     try:
-        total = res.headers.get('Content-Length')
+        total = res.headers.get("Content-Length")
         if total is not None:
             total = int(total)
         if not quiet:
-            pbar = tqdm.tqdm(total=total, unit='B', unit_scale=True)
+            pbar = tqdm.tqdm(total=total, unit="B", unit_scale=True)
         t_start = time.time()
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
             if not quiet:
                 pbar.update(len(chunk))
             if speed is not None:
-                elapsed_time_expected = 1. * pbar.n / speed
+                elapsed_time_expected = 1.0 * pbar.n / speed
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)

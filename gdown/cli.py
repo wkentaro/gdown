@@ -9,19 +9,18 @@ import six
 
 from .download import download
 
-
-distribution = pkg_resources.get_distribution('gdown')
+distribution = pkg_resources.get_distribution("gdown")
 
 
 class _ShowVersionAction(argparse.Action):
     def __init__(self, *args, **kwargs):
-        kwargs['nargs'] = 0
-        self.version = kwargs.pop('version')
+        kwargs["nargs"] = 0
+        self.version = kwargs.pop("version")
         super(self.__class__, self).__init__(*args, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         print(
-            'gdown {ver} at {pos}'.format(
+            "gdown {ver} at {pos}".format(
                 ver=self.version, pos=distribution.location
             )
         )
@@ -30,18 +29,18 @@ class _ShowVersionAction(argparse.Action):
 
 def file_size(argv):
     if argv is not None:
-        m = re.match(r'([0-9]+)(GB|MB|KB|B)', argv)
+        m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
         if not m:
             raise TypeError
         size, unit = m.groups()
         size = float(size)
-        if unit == 'KB':
+        if unit == "KB":
             size *= 1024
-        elif unit == 'MB':
+        elif unit == "MB":
             size *= 1024 ** 2
-        elif unit == 'GB':
+        elif unit == "GB":
             size *= 1024 ** 3
-        elif unit == 'B':
+        elif unit == "B":
             pass
         return size
 
@@ -51,44 +50,44 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
-        '-V',
-        '--version',
+        "-V",
+        "--version",
         version=distribution.version,
         action=_ShowVersionAction,
-        help='display version',
+        help="display version",
     )
     parser.add_argument(
-        'url_or_id', help='url or file id (with --id) to download file from'
+        "url_or_id", help="url or file id (with --id) to download file from"
     )
-    parser.add_argument('-O', '--output', help='output filename')
+    parser.add_argument("-O", "--output", help="output filename")
     parser.add_argument(
-        '-q', '--quiet', action='store_true', help='suppress standard output'
-    )
-    parser.add_argument(
-        '--id',
-        action='store_true',
-        help='flag to specify file id instead of url',
+        "-q", "--quiet", action="store_true", help="suppress standard output"
     )
     parser.add_argument(
-        '--proxy',
-        help='<protocol://host:port> download using the specified proxy',
+        "--id",
+        action="store_true",
+        help="flag to specify file id instead of url",
     )
     parser.add_argument(
-        '--speed',
+        "--proxy",
+        help="<protocol://host:port> download using the specified proxy",
+    )
+    parser.add_argument(
+        "--speed",
         type=file_size,
         help="download speed limit in second (e.g., '10MB' -> 10MB/s).",
     )
 
     args = parser.parse_args()
 
-    if args.output == '-':
+    if args.output == "-":
         if six.PY3:
             args.output = sys.stdout.buffer
         else:
             args.output = sys.stdout
 
     if args.id:
-        url = 'https://drive.google.com/uc?id={id}'.format(id=args.url_or_id)
+        url = "https://drive.google.com/uc?id={id}".format(id=args.url_or_id)
     else:
         url = args.url_or_id
 
@@ -101,5 +100,5 @@ def main():
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

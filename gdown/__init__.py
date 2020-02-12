@@ -7,6 +7,5 @@ from .cached_download import md5sum
 from .download import download
 from .extractall import extractall
 
-
-__author__ = 'Kentaro Wada <www.kentaro.wada@gmail.com>'
-__version__ = pkg_resources.get_distribution('gdown').version
+__author__ = "Kentaro Wada <www.kentaro.wada@gmail.com>"
+__version__ = pkg_resources.get_distribution("gdown").version

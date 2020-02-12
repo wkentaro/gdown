@@ -17,14 +17,14 @@ def extractall(path, to=None):
     if to is None:
         to = osp.dirname(path)
 
-    if path.endswith('.zip'):
-        opener, mode = zipfile.ZipFile, 'r'
-    elif path.endswith('.tar'):
-        opener, mode = tarfile.open, 'r'
-    elif path.endswith('.tar.gz') or path.endswith('.tgz'):
-        opener, mode = tarfile.open, 'r:gz'
-    elif path.endswith('.tar.bz2') or path.endswith('.tbz'):
-        opener, mode = tarfile.open, 'r:bz2'
+    if path.endswith(".zip"):
+        opener, mode = zipfile.ZipFile, "r"
+    elif path.endswith(".tar"):
+        opener, mode = tarfile.open, "r"
+    elif path.endswith(".tar.gz") or path.endswith(".tgz"):
+        opener, mode = tarfile.open, "r:gz"
+    elif path.endswith(".tar.bz2") or path.endswith(".tbz"):
+        opener, mode = tarfile.open, "r:bz2"
     else:
         raise ValueError(
             "Could not extract '%s' as no appropriate "
