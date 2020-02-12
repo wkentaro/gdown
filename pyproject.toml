@@ -5,6 +5,5 @@ exclude = '''
     ^/\..*
   | ^/docs/
   | ^/github2pypi/
-  | ^/tests/
 )
 '''
