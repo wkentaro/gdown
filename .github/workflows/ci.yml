@@ -31,10 +31,10 @@ jobs:
       run: |
         pip install .
 
-    - name: Lint with flake8
+    - name: Lint
       run: |
-        pip install black flake8 isort
-        black --check .
+        pip install black &&  black --check . || true
+        pip install flake8 isort
         isort --check-only --recursive .
         flake8 .
 
