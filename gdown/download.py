@@ -6,6 +6,7 @@ import re
 import shutil
 import sys
 import tempfile
+import textwrap
 import time
 
 import requests
@@ -38,6 +39,10 @@ def get_url_from_gdrive_confirmation(contents):
             url = url.replace("\\u003d", "=")
             url = url.replace("\\u0026", "&")
             return url
+        m = re.search('<p class="uc-error-subcaption">(.*)</p>', line)
+        if m:
+            error = m.groups()[0]
+            raise RuntimeError(error)
 
 
 def download(url, output=None, quiet=False, proxy=None, speed=None):
@@ -86,7 +91,19 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
             break
 
         # Need to redirect with confirmation
-        url = get_url_from_gdrive_confirmation(res.text)
+        try:
+            url = get_url_from_gdrive_confirmation(res.text)
+        except RuntimeError as e:
+            print("Access denied with the following error:")
+            error = "\n".join(textwrap.wrap(str(e)))
+            error = textwrap.indent(error, "\t")
+            print("\n", error, "\n", file=sys.stderr)
+            print(
+                "You may still be able to access the file from the browser:",
+                file=sys.stderr,
+            )
+            print("\n\t", url_origin, "\n", file=sys.stderr)
+            return
 
         if url is None:
             print("Permission denied:", url_origin, file=sys.stderr)
