@@ -58,15 +58,10 @@ jobs:
 
     - name: Download large file from Gdrive
       run: |
-        output=/tmp/apc2015_object_images.tgz
-        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O $output --quiet
-        test $(md5sum $output | awk '{print $1}') = fa837a88f0c40c513d975104edf3da17
+        output=/tmp/pose_estimation_2d_chainermodel.pkl
+        gdown https://drive.google.com/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ -O $output --quiet
+        test $(md5sum $output | awk '{print $1}') = 587933c2c0adf335ebed0486c183541f
         rm -rf $output
-
-    - name: Download large file to stdout
-      run: |
-        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O - --quiet | tar zxvf -
-        rm -rf 20150428_collected_images/
 
     - name: Install from dist
       run: |
