@@ -52,7 +52,7 @@ jobs:
       run: |
         pip install black
         black --check .
-      if: matrix.python-version == '3.8'
+      if: matrix.python-version != '2.7' && matrix.python-version != '3.5'
 
     - name: Test with pytest
       run: |
