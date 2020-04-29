@@ -18,14 +18,16 @@ from .parse_url import parse_url
 CHUNK_SIZE = 512 * 1024  # 512KB
 
 
-if hasattr(textwrap, 'indent'):
+if hasattr(textwrap, "indent"):
     indent_func = textwrap.indent
 else:
+
     def indent_func(text, prefix):
         def prefixed_lines():
             for line in text.splitlines(True):
                 yield (prefix + line if line.strip() else line)
-        return ''.join(prefixed_lines())
+
+        return "".join(prefixed_lines())
 
 
 def get_url_from_gdrive_confirmation(contents):

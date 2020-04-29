@@ -13,7 +13,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7]
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v1
@@ -31,11 +31,16 @@ jobs:
       run: |
         pip install .
 
-    - name: Lint
+    - name: Flake8
       run: |
-        pip install -U black &&  black --check . || true
-        pip install -U hacking
+        pip install hacking
         flake8 .
+
+    - name: Black
+      run: |
+        pip install black
+        black --check .
+      if: matrix.python-version == '3.8'
 
     - name: Test with pytest
       run: |
