@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import json
 import os
 import os.path as osp
 import re
@@ -16,6 +17,7 @@ import tqdm
 from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
+home = osp.expanduser("~")
 
 
 if hasattr(textwrap, "indent"):
@@ -57,7 +59,9 @@ def get_url_from_gdrive_confirmation(contents):
             raise RuntimeError(error)
 
 
-def download(url, output=None, quiet=False, proxy=None, speed=None):
+def download(
+    url, output=None, quiet=False, proxy=None, speed=None, use_cookies=True
+):
     """Download file from URL.
 
     Parameters
@@ -72,6 +76,8 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
         Proxy.
     speed: float
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
+    use_cookies: bool
+        Flag to use cookies. Default is True.
 
     Returns
     -------
@@ -80,6 +86,17 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
     """
     url_origin = url
     sess = requests.session()
+
+    # Load cookies
+    cache_dir = osp.join(home, ".cache", "gdown")
+    if not osp.exists(cache_dir):
+        os.makedirs(cache_dir)
+    cookies_file = osp.join(cache_dir, "cookies.json")
+    if osp.exists(cookies_file) and use_cookies:
+        with open(cookies_file) as f:
+            cookies = json.load(f)
+        for k, v in cookies:
+            sess.cookies[k] = v
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
@@ -95,6 +112,10 @@ def download(url, output=None, quiet=False, proxy=None, speed=None):
             print("An error has occurred using proxy:", proxy, file=sys.stderr)
             print(e, file=sys.stderr)
             return
+
+        # Save cookies
+        with open(cookies_file, "w") as f:
+            json.dump(sess.cookies.items(), f, indent=2)
 
         if "Content-Disposition" in res.headers:
             # This is the file
