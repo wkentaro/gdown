@@ -77,6 +77,11 @@ def main():
         type=file_size,
         help="download speed limit in second (e.g., '10MB' -> 10MB/s).",
     )
+    parser.add_argument(
+        "--no-cookies",
+        action="store_true",
+        help="don't use cookies in ~/.cache/gdown/cookies.json",
+    )
 
     args = parser.parse_args()
 
@@ -97,6 +102,7 @@ def main():
         quiet=args.quiet,
         proxy=args.proxy,
         speed=args.speed,
+        use_cookies=not args.no_cookies,
     )
 
 
