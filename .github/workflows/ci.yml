@@ -75,9 +75,9 @@ jobs:
 
     - name: Download large file from Gdrive
       run: |
-        output=/tmp/pose_estimation_2d_chainermodel.pkl
-        gdown https://drive.google.com/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ -O $output --quiet
-        test $(md5sum $output | awk '{print $1}') = 587933c2c0adf335ebed0486c183541f
+        output=/tmp/20150428_collected_images.tgz
+        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O $output --quiet
+        test $(md5sum $output | awk '{print $1}') = fa837a88f0c40c513d975104edf3da17
         rm -rf $output
 
     - name: Install from dist
