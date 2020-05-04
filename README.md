@@ -39,7 +39,11 @@ pip install gdown
 ### From Command Line
 
 ```bash
-$ usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED] url_or_id
+$ gdown --help
+usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED]
+             [--no-cookies]
+             url_or_id
+...
 
 $ # a large file (~400MB)
 $ gdown https://drive.google.com/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ
