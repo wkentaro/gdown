@@ -115,7 +115,12 @@ def download(
 
         # Save cookies
         with open(cookies_file, "w") as f:
-            json.dump(sess.cookies.items(), f, indent=2)
+            cookies = [
+                (k, v)
+                for k, v in sess.cookies.items()
+                if not k.startswith("download_warning_")
+            ]
+            json.dump(cookies, f, indent=2)
 
         if "Content-Disposition" in res.headers:
             # This is the file
