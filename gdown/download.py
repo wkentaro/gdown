@@ -208,6 +208,7 @@ def download(
         print(e, file=sys.stderr)
         return
     finally:
+        sess.close()
         try:
             if tmp_file:
                 os.remove(tmp_file)
