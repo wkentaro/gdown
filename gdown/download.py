@@ -152,14 +152,18 @@ def download(
             )
             return
 
+    if file_id and is_download_link:
+        m = re.search('filename="(.*)"', res.headers["Content-Disposition"])
+        filename_from_url = m.groups()[0]
+    else:
+        filename_from_url = osp.basename(url)
+
     if output is None:
-        if file_id and is_download_link:
-            m = re.search(
-                'filename="(.*)"', res.headers["Content-Disposition"]
-            )
-            output = m.groups()[0]
-        else:
-            output = osp.basename(url)
+        output = filename_from_url
+    elif output.endswith(osp.sep):
+        if not osp.exists(output):
+            os.makedirs(output)
+        output = osp.join(output, filename_from_url)
 
     output_is_path = isinstance(output, six.string_types)
 
