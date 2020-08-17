@@ -158,14 +158,14 @@ def download(
     else:
         filename_from_url = osp.basename(url)
 
+    output_is_path = isinstance(output, six.string_types)
+
     if output is None:
         output = filename_from_url
-    elif output.endswith(osp.sep):
+    elif output_is_path and output.endswith(osp.sep):
         if not osp.exists(output):
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
-
-    output_is_path = isinstance(output, six.string_types)
 
     if not quiet:
         print("Downloading...", file=sys.stderr)
