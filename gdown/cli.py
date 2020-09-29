@@ -82,6 +82,11 @@ def main():
         action="store_true",
         help="don't use cookies in ~/.cache/gdown/cookies.json",
     )
+    parser.add_argument(
+        "--no-clobber",
+        action="store_true",
+        help="don't download file if a file with same name exists.",
+    )
 
     args = parser.parse_args()
 
@@ -103,6 +108,7 @@ def main():
         proxy=args.proxy,
         speed=args.speed,
         use_cookies=not args.no_cookies,
+        no_clobber=args.no_clobber
     )
 
 

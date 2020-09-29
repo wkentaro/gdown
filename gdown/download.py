@@ -60,7 +60,8 @@ def get_url_from_gdrive_confirmation(contents):
 
 
 def download(
-    url, output=None, quiet=False, proxy=None, speed=None, use_cookies=True
+    url, output=None, quiet=False, proxy=None, speed=None, use_cookies=True,
+    no_clobber=False,
 ):
     """Download file from URL.
 
@@ -78,6 +79,8 @@ def download(
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
     use_cookies: bool
         Flag to use cookies. Default is True.
+    no_clobber: bool
+        Flage to skip download if file exists. Defaults to False.
 
     Returns
     -------
@@ -167,6 +170,12 @@ def download(
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
 
+    if osp.exists(output) and no_clobber:
+        if not quiet:
+            print("File exists: ", output)
+            print("Not downloading (--no-clobber)")
+        return
+
     if not quiet:
         print("Downloading...", file=sys.stderr)
         print("From:", url_origin, file=sys.stderr)
@@ -188,11 +197,11 @@ def download(
         f = output
 
     try:
-        total = res.headers.get("Content-Length")
-        if total is not None:
-            total = int(total)
+        content_length = res.headers.get("Content-Length")
+        if content_length is not None:
+            content_length = int(content_length)
         if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", unit_scale=True)
+            pbar = tqdm.tqdm(total=content_length, unit="B", unit_scale=True)
         t_start = time.time()
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
