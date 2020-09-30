@@ -108,7 +108,7 @@ def main():
         proxy=args.proxy,
         speed=args.speed,
         use_cookies=not args.no_cookies,
-        no_clobber=args.no_clobber
+        no_clobber=args.no_clobber,
     )
 
 
