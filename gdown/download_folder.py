@@ -1,18 +1,21 @@
 from bs4 import BeautifulSoup
 from .download import download
-import requests, ast
+import requests
+import ast
 
 client = requests.session()
 
-def download_folder(folder, quiet = False, proxy = None, speed = None):
+def download_folder(folder, quiet=False, proxy=None, speed=None):
     """
+    
     Download entire folder from URL.
 
     Parameters
     ----------
 
     url: str
-        URL of the Google Drive folder. Must be of the format 'https://drive.google.com/drive/folders/{url}'
+        URL of the Google Drive folder.
+        Must be of the format 'https://drive.google.com/drive/folders/{url}'
     quiet: bool, optional
         Suppress terminal output.
     proxy: str, optional
@@ -29,17 +32,29 @@ def download_folder(folder, quiet = False, proxy = None, speed = None):
     Example
     -------
 
-    gdown.download_folder("https://drive.google.com/drive/folders/1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2")
+    gdown.download_folder(
+        "https://drive.google.com/drive/folders/" +
+        "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2"
+    )
 
     """
 
-    folder_soup = BeautifulSoup(client.get(folder).text, features = "html.parser")
+    folder_soup = BeautifulSoup(
+        client.get(folder).text,
+        features="html.parser"
+    )
 
-    # finds the script tag with window['_DRIVE_ivd'] in it and extracts the encoded array
+    # finds the script tag with window['_DRIVE_ivd']
+    # in it and extracts the encoded array
     byte_string = folder_soup.find_all('script')[-3].contents[0][24:-113] 
 
     # decodes the array and evaluates it as a python array
-    folder_arr = ast.literal_eval(byte_string.replace('\\/', "/").encode('utf-8').decode('unicode-escape').replace("\n", "").replace('null', '"null"'))
+    folder_arr = ast.literal_eval(byte_string.replace('\\/', "/")
+        .encode('utf-8')
+        .decode('unicode-escape')
+        .replace("\n", "")
+        .replace('null', '"null"')
+    )
 
     folder_file_list = [i[0] for i in folder_arr[0]]
     folder_name_list = [i[2] for i in folder_arr[0]]
@@ -47,10 +62,29 @@ def download_folder(folder, quiet = False, proxy = None, speed = None):
 
     for file in range(len(folder_file_list)):
         if folder_type_list[file] != "application/vnd.google-apps.folder":
-            download("https://drive.google.com/uc?id=" + folder_file_list[file], folder_name_list[file], quiet = True, proxy = proxy, speed = speed)
-            if quiet == False:
-                print("https://drive.google.com/uc?id=" + folder_file_list[file], folder_name_list[file])
+            download(
+                "https://drive.google.com/uc?id=" + folder_file_list[file],
+                output=folder_name_list[file],
+                quiet=True,
+                proxy=proxy,
+                speed=speed
+            )
+            if not quiet:
+                print(
+                    "https://drive.google.com/uc?id=" + folder_file_list[file],
+                    folder_name_list[file]
+                )
         else:
-            if quiet == False:
-                print("Processing folder", folder_name_list[file], "(https://drive.google.com/drive/folders/" + folder_file_list[file] + ")")
-            download_folder("https://drive.google.com/drive/folders/" + folder_file_list[file], quiet = quiet, proxy = proxy, speed = speed)
+            if not quiet:
+                print(
+                    "Processing folder", folder_name_list[file],
+                    "(https://drive.google.com/drive/folders/" +
+                    folder_file_list[file] + ")"
+                )
+            download_folder(
+                "https://drive.google.com/drive/folders/" +
+                folder_file_list[file],
+                quiet=quiet,
+                proxy=proxy,
+                speed=speed
+            )
