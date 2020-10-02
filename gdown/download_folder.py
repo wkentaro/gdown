@@ -6,7 +6,9 @@ import requests
 client = requests.session()
 
 
-def download_folder(folder, quiet=False, proxy=None, speed=None):
+def download_folder(
+    folder, quiet=False, proxy=None, speed=None, use_cookies=True
+):
     """Download entire folder from URL.
 
     Parameters
@@ -20,17 +22,15 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
         Proxy.
     speed: float, optional
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
-
-    Returns
-    -------
-    output: str
-        Output filename.
+    use_cookies: bool
+        Flag to use cookies. Default is True.
 
     Example
     -------
     gdown.download_folder(
         "https://drive.google.com/drive/folders/" +
-        "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2"
+        "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2",
+        use_cookies=True
     )
     """
     folders_url = "https://drive.google.com/drive/folders/"
@@ -39,6 +39,9 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
     folder_soup = BeautifulSoup(
         client.get(folder).text, features="html.parser"
     )
+
+    if not use_cookies:
+        client.cookies.clear()
 
     # finds the script tag with window['_DRIVE_ivd']
     # in it and extracts the encoded array
@@ -65,6 +68,7 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
                 quiet=True,
                 proxy=proxy,
                 speed=speed,
+                use_cookies=use_cookies,
             )
             if not quiet:
                 print(
@@ -82,4 +86,5 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
                 quiet=quiet,
                 proxy=proxy,
                 speed=speed,
+                use_cookies=use_cookies,
             )
