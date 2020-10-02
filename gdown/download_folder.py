@@ -1,13 +1,13 @@
-from bs4 import BeautifulSoup
 from .download import download
-import requests
+from bs4 import BeautifulSoup
 import ast
+import requests
 
 client = requests.session()
 
+
 def download_folder(folder, quiet=False, proxy=None, speed=None):
     """
-    
     Download entire folder from URL.
 
     Parameters
@@ -38,6 +38,9 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
     )
 
     """
+    
+    folders_url = "https://drive.google.com/drive/folders/"
+    files_url = "https://drive.google.com/uc?id="
 
     folder_soup = BeautifulSoup(
         client.get(folder).text,
@@ -46,7 +49,7 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
 
     # finds the script tag with window['_DRIVE_ivd']
     # in it and extracts the encoded array
-    byte_string = folder_soup.find_all('script')[-3].contents[0][24:-113] 
+    byte_string = folder_soup.find_all('script')[-3].contents[0][24:-113]
 
     # decodes the array and evaluates it as a python array
     folder_arr = ast.literal_eval(byte_string.replace('\\/', "/")
@@ -63,7 +66,7 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
     for file in range(len(folder_file_list)):
         if folder_type_list[file] != "application/vnd.google-apps.folder":
             download(
-                "https://drive.google.com/uc?id=" + folder_file_list[file],
+                files_url + folder_file_list[file],
                 output=folder_name_list[file],
                 quiet=True,
                 proxy=proxy,
@@ -71,19 +74,17 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
             )
             if not quiet:
                 print(
-                    "https://drive.google.com/uc?id=" + folder_file_list[file],
+                    files_url + folder_file_list[file],
                     folder_name_list[file]
                 )
         else:
             if not quiet:
                 print(
                     "Processing folder", folder_name_list[file],
-                    "(https://drive.google.com/drive/folders/" +
-                    folder_file_list[file] + ")"
+                    "(" + folders_url + folder_file_list[file] + ")"
                 )
             download_folder(
-                "https://drive.google.com/drive/folders/" +
-                folder_file_list[file],
+                folders_url + folder_file_list[file],
                 quiet=quiet,
                 proxy=proxy,
                 speed=speed
