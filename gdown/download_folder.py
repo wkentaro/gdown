@@ -8,6 +8,7 @@ client = requests.session()
 
 def download_folder(folder, quiet=False, proxy=None, speed=None):
     """Download entire folder from URL.
+
     Parameters
     ----------
     url: str
@@ -19,10 +20,12 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
         Proxy.
     speed: float, optional
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
+
     Returns
     -------
     output: str
         Output filename.
+
     Example
     -------
     gdown.download_folder(
@@ -33,7 +36,9 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
     folders_url = "https://drive.google.com/drive/folders/"
     files_url = "https://drive.google.com/uc?id="
 
-    folder_soup = BeautifulSoup(client.get(folder).text, features="html.parser")
+    folder_soup = BeautifulSoup(
+        client.get(folder).text, features="html.parser"
+    )
 
     # finds the script tag with window['_DRIVE_ivd']
     # in it and extracts the encoded array
