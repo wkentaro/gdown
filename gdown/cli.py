@@ -81,7 +81,7 @@ def main():
     parser.add_argument(
         "--speed",
         type=file_size,
-        help="download speed limit in second (e.g., '10MB' -> 10MB/s).",
+        help="download speed limit in second (e.g., '10MB' -> 10MB/s)",
     )
     parser.add_argument(
         "--no-cookies",
@@ -103,7 +103,7 @@ def main():
     parser.add_argument(
         "--folder",
         action="store_true",
-        help="download entire folder instead of a single file.",
+        help="download entire folder instead of a single file",
     )
 
     args = parser.parse_args()
