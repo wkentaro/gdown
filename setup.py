@@ -14,9 +14,7 @@ version = "4.0.2"
 
 if sys.argv[1] == "release":
     if not distutils.spawn.find_executable("twine"):
-        print(
-            "Please install twine:\n\n\tpip install twine\n", file=sys.stderr
-        )
+        print("Please install twine:\n\n\tpip install twine\n", file=sys.stderr)
         sys.exit(1)
 
     commands = [
@@ -38,9 +36,7 @@ def get_long_description():
     try:
         import github2pypi
 
-        return github2pypi.replace_url(
-            slug="wkentaro/gdown", content=long_description
-        )
+        return github2pypi.replace_url(slug="wkentaro/gdown", content=long_description)
     except Exception:
         return long_description
 
@@ -49,13 +45,7 @@ setup(
     name="gdown",
     version=version,
     packages=find_packages(exclude=["github2pypi"]),
-    install_requires=[
-        "filelock",
-        "requests[socks]",
-        "six",
-        "tqdm",
-        "beautifulsoup4"
-    ],
+    install_requires=["filelock", "requests[socks]", "six", "tqdm", "beautifulsoup4"],
     description="Google Drive direct download of big files.",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
