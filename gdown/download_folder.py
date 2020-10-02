@@ -25,6 +25,12 @@ def download_folder(
     use_cookies: bool
         Flag to use cookies. Default is True.
 
+    Returns
+    -------
+    return_code: bool
+        Returns False if the download completed unsuccessfully.
+        May be due to invalid URLs, permission errors, rate limits, etc.
+
     Example
     -------
     gdown.download_folder(
@@ -33,16 +39,19 @@ def download_folder(
         use_cookies=True
     )
     """
+    return_code = True
+
     folders_url = "https://drive.google.com/drive/folders/"
     files_url = "https://drive.google.com/uc?id="
 
-    folder_soup = BeautifulSoup(
-        client.get(folder).text, features="html.parser"
-    )
+    folder_page = client.get(folder)
+
+    if folder_page.status_code != 200:
+        return False
+    folder_soup = BeautifulSoup(folder_page.text, features="html.parser")
 
     if not use_cookies:
         client.cookies.clear()
-
     # finds the script tag with window['_DRIVE_ivd']
     # in it and extracts the encoded array
     byte_string = folder_soup.find_all("script")[-3].contents[0][24:-113]
@@ -62,7 +71,7 @@ def download_folder(
 
     for file in range(len(folder_file_list)):
         if folder_type_list[file] != "application/vnd.google-apps.folder":
-            download(
+            return_code = download(
                 files_url + folder_file_list[file],
                 output=folder_name_list[file],
                 quiet=True,
@@ -74,6 +83,8 @@ def download_folder(
                 print(
                     files_url + folder_file_list[file], folder_name_list[file]
                 )
+            if not return_code:
+                return return_code
         else:
             if not quiet:
                 print(
@@ -81,10 +92,13 @@ def download_folder(
                     folder_name_list[file],
                     "(" + folders_url + folder_file_list[file] + ")",
                 )
-            download_folder(
+            return_code = download_folder(
                 folders_url + folder_file_list[file],
                 quiet=quiet,
                 proxy=proxy,
                 speed=speed,
                 use_cookies=use_cookies,
             )
+            if not return_code:
+                return False
+    return True
