@@ -6,11 +6,8 @@ import requests
 client = requests.session()
 
 
-def download_folder(
-    folder, quiet=False, proxy=None, speed=None
-):
+def download_folder(folder, quiet=False, proxy=None, speed=None):
     """Download entire folder from URL.
-
     Parameters
     ----------
     url: str
@@ -22,12 +19,10 @@ def download_folder(
         Proxy.
     speed: float, optional
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
-
     Returns
     -------
     output: str
         Output filename.
-
     Example
     -------
     gdown.download_folder(
@@ -38,21 +33,19 @@ def download_folder(
     folders_url = "https://drive.google.com/drive/folders/"
     files_url = "https://drive.google.com/uc?id="
 
-    folder_soup = BeautifulSoup(
-        client.get(folder).text,
-        features="html.parser"
-    )
+    folder_soup = BeautifulSoup(client.get(folder).text, features="html.parser")
 
     # finds the script tag with window['_DRIVE_ivd']
     # in it and extracts the encoded array
-    byte_string = folder_soup.find_all('script')[-3].contents[0][24:-113]
+    byte_string = folder_soup.find_all("script")[-3].contents[0][24:-113]
 
     # decodes the array and evaluates it as a python array
     folder_arr = ast.literal_eval(
-        byte_string.replace('\\/', "/")
-        .encode('utf-8').decode('unicode-escape')
+        byte_string.replace("\\/", "/")
+        .encode("utf-8")
+        .decode("unicode-escape")
         .replace("\n", "")
-        .replace('null', '"null"')
+        .replace("null", '"null"')
     )
 
     folder_file_list = [i[0] for i in folder_arr[0]]
@@ -66,22 +59,22 @@ def download_folder(
                 output=folder_name_list[file],
                 quiet=True,
                 proxy=proxy,
-                speed=speed
+                speed=speed,
             )
             if not quiet:
                 print(
-                    files_url + folder_file_list[file],
-                    folder_name_list[file]
+                    files_url + folder_file_list[file], folder_name_list[file]
                 )
         else:
             if not quiet:
                 print(
-                    "Processing folder", folder_name_list[file],
-                    "(" + folders_url + folder_file_list[file] + ")"
+                    "Processing folder",
+                    folder_name_list[file],
+                    "(" + folders_url + folder_file_list[file] + ")",
                 )
             download_folder(
                 folders_url + folder_file_list[file],
                 quiet=quiet,
                 proxy=proxy,
-                speed=speed
+                speed=speed,
             )
