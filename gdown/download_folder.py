@@ -13,7 +13,7 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
     ----------
     url: str
         URL of the Google Drive folder.
-        Must be of the format 'https://drive.google.com/drive/folders/{url}'
+        Must be of the format 'https://drive.google.com/drive/folders/{url}'.
     quiet: bool, optional
         Suppress terminal output.
     proxy: str, optional
