@@ -6,9 +6,10 @@ import requests
 client = requests.session()
 
 
-def download_folder(folder, quiet=False, proxy=None, speed=None):
-    """
-    Download entire folder from URL.
+def download_folder(
+    folder, quiet=False, proxy=None, speed=None
+):
+    """Download entire folder from URL.
 
     Parameters
     ----------
@@ -34,7 +35,6 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
         "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2"
     )
     """
-
     folders_url = "https://drive.google.com/drive/folders/"
     files_url = "https://drive.google.com/uc?id="
 
