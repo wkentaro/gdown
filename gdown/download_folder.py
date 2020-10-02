@@ -1,6 +1,6 @@
 from .download import download
-from bs4 import BeautifulSoup
 import ast
+from bs4 import BeautifulSoup
 import requests
 
 client = requests.session()
@@ -12,7 +12,6 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
 
     Parameters
     ----------
-
     url: str
         URL of the Google Drive folder.
         Must be of the format 'https://drive.google.com/drive/folders/{url}'
@@ -25,20 +24,17 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
 
     Returns
     -------
-
     output: str
         Output filename.
 
     Example
     -------
-
     gdown.download_folder(
         "https://drive.google.com/drive/folders/" +
         "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2"
     )
-
     """
-    
+
     folders_url = "https://drive.google.com/drive/folders/"
     files_url = "https://drive.google.com/uc?id="
 
@@ -53,8 +49,7 @@ def download_folder(folder, quiet=False, proxy=None, speed=None):
 
     # decodes the array and evaluates it as a python array
     folder_arr = ast.literal_eval(byte_string.replace('\\/', "/")
-        .encode('utf-8')
-        .decode('unicode-escape')
+        .encode('utf-8').decode('unicode-escape')
         .replace("\n", "")
         .replace('null', '"null"')
     )
