@@ -58,7 +58,7 @@ def main():
         help="display version",
     )
     parser.add_argument(
-        "url_or_id", help="url or file/folder id (with --id) to download file/folder from"
+        "url_or_id", help="url or file/folder id (with --id) to download from"
     )
     parser.add_argument("-O", "--output", help="output filename")
     parser.add_argument(
@@ -151,6 +151,7 @@ def main():
 
     if filename is None:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
