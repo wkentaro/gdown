@@ -58,7 +58,7 @@ def main():
         help="display version",
     )
     parser.add_argument(
-        "url_or_id", help="url or file/folder id (with --id) to download file/folder from"
+        "url_or_id", help="url or file/folder id (with --id) to download from"
     )
     parser.add_argument("-O", "--output", help="output filename")
     parser.add_argument(
@@ -103,7 +103,7 @@ def main():
         url = "https://drive.google.com/folders/{id}".format(id=args.url_or_id)
     else:
         url = args.url_or_id
-    
+
     if args.folder:
         download_folder(
             url=url,
@@ -120,6 +120,7 @@ def main():
             speed=args.speed,
             use_cookies=not args.no_cookies,
         )
+
 
 if __name__ == "__main__":
     main()
