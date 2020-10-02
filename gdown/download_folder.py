@@ -48,7 +48,8 @@ def download_folder(
     byte_string = folder_soup.find_all('script')[-3].contents[0][24:-113]
 
     # decodes the array and evaluates it as a python array
-    folder_arr = ast.literal_eval(byte_string.replace('\\/', "/")
+    folder_arr = ast.literal_eval(
+        byte_string.replace('\\/', "/")
         .encode('utf-8').decode('unicode-escape')
         .replace("\n", "")
         .replace('null', '"null"')
