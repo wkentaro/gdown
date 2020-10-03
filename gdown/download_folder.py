@@ -198,7 +198,7 @@ def download_folder(
         file[1].parent.mkdir(parents=True, exist_ok=True)
 
         return_code = download(
-            file[0],
+            files_url+file[0],
             output=str(file[1]),
             quiet=quiet,
             proxy=proxy,
