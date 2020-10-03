@@ -1,10 +1,15 @@
 from .download import download
 import ast
 from bs4 import BeautifulSoup
-import pathlib
 import requests
+import sys
 
-print(pathlib.__version__)
+if sys.version_info.major < 3:
+    from pathlib2 import Path
+    from pathlib2 import PurePath
+else:
+    from pathlib import Path
+    from pathlib import PurePath
 
 client = requests.session()
 
