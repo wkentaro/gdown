@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import pathlib
 import requests
 
+print(pathlib.__version__)
+
 client = requests.session()
 
 
