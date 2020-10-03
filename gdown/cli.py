@@ -129,7 +129,7 @@ def main():
     
     if args.folder:
         download_folder(
-            url=url,
+            url,
             output=args.output,
             quiet=args.quiet,
             proxy=args.proxy,
