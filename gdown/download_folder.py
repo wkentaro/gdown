@@ -6,10 +6,10 @@ import sys
 
 if sys.version_info.major < 3:
     from pathlib2 import Path
-    from pathlib2 import PurePath
 else:
     from pathlib import Path
-    from pathlib import PurePath
+
+folder_root = Path()
 
 client = requests.session()
 
