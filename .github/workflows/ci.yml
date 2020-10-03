@@ -91,7 +91,7 @@ jobs:
     
     - name: Download folder from Google Drive
       run: |
-        output = /tmp/folder
+        output=/tmp/folder
         gdown https://drive.google.com/drive/folders/1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2 -O $output --quiet --folder
         test $(tree $output | tail -1) = '7 directories, 51 files'
         rm -rf $output
