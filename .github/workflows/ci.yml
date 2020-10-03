@@ -65,14 +65,14 @@ jobs:
         test $(md5sum $output | awk '{print $1}') = 2a51927dde6b146ce56b4d89ebbb5268
         rm -rf $output
 
-    - name: Download small file from Gdrive
+    - name: Download small file from Google Drive
       run: |
         output=/tmp/spam.txt
         gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O $output --quiet
         test $(cat $output) = spam
         rm -rf $output
 
-    - name: Download large file from Gdrive
+    - name: Download large file from Google Drive
       run: |
         output=/tmp/large_file
         success=0
@@ -88,6 +88,13 @@ jobs:
       run: |
         gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - --quiet | tar zxf -
         test -d gdown-4.0.0
+    
+    - name: Download folder from Google Drive
+      run: |
+        output = /tmp/folder
+        gdown https://drive.google.com/drive/folders/1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2 -O $output --quiet --folder
+        test (tree $output | tail -1) = '7 directories, 51 files'
+        rm -rf $output
 
     - name: Install from dist
       run: |
