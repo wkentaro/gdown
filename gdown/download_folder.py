@@ -1,6 +1,7 @@
 from .download import download
 import ast
 from bs4 import BeautifulSoup
+import pathlib
 import requests
 
 client = requests.session()
