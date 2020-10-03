@@ -60,7 +60,7 @@ def main():
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
     )
-    parser.add_argument("-O", "--output", help="output filename")
+    parser.add_argument("-O", "--output", help="output file name / path")
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="suppress standard output"
     )
@@ -130,9 +130,11 @@ def main():
     if args.folder:
         download_folder(
             url=url,
+            output=args.output,
             quiet=args.quiet,
             proxy=args.proxy,
             speed=args.speed,
+            use_cookies=not args.no_cookies,
         )
         return
         
