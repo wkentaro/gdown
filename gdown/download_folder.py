@@ -30,6 +30,8 @@ def download_folder(
     return_code: bool
         Returns False if the download completed unsuccessfully.
         May be due to invalid URLs, permission errors, rate limits, etc.
+    folder_list: dict
+        Returns the directory structure of the folder.
 
     Example
     -------
@@ -41,13 +43,15 @@ def download_folder(
     """
     return_code = True
 
+    folder_list = {}
+
     folders_url = "https://drive.google.com/drive/folders/"
     files_url = "https://drive.google.com/uc?id="
 
     folder_page = client.get(folder)
 
     if folder_page.status_code != 200:
-        return False
+        return False, None
     folder_soup = BeautifulSoup(folder_page.text, features="html.parser")
 
     if not use_cookies:
@@ -65,12 +69,25 @@ def download_folder(
         .replace("null", '"null"')
     )
 
+    folder_list["file_name"] = folder_soup.title.contents
+    folder_list["file_id"] = folder[39:]
+    folder_list["file_type"] = "application/vnd.google-apps.folder"
+    folder_list["file_contents"] = []
+
     folder_file_list = [i[0] for i in folder_arr[0]]
     folder_name_list = [i[2] for i in folder_arr[0]]
     folder_type_list = [i[3] for i in folder_arr[0]]
 
     for file in range(len(folder_file_list)):
         if folder_type_list[file] != "application/vnd.google-apps.folder":
+            folder_list["file_contents"].append(
+                {
+                    "file_name": folder_name_list[file],
+                    "file_id": folder_file_list[file],
+                    "file_type": folder_type_list[file],
+                    "file_contents": None,
+                }
+            )
             return_code = download(
                 files_url + folder_file_list[file],
                 output=folder_name_list[file],
@@ -84,7 +101,7 @@ def download_folder(
                     files_url + folder_file_list[file], folder_name_list[file]
                 )
             if not return_code:
-                return return_code
+                return return_code, None
         else:
             if not quiet:
                 print(
@@ -92,7 +109,7 @@ def download_folder(
                     folder_name_list[file],
                     "(" + folders_url + folder_file_list[file] + ")",
                 )
-            return_code = download_folder(
+            return_code, directory_structure = download_folder(
                 folders_url + folder_file_list[file],
                 quiet=quiet,
                 proxy=proxy,
@@ -100,5 +117,6 @@ def download_folder(
                 use_cookies=use_cookies,
             )
             if not return_code:
-                return False
-    return True
+                return return_code, None
+            folder_list["file_contents"].append(directory_structure)
+    return return_code, folder_list
