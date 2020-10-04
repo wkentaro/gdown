@@ -40,7 +40,7 @@ pip install gdown
 
 ```bash
 $ gdown --help
-usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED]
+usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--folder] [--proxy PROXY] [--speed SPEED]
              [--no-cookies]
              url_or_id
 ...
@@ -55,6 +55,9 @@ $ # a small file
 $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
 $ cat spam.txt
 spam
+
+$ # a folder
+$ gdown https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj -O /temp/folder --folder
 
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
@@ -82,6 +85,9 @@ gdown.download(url, output, quiet=False)
 
 md5 = 'fa837a88f0c40c513d975104edf3da17'
 gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
+
+url = 'https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj'
+gdown.download_folder(url, quiet=True, no_cookies=True)
 ```
 
 
