@@ -40,9 +40,9 @@ pip install gdown
 
 ```bash
 $ gdown --help
-usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id] [--proxy PROXY]
+usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id]  [--proxy PROXY]
              [--speed SPEED] [--no-cookies] [--no-check-certificate]
-             [--continue]
+             [--continue] [--folder]
              url_or_id
 ...
 
@@ -61,8 +61,12 @@ $ # download with fuzzy extraction of a file ID
 $ gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing&resourcekey=0-WWs_XOSctfaY_0-sJBKRSQ'
 $ cat spam.txt
 spam
+
 $ # --fuzzy option also works with Microsoft Powerpoint files
 $ gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing&ouid=117512221203072002113&rtpof=true&sd=true"
+
+$ # a folder
+$ gdown https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj -O /temp/folder --folder
 
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
@@ -87,6 +91,9 @@ gdown.download(url, output, quiet=False)
 
 md5 = 'fa837a88f0c40c513d975104edf3da17'
 gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
+
+url = 'https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj'
+gdown.download_folder(url, quiet=True, no_cookies=True)
 ```
 
 
