@@ -84,7 +84,11 @@ def download(
     output: str
         Output filename.
     """
-    url_origin = url
+    if "https://drive.google.com/uc?id=" not in url:
+        url_origin = url = ("https://drive.google.com/uc?id=")+url.split("https://drive.google.com/file/d/")[-1].split("/")[0]
+    else:
+        url_origin = url
+        
     sess = requests.session()
 
     # Load cookies
