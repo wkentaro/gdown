@@ -85,9 +85,13 @@ def download(
         Output filename.
     """
     if "https://drive.google.com/uc?id=" not in url:
-        url_origin = ("https://drive.google.com/uc?id=")
-        url_origin += url.split("https://drive.google.com/file/d/")[-1]
-        url_origin = url_origin.split("/")[0]
+        url_origin = "https://drive.google.com/uc?id="
+        url_origin += url.split(
+            "https://drive.google.com/file/d/"
+        )[-1]
+        url_origin = url_origin.split(
+            "/"
+        )[0]
     else:
         url_origin = url
 
