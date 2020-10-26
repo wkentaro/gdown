@@ -24,7 +24,7 @@ def parse_url(url, warning=True):
     if match:
         file_id = match.groups()[0]
 
-    if is_gdrive and not is_download_link:
+    if warning and is_gdrive and not is_download_link:
         warnings.warn(
             "You specified Google Drive Link but it is not the correct link "
             "to download the file. Maybe you should try: {url}".format(
