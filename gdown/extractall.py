@@ -1,4 +1,5 @@
 import os.path as osp
+import rarfile
 import tarfile
 import zipfile
 
@@ -25,6 +26,8 @@ def extractall(path, to=None):
         opener, mode = tarfile.open, "r:gz"
     elif path.endswith(".tar.bz2") or path.endswith(".tbz"):
         opener, mode = tarfile.open, "r:bz2"
+    elif path.endswith(".rar"):
+        opener, mode = rarfile.RarFile, "r"
     else:
         raise ValueError(
             "Could not extract '%s' as no appropriate "
@@ -32,7 +35,7 @@ def extractall(path, to=None):
         )
 
     def namelist(f):
-        if isinstance(f, zipfile.ZipFile):
+        if isinstance(f, zipfile.ZipFile) or isinstance(f, rarfile.RarFile):
             return f.namelist()
         return [m.path for m in f.members]
 
