@@ -1,6 +1,7 @@
 from .download import download
-import ast
 from bs4 import BeautifulSoup
+import json
+import re
 import requests
 import sys
 
@@ -48,18 +49,23 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
 
     if not use_cookies:
         client.cookies.clear()
+
     # finds the script tag with window['_DRIVE_ivd']
-    # in it and extracts the encoded array
-    byte_string = folder_soup.find_all("script")[-3].contents[0][24:-113]
+    encoded_data = None
+    string_regex = re.compile(r"\'([^\']+)\'")
+    for script in folder_soup.select("script"):
+        inner_html = script.decode_contents()
+        if "_DRIVE_ivd" in inner_html:  # hacky script tag search
+            encoded_data = string_regex.findall(inner_html)[
+                1
+            ]  # second one, first one is '_DRIVE_ivdc'
+            break
+    if encoded_data is None:
+        raise RuntimeError("Didn't found _DRIVE_ivd script tag")
 
     # decodes the array and evaluates it as a python array
-    folder_arr = ast.literal_eval(
-        byte_string.replace("\\/", "/")
-        .encode("utf-8")
-        .decode("unicode-escape")
-        .replace("\n", "")
-        .replace("null", '"null"')
-    )
+    decoded = bytes(encoded_data, "utf-8").decode("unicode_escape")
+    folder_arr = json.loads(decoded)
 
     folder_list["file_name"] = folder_soup.title.contents[0][:-15]
     folder_list["file_id"] = folder[39:]
