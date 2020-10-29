@@ -1,5 +1,6 @@
 from .download import download
 from bs4 import BeautifulSoup
+from builtins import bytes
 import json
 import re
 import requests
