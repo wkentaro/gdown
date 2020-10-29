@@ -56,6 +56,7 @@ setup(
         "tqdm",
         "beautifulsoup4",
         "pathlib2",
+        "future",
     ],
     description="Google Drive direct download of big files.",
     long_description=get_long_description(),
