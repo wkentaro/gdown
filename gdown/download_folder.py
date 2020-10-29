@@ -16,6 +16,8 @@ folders_url = "https://drive.google.com/drive/folders/"
 files_url = "https://drive.google.com/uc?id="
 folder_type = "application/vnd.google-apps.folder"
 
+string_regex = re.compile(r"'((?:[^'\\]|\\.)*)'")
+
 
 def get_folder_list(folder, quiet=False, use_cookies=True):
     """Get folder structure of Google Drive folder URL.
@@ -53,7 +55,6 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
 
     # finds the script tag with window['_DRIVE_ivd']
     encoded_data = None
-    string_regex = re.compile(r"\'([^\']+)\'")
     for script in folder_soup.select("script"):
         inner_html = script.decode_contents()
         if "_DRIVE_ivd" in inner_html:  # hacky script tag search
