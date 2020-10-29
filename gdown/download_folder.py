@@ -67,14 +67,16 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
     decoded = bytes(encoded_data, "utf-8").decode("unicode_escape")
     folder_arr = json.loads(decoded)
 
+    folder_contents = [] if folder_arr[0] is None else folder_arr[0]
+
     folder_list["file_name"] = folder_soup.title.contents[0][:-15]
     folder_list["file_id"] = folder[39:]
     folder_list["file_type"] = folder_type
     folder_list["file_contents"] = []
 
-    folder_file_list = [i[0] for i in folder_arr[0]]
-    folder_name_list = [i[2] for i in folder_arr[0]]
-    folder_type_list = [i[3] for i in folder_arr[0]]
+    folder_file_list = [i[0] for i in folder_contents]
+    folder_name_list = [i[2] for i in folder_contents]
+    folder_type_list = [i[3] for i in folder_contents]
 
     for file in range(len(folder_file_list)):
         if folder_type_list[file] != folder_type:
@@ -104,6 +106,7 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
             return_code, folder_structure = get_folder_list(
                 folders_url + folder_file_list[file],
                 use_cookies=use_cookies,
+                quiet=quiet,
             )
             if not return_code:
                 return return_code, None
@@ -129,6 +132,9 @@ def get_directory_structure(directory, previous_path):
     directory_structure = []
     for file in directory["file_contents"]:
         if file["file_type"] == folder_type:
+            directory_structure.append(
+                (None, previous_path / file["file_name"])
+            )
             for i in get_directory_structure(
                 file, previous_path / file["file_name"]
             ):
@@ -200,12 +206,14 @@ def download_folder(
 
     if not quiet:
         print("Building directory structure completed")
-    for file in directory_structure:
-        file[1].parent.mkdir(parents=True, exist_ok=True)
+    for file_id, file_path in directory_structure:
+        if file_id is None:  # folder
+            file_path.mkdir(parents=True, exist_ok=True)
+            continue
 
         return_code = download(
-            files_url + file[0],
-            output=str(file[1]),
+            files_url + file_id,
+            output=str(file_path),
             quiet=quiet,
             proxy=proxy,
             speed=speed,
