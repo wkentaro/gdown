@@ -1,6 +1,7 @@
 from .download import download
 from bs4 import BeautifulSoup
 from builtins import bytes
+from itertools import islice
 import json
 import re
 import requests
@@ -57,11 +58,19 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
     encoded_data = None
     for script in folder_soup.select("script"):
         inner_html = script.decode_contents()
-        if "_DRIVE_ivd" in inner_html:  # hacky script tag search
-            encoded_data = string_regex.findall(inner_html)[
-                1
-            ]  # second one, first one is '_DRIVE_ivdc'
+
+        if "_DRIVE_ivd" in inner_html:
+            # first js string is _DRIVE_ivd, the second one is the encoded arr
+            regex_iter = string_regex.finditer(inner_html)
+            # get the second elem in the iter
+            try:
+                encoded_data = next(islice(regex_iter, 1, None)).group(1)
+            except StopIteration:
+                raise RuntimeError(
+                    "Couldn't find the folder encoded JS string"
+                )
             break
+
     if encoded_data is None:
         raise RuntimeError("Didn't found _DRIVE_ivd script tag")
 
