@@ -155,6 +155,13 @@ def download(
     if file_id and is_download_link:
         m = re.search('filename="(.*)"', res.headers["Content-Disposition"])
         filename_from_url = m.groups()[0]
+        
+        content_disposition = res.headers["Content-Disposition"]
+        cd_list = content_disposition.split(";")
+        if len(cd_list) > 2:
+            encoded_startswith = "filename*=UTF-8''"
+            filename_from_url = cd_list[2][len(encoded_startswith):]
+            filename_from_url = urllib.parse.unquote(filename_from_url)
     else:
         filename_from_url = osp.basename(url)
 
