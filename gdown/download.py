@@ -9,6 +9,7 @@ import sys
 import tempfile
 import textwrap
 import time
+import urllib
 
 import requests
 import six
