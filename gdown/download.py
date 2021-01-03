@@ -67,7 +67,13 @@ def get_url_from_gdrive_confirmation(contents):
 
 
 def download(
-    url, output=None, quiet=False, proxy=None, speed=None, use_cookies=True
+    url,
+    output=None,
+    quiet=False,
+    proxy=None,
+    speed=None,
+    use_cookies=True,
+    verify=True,
 ):
     """Download file from URL.
 
@@ -85,6 +91,10 @@ def download(
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
     use_cookies: bool
         Flag to use cookies. Default is True.
+    verify: bool or string
+        Either a bool, in which case it controls whether the server’s TLS
+        certificate is verified, or a string, in which case it must be a path
+        to a CA bundle to use. Default is True.
 
     Returns
     -------
@@ -117,7 +127,7 @@ def download(
 
     while True:
         try:
-            res = sess.get(url, headers=headers, stream=True)
+            res = sess.get(url, headers=headers, stream=True, verify=verify)
         except requests.exceptions.ProxyError as e:
             print("An error has occurred using proxy:", proxy, file=sys.stderr)
             print(e, file=sys.stderr)
