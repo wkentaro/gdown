@@ -41,7 +41,7 @@ pip install gdown
 ```bash
 $ gdown --help
 usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED]
-             [--no-cookies]
+             [--no-cookies] [--no-check-certificate]
              url_or_id
 ...
 
