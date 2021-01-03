@@ -87,7 +87,7 @@ def main():
         action="store_true",
         help="don't verify the server's TLS certificate",
     )
-    
+
     args = parser.parse_args()
 
     if args.output == "-":
