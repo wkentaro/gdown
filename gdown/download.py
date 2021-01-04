@@ -60,7 +60,12 @@ def get_url_from_gdrive_confirmation(contents):
 
 
 def download(
-    url, output=None, quiet=False, proxy=None, speed=None, use_cookies=True,
+    url,
+    output=None,
+    quiet=False,
+    proxy=None,
+    speed=None,
+    use_cookies=True,
     verify=True,
 ):
     """Download file from URL.
