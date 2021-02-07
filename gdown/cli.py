@@ -8,6 +8,7 @@ import pkg_resources
 import six
 
 from .download import download
+from .download_folder import download_folder
 
 distribution = pkg_resources.get_distribution("gdown")
 
@@ -57,16 +58,16 @@ def main():
         help="display version",
     )
     parser.add_argument(
-        "url_or_id", help="url or file id (with --id) to download file from"
+        "url_or_id", help="url or file/folder id (with --id) to download from"
     )
-    parser.add_argument("-O", "--output", help="output filename")
+    parser.add_argument("-O", "--output", help="output file name / path")
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="suppress standard output"
     )
     parser.add_argument(
         "--id",
         action="store_true",
-        help="flag to specify file id instead of url",
+        help="flag to specify file/folder id instead of url",
     )
     parser.add_argument(
         "--proxy",
@@ -75,12 +76,17 @@ def main():
     parser.add_argument(
         "--speed",
         type=file_size,
-        help="download speed limit in second (e.g., '10MB' -> 10MB/s).",
+        help="download speed limit in second (e.g., '10MB' -> 10MB/s)",
     )
     parser.add_argument(
         "--no-cookies",
         action="store_true",
         help="don't use cookies in ~/.cache/gdown/cookies.json",
+    )
+    parser.add_argument(
+        "--folder",
+        action="store_true",
+        help="download entire folder instead of a single file",
     )
 
     args = parser.parse_args()
@@ -91,19 +97,31 @@ def main():
         else:
             args.output = sys.stdout
 
-    if args.id:
+    if args.id and not args.folder:
         url = "https://drive.google.com/uc?id={id}".format(id=args.url_or_id)
+    elif args.id and args.folder:
+        url = "https://drive.google.com/folders/{id}".format(id=args.url_or_id)
     else:
         url = args.url_or_id
 
-    download(
-        url=url,
-        output=args.output,
-        quiet=args.quiet,
-        proxy=args.proxy,
-        speed=args.speed,
-        use_cookies=not args.no_cookies,
-    )
+    if args.folder:
+        download_folder(
+            url,
+            output=args.output,
+            quiet=args.quiet,
+            proxy=args.proxy,
+            speed=args.speed,
+            use_cookies=not args.no_cookies,
+        )
+    else:
+        download(
+            url=url,
+            output=args.output,
+            quiet=args.quiet,
+            proxy=args.proxy,
+            speed=args.speed,
+            use_cookies=not args.no_cookies,
+        )
 
 
 if __name__ == "__main__":
