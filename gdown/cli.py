@@ -96,7 +96,7 @@ def main():
     else:
         url = args.url_or_id
 
-    download(
+    filename = download(
         url=url,
         output=args.output,
         quiet=args.quiet,
@@ -104,6 +104,9 @@ def main():
         speed=args.speed,
         use_cookies=not args.no_cookies,
     )
+
+    if filename is None:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
