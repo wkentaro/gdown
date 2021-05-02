@@ -104,10 +104,12 @@ def download(
 
     file_id, is_download_link = parse_url(url)
 
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
     while True:
 
         try:
-            res = sess.get(url, stream=True)
+            res = sess.get(url, headers=headers, stream=True)
         except requests.exceptions.ProxyError as e:
             print("An error has occurred using proxy:", proxy, file=sys.stderr)
             print(e, file=sys.stderr)
