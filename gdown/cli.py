@@ -83,9 +83,9 @@ def main():
         help="don't use cookies in ~/.cache/gdown/cookies.json",
     )
     parser.add_argument(
-        "--no-verify",
+        "--no-check-certificate",
         action="store_true",
-        help="don't verify the server's TLS certificate",
+        help="don't check the server's TLS certificate",
     )
 
     args = parser.parse_args()
@@ -108,7 +108,7 @@ def main():
         proxy=args.proxy,
         speed=args.speed,
         use_cookies=not args.no_cookies,
-        verify=not args.no_verify,
+        verify=not args.no_check_certificate,
     )
 
 
