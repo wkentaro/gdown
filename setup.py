@@ -8,7 +8,7 @@ import sys
 from setuptools import find_packages
 from setuptools import setup
 
-version = "3.12.2"
+version = "3.13.0"
 
 
 if sys.argv[1] == "release":
@@ -48,7 +48,7 @@ setup(
     name="gdown",
     version=version,
     packages=find_packages(exclude=["github2pypi"]),
-    install_requires=["filelock", "requests[socks]", "six", "tqdm"],
+    install_requires=["filelock", "requests[socks]>=2.12.0", "six", "tqdm"],
     description="Google Drive direct download of big files.",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
