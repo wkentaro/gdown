@@ -8,6 +8,7 @@ import pkg_resources
 import six
 
 from .download import download
+from .parse_url import google_drive_url_normalizer
 
 distribution = pkg_resources.get_distribution("gdown")
 
@@ -91,10 +92,8 @@ def main():
         else:
             args.output = sys.stdout
 
-    if args.id:
-        url = "https://drive.google.com/uc?id={id}".format(id=args.url_or_id)
-    else:
-        url = args.url_or_id
+    url = google_drive_url_normalizer(args.url_or_id)
+
 
     filename = download(
         url=url,

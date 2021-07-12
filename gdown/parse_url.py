@@ -33,3 +33,21 @@ def parse_url(url, warning=True):
         )
 
     return file_id, is_download_link
+
+
+def google_drive_url_normalizer(url_or_id):
+    """Normalize and handle URLs or IDs especially for Google Drive links.
+
+    url_or_id: Downloadable URL or ID of a Google Drive link.
+    """
+    if ('drive.google.com' in url_or_id):
+        arr = url_or_id.split("/")[-3:]
+        for gdid in arr:
+            if len(gdid) == 33:
+                break
+        return 'https://drive.google.com/uc?id=' + gdid
+        
+    elif len(url_or_id) == 33:
+        return "https://drive.google.com/uc?id={id}".format(id=url_or_id)
+    else:
+        return url_or_id
