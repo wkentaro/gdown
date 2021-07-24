@@ -57,7 +57,7 @@ def cached_download(
     proxy=None,
     speed=None,
 ):
-    """Cached downlaod from URL.
+    """Cached download from URL.
 
     Parameters
     ----------
