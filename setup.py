@@ -8,7 +8,8 @@ import sys
 from setuptools import find_packages
 from setuptools import setup
 
-version = "3.13.0"
+
+version = "3.13.1"
 
 
 if sys.argv[1] == "release":
