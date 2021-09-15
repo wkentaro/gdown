@@ -46,8 +46,8 @@ usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED]
 ...
 
 $ # a large file (~400MB)
-$ gdown https://drive.google.com/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ
-$ # gdown --id 0B_NiLAzvehC9R2stRmQyM3ZiVjQ
+$ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
+$ # gdown --id 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 $ md5sum pose_estimation_2d_chainermodel.pkl
 587933c2c0adf335ebed0486c183541f
 
