@@ -39,24 +39,31 @@ def get_url_from_gdrive_confirmation(contents):
         if m:
             url = "https://docs.google.com" + m.groups()[0]
             url = url.replace("&amp;", "&")
-            return url
+            break
         m = re.search("confirm=([^;&]+)", line)
         if m:
             confirm = m.groups()[0]
             url = re.sub(
                 r"confirm=([^;&]+)", r"confirm={}".format(confirm), url
             )
-            return url
+            break
         m = re.search('"downloadUrl":"([^"]+)', line)
         if m:
             url = m.groups()[0]
             url = url.replace("\\u003d", "=")
             url = url.replace("\\u0026", "&")
-            return url
+            break
         m = re.search('<p class="uc-error-subcaption">(.*)</p>', line)
         if m:
             error = m.groups()[0]
             raise RuntimeError(error)
+    if not url:
+        raise RuntimeError(
+            "Cannot retrieve the public link of the file. "
+            "You may need to change the permission to "
+            "'Anyone with the link', or have had many accesses."
+        )
+    return url
 
 
 def download(
@@ -109,7 +116,6 @@ def download(
     }
 
     while True:
-
         try:
             res = sess.get(url, headers=headers, stream=True)
         except requests.exceptions.ProxyError as e:
@@ -145,15 +151,6 @@ def download(
                 file=sys.stderr,
             )
             print("\n\t", url_origin, "\n", file=sys.stderr)
-            return
-
-        if url is None:
-            print("Permission denied:", url_origin, file=sys.stderr)
-            print(
-                "Maybe you need to change permission over "
-                "'Anyone with the link'?",
-                file=sys.stderr,
-            )
             return
 
     if file_id and is_download_link:
