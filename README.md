@@ -45,11 +45,11 @@ usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED]
              url_or_id
 ...
 
-$ # a large file (~400MB)
+$ # a large file (~500MB)
 $ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 $ # gdown --id 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
-$ md5sum pose_estimation_2d_chainermodel.pkl
-587933c2c0adf335ebed0486c183541f
+$ md5sum fcn8s_from_caffe.npz
+256c2a8235c1c65e62e48d3284fbd384
 
 $ # a small file
 $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
