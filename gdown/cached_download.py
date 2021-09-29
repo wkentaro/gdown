@@ -49,13 +49,7 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
 
 
 def cached_download(
-    url,
-    path=None,
-    md5=None,
-    quiet=False,
-    postprocess=None,
-    proxy=None,
-    speed=None,
+    url, path=None, md5=None, quiet=False, postprocess=None, **kwargs
 ):
     """Cached download from URL.
 
@@ -71,10 +65,8 @@ def cached_download(
         Suppress terminal output. Default is False.
     postprocess: callable
         Function called with filename as postprocess.
-    proxy: str
-        Proxy.
-    speed: float
-        Download byte size per second (e.g., 256KB/s = 256 * 1024).
+    kwargs: dict
+        Keyword arguments to be passed to `download`.
 
     Returns
     -------
@@ -120,7 +112,7 @@ def cached_download(
                 msg = "{}...".format(msg)
             print(msg, file=sys.stderr)
 
-        download(url, temp_path, quiet=quiet, proxy=proxy, speed=speed)
+        download(url, temp_path, quiet=quiet, **kwargs)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
     except Exception:
