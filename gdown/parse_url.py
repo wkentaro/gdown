@@ -12,19 +12,26 @@ def parse_url(url, warning=True):
     """
     parsed = urllib_parse.urlparse(url)
     query = urllib_parse.parse_qs(parsed.query)
-    is_gdrive = parsed.hostname == "drive.google.com"
+    is_gdrive = parsed.hostname in ["drive.google.com", "docs.google.com"]
     is_download_link = parsed.path.endswith("/uc")
 
+    if not is_gdrive:
+        return is_gdrive, is_download_link
+
     file_id = None
-    if is_gdrive and "id" in query:
+    if "id" in query:
         file_ids = query["id"]
         if len(file_ids) == 1:
             file_id = file_ids[0]
-    match = re.match(r"^/file/d/(.*?)/view$", parsed.path)
-    if match:
-        file_id = match.groups()[0]
+    else:
+        patterns = [r"^/file/d/(.*?)/view$", r"^/presentation/d/(.*?)/edit$"]
+        for pattern in patterns:
+            match = re.match(pattern, parsed.path)
+            if match:
+                file_id = match.groups()[0]
+                break
 
-    if warning and is_gdrive and not is_download_link:
+    if warning and not is_download_link:
         warnings.warn(
             "You specified Google Drive Link but it is not the correct link "
             "to download the file. Maybe you should try: {url}".format(

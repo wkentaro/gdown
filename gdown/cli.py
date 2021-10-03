@@ -64,6 +64,11 @@ def main():
         "-q", "--quiet", action="store_true", help="suppress standard output"
     )
     parser.add_argument(
+        "--fuzzy",
+        action="store_true",
+        help="extract Google Drive's file ID",
+    )
+    parser.add_argument(
         "--id",
         action="store_true",
         help="flag to specify file id instead of url",
@@ -112,6 +117,7 @@ def main():
         use_cookies=not args.no_cookies,
         verify=not args.no_check_certificate,
         id=id,
+        fuzzy=args.fuzzy,
     )
 
     if filename is None:
