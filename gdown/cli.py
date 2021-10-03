@@ -97,9 +97,11 @@ def main():
             args.output = sys.stdout
 
     if args.id:
-        url = "https://drive.google.com/uc?id={id}".format(id=args.url_or_id)
+        url = None
+        id = args.url_or_id
     else:
         url = args.url_or_id
+        id = None
 
     filename = download(
         url=url,
@@ -109,6 +111,7 @@ def main():
         speed=args.speed,
         use_cookies=not args.no_cookies,
         verify=not args.no_check_certificate,
+        id=id,
     )
 
     if filename is None:

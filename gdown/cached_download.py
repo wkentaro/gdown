@@ -49,7 +49,7 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
 
 
 def cached_download(
-    url, path=None, md5=None, quiet=False, postprocess=None, **kwargs
+    url=None, path=None, md5=None, quiet=False, postprocess=None, **kwargs
 ):
     """Cached download from URL.
 
