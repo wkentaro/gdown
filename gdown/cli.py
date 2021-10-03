@@ -92,6 +92,13 @@ def main():
         action="store_true",
         help="don't check the server's TLS certificate",
     )
+    parser.add_argument(
+        "--continue",
+        "-c",
+        dest="continue_",
+        action="store_true",
+        help="resume getting a partially-downloaded file"
+    )
 
     args = parser.parse_args()
 
@@ -118,6 +125,7 @@ def main():
         verify=not args.no_check_certificate,
         id=id,
         fuzzy=args.fuzzy,
+        resume=args.continue_,
     )
 
     if filename is None:
