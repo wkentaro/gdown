@@ -75,9 +75,14 @@ jobs:
 
     - name: Download large file from Gdrive
       run: |
-        output=/tmp/fcn8s_from_caffe.npz
-        gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ -O $output --quiet
-        test $(md5sum $output | awk '{print $1}') = 256c2a8235c1c65e62e48d3284fbd384
+        output=/tmp/large_file
+        success=0
+        while IFS=, read -r file_id md5
+        do
+            gdown --id $file_id -O $output --quiet || continue
+            test $(md5sum $output | awk '{print $1}') = $md5 && success=1 && break
+        done < tests/data/file_ids_large.csv
+        test $success = 1
         rm -rf $output
 
     - name: Install from dist
