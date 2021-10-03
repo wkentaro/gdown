@@ -216,7 +216,7 @@ def download(
         tmp_file = None
         f = output
 
-    if f.tell() != 0:
+    if tmp_file is not None and f.tell() != 0:
         headers["Range"] = "bytes={}-".format(f.tell())
         res = sess.get(url, headers=headers, stream=True, verify=verify)
 
