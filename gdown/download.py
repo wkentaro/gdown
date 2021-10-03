@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import glob
 import json
 import os
 import os.path as osp
@@ -76,6 +77,7 @@ def download(
     verify=True,
     id=None,
     fuzzy=False,
+    resume=False,
 ):
     """Download file from URL.
 
@@ -100,7 +102,10 @@ def download(
     id: str
         Google Drive's file ID.
     fuzzy: bool
-        Fuzzy extraction of Google Drive's file Id.
+        Fuzzy extraction of Google Drive's file Id. Default is False.
+    resume: bool
+        Resume the download from existing tmp file if possible.
+        Default is False.
 
     Returns
     -------
@@ -195,25 +200,36 @@ def download(
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
 
+    if output_is_path:
+        existing_tmp_files = glob.glob("{}*".format(output))
+        if resume and existing_tmp_files:
+            tmp_file = existing_tmp_files[0]
+        else:
+            resume = False
+            tmp_file = tempfile.mktemp(
+                suffix=tempfile.template,
+                prefix=osp.basename(output),
+                dir=osp.dirname(output),
+            )
+        f = open(tmp_file, "ab")
+    else:
+        tmp_file = None
+        f = output
+
+    if f.tell() != 0:
+        headers["Range"] = "bytes={}-".format(f.tell())
+        res = sess.get(url, headers=headers, stream=True, verify=verify)
+
     if not quiet:
         print("Downloading...", file=sys.stderr)
+        if resume:
+            print("Resume:", tmp_file, file=sys.stderr)
         print("From:", url_origin, file=sys.stderr)
         print(
             "To:",
             osp.abspath(output) if output_is_path else output,
             file=sys.stderr,
         )
-
-    if output_is_path:
-        tmp_file = tempfile.mktemp(
-            suffix=tempfile.template,
-            prefix=osp.basename(output),
-            dir=osp.dirname(output),
-        )
-        f = open(tmp_file, "wb")
-    else:
-        tmp_file = None
-        f = output
 
     try:
         total = res.headers.get("Content-Length")
@@ -241,10 +257,5 @@ def download(
         return
     finally:
         sess.close()
-        try:
-            if tmp_file:
-                os.remove(tmp_file)
-        except OSError:
-            pass
 
     return output
