@@ -40,8 +40,8 @@ pip install gdown
 
 ```bash
 $ gdown --help
-usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--id] [--proxy PROXY] [--speed SPEED]
-             [--no-cookies] [--no-check-certificate]
+usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id] [--proxy PROXY]
+             [--speed SPEED] [--no-cookies] [--no-check-certificate]
              url_or_id
 ...
 
@@ -53,6 +53,11 @@ $ md5sum fcn8s_from_caffe.npz
 
 $ # a small file
 $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
+$ cat spam.txt
+spam
+
+$ # download with fuzzy extraction of a file ID
+$ gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing&resourcekey=0-WWs_XOSctfaY_0-sJBKRSQ'
 $ cat spam.txt
 spam
 
