@@ -75,6 +75,7 @@ def download(
     use_cookies=True,
     verify=True,
     id=None,
+    fuzzy=False,
 ):
     """Download file from URL.
 
@@ -98,6 +99,8 @@ def download(
         to a CA bundle to use. Default is True.
     id: str
         Google Drive's file ID.
+    fuzzy: bool
+        Fuzzy extraction of Google Drive's file Id.
 
     Returns
     -------
@@ -127,7 +130,13 @@ def download(
         sess.proxies = {"http": proxy, "https": proxy}
         print("Using proxy:", proxy, file=sys.stderr)
 
-    file_id, is_download_link = parse_url(url)
+    gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
+
+    if fuzzy and gdrive_file_id:
+        # overwrite the url with fuzzy match of a file id
+        url = "https://drive.google.com/uc?id={id}".format(id=gdrive_file_id)
+        url_origin = url
+        is_gdrive_download_link = True
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA
@@ -153,7 +162,7 @@ def download(
         if "Content-Disposition" in res.headers:
             # This is the file
             break
-        if not (file_id and is_download_link):
+        if not (gdrive_file_id and is_gdrive_download_link):
             break
 
         # Need to redirect with confirmation
@@ -171,7 +180,7 @@ def download(
             print("\n\t", url_origin, "\n", file=sys.stderr)
             return
 
-    if file_id and is_download_link:
+    if gdrive_file_id and is_gdrive_download_link:
         m = re.search('filename="(.*)"', res.headers["Content-Disposition"])
         filename_from_url = m.groups()[0]
     else:
