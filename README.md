@@ -62,6 +62,9 @@ $ gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/vi
 $ cat spam.txt
 spam
 
+$ # it can handle urls created from [Share] -> [Copy Url] on Google Drive
+$ gdown 'https://drive.google.com/a/jsk.imi.i.u-tokyo.ac.jp/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ'
+
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
 $ cat ip.json
@@ -70,11 +73,8 @@ $ cat ip.json
 }
 
 $ # write stdout and pipe to extract
-$ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU -O - --quiet | tar zxvf -
-$ ls 20150428_collected_images/
-
-$ # it can handle urls created from [Share] -> [Copy Url] on Google Drive
-$ gdown 'https://drive.google.com/a/jsk.imi.i.u-tokyo.ac.jp/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ'
+$ gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - --quiet | tar zxvf -
+$ ls gdown-4.0.0
 ```
 
 ### From Python
