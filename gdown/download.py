@@ -67,13 +67,14 @@ def get_url_from_gdrive_confirmation(contents):
 
 
 def download(
-    url,
+    url=None,
     output=None,
     quiet=False,
     proxy=None,
     speed=None,
     use_cookies=True,
     verify=True,
+    id=None,
 ):
     """Download file from URL.
 
@@ -81,7 +82,7 @@ def download(
     ----------
     url: str
         URL. Google Drive URL is also supported.
-    output: str, optional
+    output: str
         Output filename. Default is basename of URL.
     quiet: bool
         Suppress terminal output. Default is False.
@@ -95,12 +96,19 @@ def download(
         Either a bool, in which case it controls whether the server’s TLS
         certificate is verified, or a string, in which case it must be a path
         to a CA bundle to use. Default is True.
+    id: str
+        Google Drive's file ID.
 
     Returns
     -------
     output: str
         Output filename.
     """
+    if not (id is None) ^ (url is None):
+        raise ValueError("Either url or id has to be specified")
+    if id is not None:
+        url = "https://drive.google.com/uc?id={id}".format(id=id)
+
     url_origin = url
     sess = requests.session()
 
