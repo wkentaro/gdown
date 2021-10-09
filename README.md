@@ -61,9 +61,8 @@ $ # download with fuzzy extraction of a file ID
 $ gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing&resourcekey=0-WWs_XOSctfaY_0-sJBKRSQ'
 $ cat spam.txt
 spam
-
-$ # it can handle urls created from [Share] -> [Copy Url] on Google Drive
-$ gdown 'https://drive.google.com/a/jsk.imi.i.u-tokyo.ac.jp/uc?id=0B_NiLAzvehC9R2stRmQyM3ZiVjQ'
+$ # --fuzzy option also works with Microsoft Powerpoint files
+$ gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing&ouid=117512221203072002113&rtpof=true&sd=true"
 
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
