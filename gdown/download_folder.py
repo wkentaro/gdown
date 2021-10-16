@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from .download import download
-from .download import indent_func
+from .download import indent
 
 
 client = requests.session()
@@ -309,7 +309,7 @@ def download_folder(
     except RuntimeError as e:
         print("Failed to retrieve folder contents:", file=sys.stderr)
         error = "\n".join(textwrap.wrap(str(e)))
-        error = indent_func(error, "\t")
+        error = indent(error, "\t")
         print("\n", error, "\n", file=sys.stderr)
         return
 
