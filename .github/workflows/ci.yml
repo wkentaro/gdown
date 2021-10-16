@@ -54,6 +54,12 @@ jobs:
         black --check .
       if: matrix.python-version != '2.7' && matrix.python-version != '3.5'
 
+    - name: Mypy
+      run: |
+        pip install mypy
+        mypy --install-types --non-interactive --ignore-missing-imports -p gdown
+      if: matrix.python-version != '2.7'
+
     - name: Test with pytest
       run: |
         pip install pytest

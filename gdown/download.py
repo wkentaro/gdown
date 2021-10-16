@@ -21,16 +21,13 @@ CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
 
 
-if hasattr(textwrap, "indent"):
-    indent_func = textwrap.indent
-else:
+# textwrap.indent for Python2
+def indent(text, prefix):
+    def prefixed_lines():
+        for line in text.splitlines(True):
+            yield (prefix + line if line.strip() else line)
 
-    def indent_func(text, prefix):
-        def prefixed_lines():
-            for line in text.splitlines(True):
-                yield (prefix + line if line.strip() else line)
-
-        return "".join(prefixed_lines())
+    return "".join(prefixed_lines())
 
 
 def get_url_from_gdrive_confirmation(contents):
@@ -176,7 +173,7 @@ def download(
         except RuntimeError as e:
             print("Access denied with the following error:")
             error = "\n".join(textwrap.wrap(str(e)))
-            error = indent_func(error, "\t")
+            error = indent(error, "\t")
             print("\n", error, "\n", file=sys.stderr)
             print(
                 "You may still be able to access the file from the browser:",
