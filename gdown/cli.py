@@ -130,32 +130,19 @@ def main():
         else:
             args.output = sys.stdout
 
-    if not args.folder:
-        if args.id:
-            url = None
-            id = args.url_or_id
-        else:
-            url = args.url_or_id
-            id = None
-    else:
-        if args.id:
-            url = "https://drive.google.com/folders/{id}".format(
-                id=args.url_or_id
-            )
-        else:
-            url = args.url_or_id
-
     if args.folder:
-        download_folder(
-            url,
-            output=args.output,
-            quiet=args.quiet,
-            proxy=args.proxy,
-            speed=args.speed,
-            use_cookies=not args.no_cookies,
-            remaining_ok=args.remaining_ok,
-        )
-        return
+        main_download_folder(args)
+    else:
+        main_download_single_file(args)
+
+
+def main_download_single_file(args):
+    if args.id:
+        url = None
+        id = args.url_or_id
+    else:
+        url = args.url_or_id
+        id = None
 
     filename = download(
         url=url,
@@ -172,6 +159,22 @@ def main():
 
     if filename is None:
         sys.exit(1)
+
+
+def main_download_folder(args):
+    if args.id:
+        url = "https://drive.google.com/folders/{id}".format(id=args.url_or_id)
+    else:
+        url = args.url_or_id
+    download_folder(
+        url,
+        output=args.output,
+        quiet=args.quiet,
+        proxy=args.proxy,
+        speed=args.speed,
+        use_cookies=not args.no_cookies,
+        remaining_ok=args.remaining_ok,
+    )
 
 
 if __name__ == "__main__":
