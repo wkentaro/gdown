@@ -96,6 +96,24 @@ jobs:
         sudo apt install tree
         test "$(tree $output | tail -1)" = '6 directories, 6 files'
         rm -rf $output
+    
+    - name: Try to download a folder with a file count more than the limit from Google Drive, without remaining ok
+      run: |
+        output=/tmp/folder-limit
+        gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder
+        retcode = $?
+        if [ $retcode -eq 0 ]; then
+          echo "expected command to fail"
+          exit -1
+        fi
+    - name: Download folder from Google Drive
+      run: |
+        output=/tmp/folder-limit
+        gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder --remaining-ok
+        sudo apt install tree
+        test "$(tree $output | tail -1)" = '1 directory, 50 files'
+        rm -rf $output
+    
 
     - name: Install from dist
       run: |
