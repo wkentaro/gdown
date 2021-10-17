@@ -210,10 +210,12 @@ def download_folder(
         output = Path.cwd()
     else:
         output = Path(output)
+    root_folder = output / folder_list["file_name"]
     directory_structure = get_directory_structure(
         folder_list,
-        output / folder_list["file_name"],
+        root_folder,
     )
+    root_folder.mkdir(parents=True, exist_ok=True)
 
     if not quiet:
         print("Building directory structure completed")
