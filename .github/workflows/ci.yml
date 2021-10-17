@@ -95,6 +95,12 @@ jobs:
         gdown https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks -O $output --quiet --folder
         sudo apt install tree
         test "$(tree $output | tail -1)" = '6 directories, 6 files'
+        actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort  | md5sum | awk '{print $1}')
+        echo $actual_hash
+        test $actual_hash = 9d9f7949b5d3320f0bf34abb11f169a9
+        # check if both dirs are empty
+        test $(ls -A $output//gdown_folder_test/directory-0) 0
+        test $(ls -A $output/gdown_folder_test/directory-1/directory-1-1) 0
         rm -rf $output
     
     - name: Try to download a folder with a file count more than the limit from Google Drive, without remaining ok
@@ -112,6 +118,9 @@ jobs:
         gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder --remaining-ok
         sudo apt install tree
         test "$(tree $output | tail -1)" = '1 directory, 50 files'
+        actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort  | md5sum | awk '{print $1}')
+        echo $actual_hash
+        test $actual_hash = b0e45acb8d9c7d9200ce8fe38896c790
         rm -rf $output
     
 
