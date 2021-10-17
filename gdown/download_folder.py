@@ -36,7 +36,9 @@ def get_folder_list(folder, quiet=False, use_cookies=True, remaining_ok=False):
     use_cookies: bool, optional
         Flag to use cookies. Default is True.
     remaining_ok: bool, optional
-        Flag that ensures that is ok to let some file to not be downloaded, since there is a limitation of how many items gdown can download, default is False.
+        Flag that ensures that is ok to let some file to not be downloaded,
+        since there is a limitation of how many items gdown can download,
+        default is False.
 
     Returns
     -------
@@ -127,16 +129,20 @@ def get_folder_list(folder, quiet=False, use_cookies=True, remaining_ok=False):
             if not return_code:
                 return return_code, None
             folder_list["file_contents"].append(folder_structure)
-    if (
-        not remaining_ok
-        and len(folder_list["file_contents"]) == MAX_NUMBER_FILES
-    ):
-        raise RuntimeError(
-            "The gdrive folder with url: {url} has at least {max} files, gdrive can't download more than this limit, if you are ok with this, please run again with --remaining-ok flag.".format(
-                url=folder,
-                max=MAX_NUMBER_FILES,
-            )
+    has_at_least_max_files = (
+        len(folder_list["file_contents"]) == MAX_NUMBER_FILES
+    )
+    if not remaining_ok and has_at_least_max_files:
+        err_msg = " ".join(
+            [
+                "The gdrive folder with url: {url}".format(url=folder),
+                "has at least {max} files,".format(max=MAX_NUMBER_FILES),
+                "gdrive can't download more than this limit,",
+                "if you are ok with this,",
+                "please run again with --remaining-ok flag.",
+            ]
         )
+        raise RuntimeError(err_msg)
     return return_code, folder_list
 
 
