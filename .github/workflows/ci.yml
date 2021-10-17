@@ -100,13 +100,13 @@ jobs:
     - name: Try to download a folder with a file count more than the limit from Google Drive, without remaining ok
       run: |
         output=/tmp/folder-limit
+        set +e
         gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder
-        retcode = $?
-        if [ $retcode -eq 0 ]; then
-          echo "expected command to fail"
-          exit -1
-        fi
-    - name: Download folder from Google Drive
+        retcode=$?
+        set -e
+        test retcode != 0
+    
+    - name: Download a folder with a file count more than the limit from Google Drive
       run: |
         output=/tmp/folder-limit
         gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder --remaining-ok
