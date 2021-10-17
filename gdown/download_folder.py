@@ -20,7 +20,10 @@ folder_type = "application/vnd.google-apps.folder"
 string_regex = re.compile(r"'((?:[^'\\]|\\.)*)'")
 
 
-def get_folder_list(folder, quiet=False, use_cookies=True):
+MAX_NUMBER_FILES = 50
+
+
+def get_folder_list(folder, quiet=False, use_cookies=True, remaining_ok=False):
     """Get folder structure of Google Drive folder URL.
 
     Parameters
@@ -32,6 +35,8 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
         Suppress terminal output.
     use_cookies: bool, optional
         Flag to use cookies. Default is True.
+    remaining_ok: bool, optional
+        Flag that ensures that is ok to let some file to not be downloaded, since there is a limitation of how many items gdown can download, default is False.
 
     Returns
     -------
@@ -122,6 +127,16 @@ def get_folder_list(folder, quiet=False, use_cookies=True):
             if not return_code:
                 return return_code, None
             folder_list["file_contents"].append(folder_structure)
+    if (
+        not remaining_ok
+        and len(folder_list["file_contents"]) == MAX_NUMBER_FILES
+    ):
+        raise RuntimeError(
+            "The gdrive folder with url: {url} has at least {max} files, gdrive can't download more than this limit, if you are ok with this, please run again with --remaining-ok flag.".format(
+                url=folder,
+                max=MAX_NUMBER_FILES,
+            )
+        )
     return return_code, folder_list
 
 
@@ -158,7 +173,13 @@ def get_directory_structure(directory, previous_path):
 
 
 def download_folder(
-    folder, output=None, quiet=False, proxy=None, speed=None, use_cookies=True
+    folder,
+    output=None,
+    quiet=False,
+    proxy=None,
+    speed=None,
+    use_cookies=True,
+    remaining_ok=False,
 ):
     """Downloads entire folder from URL.
 
@@ -199,6 +220,7 @@ def download_folder(
         folder,
         quiet=quiet,
         use_cookies=False,
+        remaining_ok=remaining_ok,
     )
 
     if not return_code:

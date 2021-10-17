@@ -8,7 +8,7 @@ import pkg_resources
 import six
 
 from .download import download
-from .download_folder import download_folder
+from .download_folder import MAX_NUMBER_FILES, download_folder
 
 distribution = pkg_resources.get_distribution("gdown")
 
@@ -103,7 +103,16 @@ def main():
     parser.add_argument(
         "--folder",
         action="store_true",
-        help="download entire folder instead of a single file",
+        help="download entire folder instead of a single file (max {max} files per folder)".format(
+            max=MAX_NUMBER_FILES
+        ),
+    )
+    parser.add_argument(
+        "--remaining-ok",
+        action="store_true",
+        help="(folder only) asserts that is ok to download max {max} files per folder.".format(
+            max=MAX_NUMBER_FILES
+        ),
     )
 
     args = parser.parse_args()
@@ -135,6 +144,7 @@ def main():
             proxy=args.proxy,
             speed=args.speed,
             use_cookies=not args.no_cookies,
+            remaining_ok=args.remaining_ok,
         )
         return
         
