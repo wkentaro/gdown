@@ -58,43 +58,25 @@ class GoogleDriveFile(object):
         )
 
 
-def download_and_parse_google_drive_link(
-    folder,
-    quiet=False,
-    use_cookies=True,
-    remaining_ok=False,
-):
-    """Get folder structure of Google Drive folder URL.
+def parse_google_drive_file(folder, content, use_cookies=True):
+    """Extracts information about the current page file and its children
 
     Parameters
     ----------
-    url: str
+    folder: str
         URL of the Google Drive folder.
         Must be of the format 'https://drive.google.com/drive/folders/{url}'.
-    quiet: bool, optional
-        Suppress terminal output.
-    use_cookies: bool, optional
-        Flag to use cookies. Default is True.
-    remaining_ok: bool, optional
-        Flag that ensures that is ok to let some file to not be downloaded,
-        since there is a limitation of how many items gdown can download,
-        default is False.
+    content: str
+        Google Drive's raw string
 
     Returns
     -------
-    return_code: bool
-        Returns False if the download completed unsuccessfully.
-        May be due to invalid URLs, permission errors, rate limits, etc.
     gdrive_file: GoogleDriveFile
-        Returns the folder structure of the Google Drive folder.
+        Current GoogleDriveFile, with empty children
+    id_name_type_iter: Iterator
+        Tuple iterator of each children id, name, type
     """
-    return_code = True
-
-    folder_page = client.get(folder)
-
-    if folder_page.status_code != 200:
-        return False, None
-    folder_soup = BeautifulSoup(folder_page.text, features="html.parser")
+    folder_soup = BeautifulSoup(content, features="html.parser")
 
     if not use_cookies:
         client.cookies.clear()
@@ -132,6 +114,51 @@ def download_and_parse_google_drive_link(
     )
 
     id_name_type_iter = ((e[0], e[2], e[3]) for e in folder_contents)
+
+    return gdrive_file, id_name_type_iter
+
+
+def download_and_parse_google_drive_link(
+    folder,
+    quiet=False,
+    use_cookies=True,
+    remaining_ok=False,
+):
+    """Get folder structure of Google Drive folder URL.
+
+    Parameters
+    ----------
+    folder: str
+        URL of the Google Drive folder.
+        Must be of the format 'https://drive.google.com/drive/folders/{url}'.
+    quiet: bool, optional
+        Suppress terminal output.
+    use_cookies: bool, optional
+        Flag to use cookies. Default is True.
+    remaining_ok: bool, optional
+        Flag that ensures that is ok to let some file to not be downloaded,
+        since there is a limitation of how many items gdown can download,
+        default is False.
+
+    Returns
+    -------
+    return_code: bool
+        Returns False if the download completed unsuccessfully.
+        May be due to invalid URLs, permission errors, rate limits, etc.
+    gdrive_file: GoogleDriveFile
+        Returns the folder structure of the Google Drive folder.
+    """
+    return_code = True
+
+    folder_page = client.get(folder)
+
+    if folder_page.status_code != 200:
+        return False, None
+
+    gdrive_file, id_name_type_iter = parse_google_drive_file(
+        folder,
+        folder_page.text,
+    )
 
     for child_id, child_name, child_type in id_name_type_iter:
         if child_type != folder_type:
