@@ -25,6 +25,7 @@
 Download a large file from Google Drive.  
 If you use curl/wget, it fails with a large file because of
 the security warning from Google Drive.
+Supports downloading from Google Drive folders (max 50 files per folder).
 
 
 ## Installation
