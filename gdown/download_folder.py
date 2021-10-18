@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-from builtins import bytes
 from itertools import islice
 import json
 import os
@@ -105,7 +104,7 @@ def parse_google_drive_file(folder, content, use_cookies=True):
         raise RuntimeError("Didn't found _DRIVE_ivd script tag")
 
     # decodes the array and evaluates it as a python array
-    decoded = bytes(encoded_data, "utf-8").decode("unicode_escape")
+    decoded = encoded_data.encode("utf-8").decode("unicode_escape")
     folder_arr = json.loads(decoded)
 
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
