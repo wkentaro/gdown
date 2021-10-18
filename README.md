@@ -67,7 +67,7 @@ $ # --fuzzy option also works with Microsoft Powerpoint files
 $ gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing&ouid=117512221203072002113&rtpof=true&sd=true"
 
 $ # a folder
-$ gdown https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj -O /temp/folder --folder
+$ gdown https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj -O /tmp/folder --folder
 
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
