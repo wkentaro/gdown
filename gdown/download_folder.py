@@ -306,12 +306,11 @@ def download_folder(
         print("Retrieving folder list completed", file=sys.stderr)
         print("Building directory structure", file=sys.stderr)
     if output is None:
-        output = os.getcwd()
+        output = os.getcwd() + osp.sep
+    if output.endswith(osp.sep):
+        root_folder = osp.join(output, gdrive_file.name)
     else:
-        if output.endswith(osp.sep):
-            root_folder = osp.join(output, gdrive_file.name)
-        else:
-            root_folder = output
+        root_folder = output
     directory_structure = get_directory_structure(gdrive_file, root_folder)
     if not osp.exists(root_folder):
         os.makedirs(root_folder)
