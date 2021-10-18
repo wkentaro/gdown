@@ -130,7 +130,7 @@ def main():
         id = None
 
     if args.folder:
-        retcode = download_folder(
+        filenames = download_folder(
             url=url,
             id=id,
             output=args.output,
@@ -140,8 +140,7 @@ def main():
             use_cookies=not args.no_cookies,
             remaining_ok=args.remaining_ok,
         )
-
-        sys.exit(retcode)
+        success = filenames is not None
     else:
         filename = download(
             url=url,
@@ -155,9 +154,10 @@ def main():
             fuzzy=args.fuzzy,
             resume=args.continue_,
         )
+        success = filename is not None
 
-        if filename is None:
-            sys.exit(1)
+    if not success:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

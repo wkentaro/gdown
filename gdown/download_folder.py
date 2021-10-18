@@ -275,9 +275,8 @@ def download_folder(
 
     Returns
     -------
-    return_code: bool
-        Returns False if the download completed unsuccessfully.
-        May be due to invalid URLs, permission errors, rate limits, etc.
+    filenames: list of str
+        List of files downloaded, or None if failed.
 
     Example
     -------
@@ -315,13 +314,14 @@ def download_folder(
 
     if not quiet:
         print("Building directory structure completed")
+    filenames = []
     for file_id, file_path in directory_structure:
         if file_id is None:  # folder
             if not osp.exists(file_path):
                 os.makedirs(file_path)
             continue
 
-        return_code = download(
+        filename = download(
             files_url + file_id,
             output=str(file_path),
             quiet=quiet,
@@ -330,10 +330,11 @@ def download_folder(
             use_cookies=use_cookies,
         )
 
-        if not return_code:
+        if filename is None:
             if not quiet:
                 print("Download ended unsuccessfully", file=sys.stderr)
-            return return_code
-    if return_code and not quiet:
+            return
+        filenames.append(filename)
+    if not quiet:
         print("Download completed", file=sys.stderr)
-    return return_code
+    return filenames
