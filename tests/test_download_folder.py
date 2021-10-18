@@ -1,15 +1,15 @@
-import sys
+import os.path as osp
 
-from gdown import parse_google_drive_file
+from gdown.download_folder import parse_google_drive_file
 
-if sys.version_info.major < 3:
-    from pathlib2 import Path
-else:
-    from pathlib import Path
+
+here = osp.dirname(osp.abspath(__file__))
 
 
 def test_valid_page():
-    content = Path("tests/data/folder-page-sample.html").read_text()
+    html_file = osp.join(here, "data/folder-page-sample.html")
+    with open(html_file) as f:
+        content = f.read()
     folder = "".join(
         [
             "https://drive.google.com",
