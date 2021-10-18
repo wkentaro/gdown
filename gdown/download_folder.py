@@ -1,19 +1,19 @@
 from __future__ import print_function
 
-from .download import download
-from bs4 import BeautifulSoup
-
 from builtins import bytes
 from itertools import islice
 import json
+import os
+import os.path as osp
 import re
-import requests
 import sys
 
-if sys.version_info.major < 3:
-    from pathlib2 import Path
-else:
-    from pathlib import Path
+from bs4 import BeautifulSoup
+import requests
+
+from .download import download
+
+
 client = requests.session()
 
 folders_url = "https://drive.google.com/drive/folders/"
@@ -218,7 +218,7 @@ def get_directory_structure(gdrive_file, previous_path):
     ----------
     gdrive_file: GoogleDriveFile
         Google Drive folder structure.
-    previous_path: pathlib.Path
+    previous_path: str
         Path containing the parent's file path.
 
     Returns
@@ -229,11 +229,17 @@ def get_directory_structure(gdrive_file, previous_path):
     directory_structure = []
     for file in gdrive_file.children:
         if file.is_folder():
-            directory_structure.append((None, previous_path / file.name))
-            for i in get_directory_structure(file, previous_path / file.name):
+            directory_structure.append(
+                (None, osp.join(previous_path, file.name))
+            )
+            for i in get_directory_structure(
+                file, osp.join(previous_path, file.name)
+            ):
                 directory_structure.append(i)
         elif not file.children:
-            directory_structure.append((file.id, previous_path / file.name))
+            directory_structure.append(
+                (file.id, osp.join(previous_path, file.name))
+            )
     return directory_structure
 
 
@@ -302,12 +308,11 @@ def download_folder(
         print("Retrieving folder list completed", file=sys.stderr)
         print("Building directory structure", file=sys.stderr)
     if output is None:
-        output = Path.cwd()
-    else:
-        output = Path(output)
-    root_folder = output / gdrive_file.name
+        output = os.getcwd()
+    root_folder = osp.join(output, gdrive_file.name)
     directory_structure = get_directory_structure(gdrive_file, root_folder)
-    root_folder.mkdir(parents=True, exist_ok=True)
+    if not osp.exists(root_folder):
+        os.makedirs(root_folder)
 
     if not quiet:
         print("Building directory structure completed")
