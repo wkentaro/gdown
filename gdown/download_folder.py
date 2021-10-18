@@ -317,7 +317,8 @@ def download_folder(
         print("Building directory structure completed")
     for file_id, file_path in directory_structure:
         if file_id is None:  # folder
-            file_path.mkdir(parents=True, exist_ok=True)
+            if not osp.exists(file_path):
+                os.makedirs(file_path)
             continue
 
         return_code = download(
