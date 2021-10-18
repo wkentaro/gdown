@@ -68,7 +68,7 @@ def main():
     parser.add_argument(
         "--fuzzy",
         action="store_true",
-        help="extract Google Drive's file ID",
+        help="(fild only) extract Google Drive's file ID",
     )
     parser.add_argument(
         "--id",
@@ -99,27 +99,19 @@ def main():
         "-c",
         dest="continue_",
         action="store_true",
-        help="resume getting a partially-downloaded file",
+        help="(file only) resume getting a partially-downloaded file",
     )
     parser.add_argument(
         "--folder",
         action="store_true",
-        help=" ".join(
-            [
-                "download entire folder instead of a single file",
-                "(max {max} files per folder)".format(max=MAX_NUMBER_FILES),
-            ]
-        ),
+        help="download entire folder instead of a single file "
+        "(max {max} files per folder)".format(max=MAX_NUMBER_FILES),
     )
     parser.add_argument(
         "--remaining-ok",
         action="store_true",
-        help=" ".join(
-            [
-                "(folder only) asserts that is ok to download max",
-                "{max} files per folder.".format(max=MAX_NUMBER_FILES),
-            ]
-        ),
+        help="(folder only) asserts that is ok to download max "
+        "{max} files per folder.".format(max=MAX_NUMBER_FILES),
     )
 
     args = parser.parse_args()
@@ -130,13 +122,6 @@ def main():
         else:
             args.output = sys.stdout
 
-    if args.folder:
-        main_download_folder(args)
-    else:
-        main_download_single_file(args)
-
-
-def main_download_single_file(args):
     if args.id:
         url = None
         id = args.url_or_id
@@ -144,37 +129,35 @@ def main_download_single_file(args):
         url = args.url_or_id
         id = None
 
-    filename = download(
-        url=url,
-        output=args.output,
-        quiet=args.quiet,
-        proxy=args.proxy,
-        speed=args.speed,
-        use_cookies=not args.no_cookies,
-        verify=not args.no_check_certificate,
-        id=id,
-        fuzzy=args.fuzzy,
-        resume=args.continue_,
-    )
+    if args.folder:
+        retcode = download_folder(
+            url=url,
+            id=id,
+            output=args.output,
+            quiet=args.quiet,
+            proxy=args.proxy,
+            speed=args.speed,
+            use_cookies=not args.no_cookies,
+            remaining_ok=args.remaining_ok,
+        )
 
-    if filename is None:
-        sys.exit(1)
-
-
-def main_download_folder(args):
-    if args.id:
-        url = "https://drive.google.com/folders/{id}".format(id=args.url_or_id)
+        sys.exit(retcode)
     else:
-        url = args.url_or_id
-    download_folder(
-        url,
-        output=args.output,
-        quiet=args.quiet,
-        proxy=args.proxy,
-        speed=args.speed,
-        use_cookies=not args.no_cookies,
-        remaining_ok=args.remaining_ok,
-    )
+        filename = download(
+            url=url,
+            output=args.output,
+            quiet=args.quiet,
+            proxy=args.proxy,
+            speed=args.speed,
+            use_cookies=not args.no_cookies,
+            verify=not args.no_check_certificate,
+            id=id,
+            fuzzy=args.fuzzy,
+            resume=args.continue_,
+        )
+
+        if filename is None:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
