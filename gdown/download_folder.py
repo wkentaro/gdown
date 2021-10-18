@@ -235,7 +235,8 @@ def get_directory_structure(gdrive_file, previous_path):
 
 
 def download_folder(
-    folder,
+    url=None,
+    id=None,
     output=None,
     quiet=False,
     proxy=None,
@@ -250,6 +251,8 @@ def download_folder(
     url: str
         URL of the Google Drive folder.
         Must be of the format 'https://drive.google.com/drive/folders/{url}'.
+    id: str
+        Google Drive's folder ID.
     output: str, optional
         String containing the path of the output folder.
         Defaults to current working directory.
@@ -276,12 +279,17 @@ def download_folder(
         use_cookies=True
     )
     """
+    if not (id is None) ^ (url is None):
+        raise ValueError("Either url or id has to be specified")
+    if id is not None:
+        url = "https://drive.google.com/drive/folders/{id}".format(id=id)
+
     if not quiet:
         print("Retrieving folder list")
     return_code, gdrive_file = download_and_parse_google_drive_link(
-        folder,
+        url,
         quiet=quiet,
-        use_cookies=False,
+        use_cookies=use_cookies,
         remaining_ok=remaining_ok,
     )
 
