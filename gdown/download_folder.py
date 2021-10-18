@@ -6,11 +6,13 @@ import os
 import os.path as osp
 import re
 import sys
+import textwrap
 
 from bs4 import BeautifulSoup
 import requests
 
 from .download import download
+from .download import indent_func
 
 
 client = requests.session()
@@ -101,7 +103,11 @@ def parse_google_drive_file(folder, content, use_cookies=True):
             break
 
     if encoded_data is None:
-        raise RuntimeError("Didn't found _DRIVE_ivd script tag")
+        raise RuntimeError(
+            "Cannot retrieve the folder information from the link. "
+            "You may need to change the permission to "
+            "'Anyone with the link'."
+        )
 
     # decodes the array and evaluates it as a python array
     decoded = encoded_data.encode("utf-8").decode("unicode_escape")
@@ -293,12 +299,19 @@ def download_folder(
 
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)
-    return_code, gdrive_file = download_and_parse_google_drive_link(
-        url,
-        quiet=quiet,
-        use_cookies=use_cookies,
-        remaining_ok=remaining_ok,
-    )
+    try:
+        return_code, gdrive_file = download_and_parse_google_drive_link(
+            url,
+            quiet=quiet,
+            use_cookies=use_cookies,
+            remaining_ok=remaining_ok,
+        )
+    except RuntimeError as e:
+        print("Failed to retrieve folder contents:", file=sys.stderr)
+        error = "\n".join(textwrap.wrap(str(e)))
+        error = indent_func(error, "\t")
+        print("\n", error, "\n", file=sys.stderr)
+        return
 
     if not return_code:
         return return_code
