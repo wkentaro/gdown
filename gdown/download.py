@@ -96,7 +96,7 @@ def download(
     use_cookies: bool
         Flag to use cookies. Default is True.
     verify: bool or string
-        Either a bool, in which case it controls whether the server’s TLS
+        Either a bool, in which case it controls whether the server's TLS
         certificate is verified, or a string, in which case it must be a path
         to a CA bundle to use. Default is True.
     id: str
