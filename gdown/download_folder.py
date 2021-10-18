@@ -1,5 +1,8 @@
+from __future__ import print_function
+
 from .download import download
 from bs4 import BeautifulSoup
+
 from builtins import bytes
 from itertools import islice
 import json
@@ -285,7 +288,7 @@ def download_folder(
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
 
     if not quiet:
-        print("Retrieving folder list")
+        print("Retrieving folder list", file=sys.stderr)
     return_code, gdrive_file = download_and_parse_google_drive_link(
         url,
         quiet=quiet,
@@ -296,8 +299,8 @@ def download_folder(
     if not return_code:
         return return_code
     if not quiet:
-        print("Retrieving folder list completed")
-        print("Building directory structure")
+        print("Retrieving folder list completed", file=sys.stderr)
+        print("Building directory structure", file=sys.stderr)
     if output is None:
         output = Path.cwd()
     else:
@@ -324,8 +327,8 @@ def download_folder(
 
         if not return_code:
             if not quiet:
-                print("Download ended unsuccessfully")
+                print("Download ended unsuccessfully", file=sys.stderr)
             return return_code
     if return_code and not quiet:
-        print("Download completed")
+        print("Download completed", file=sys.stderr)
     return return_code
