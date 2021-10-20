@@ -116,12 +116,15 @@ def parse_google_drive_file(folder, content, use_cookies=True):
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
 
     gdrive_file = GoogleDriveFile(
-        id=folder[39:],
-        name=folder_soup.title.contents[0][:-15],
+        id=folder.split("/")[-1],
+        name=" - ".join(folder_soup.title.contents[0].split(" - ")[:-1]),
         type=folder_type,
     )
 
-    id_name_type_iter = ((e[0], e[2], e[3]) for e in folder_contents)
+    id_name_type_iter = [
+        (e[0], e[2].encode("raw_unicode_escape").decode("utf-8"), e[3])
+        for e in folder_contents
+    ]
 
     return gdrive_file, id_name_type_iter
 
