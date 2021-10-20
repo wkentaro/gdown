@@ -183,7 +183,10 @@ def download(
             return
 
     if gdrive_file_id and is_gdrive_download_link:
-        m = re.search('filename="(.*)"', res.headers["Content-Disposition"])
+        content_disposition = six.moves.urllib_parse.unquote(
+            res.headers["Content-Disposition"]
+        )
+        m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
         filename_from_url = m.groups()[0]
     else:
         filename_from_url = osp.basename(url)
