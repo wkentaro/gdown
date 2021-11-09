@@ -14,6 +14,7 @@ import requests
 from .download import download
 from .download import indent
 
+from pathlib import Path
 
 client = requests.session()
 
@@ -321,15 +322,21 @@ def download_folder(
     if not quiet:
         print("Retrieving folder list completed", file=sys.stderr)
         print("Building directory structure", file=sys.stderr)
+
+    # Ensure that we are using the Path object for the output directory
     if output is None:
-        output = os.getcwd() + osp.sep
-    if output.endswith(osp.sep):
-        root_folder = osp.join(output, gdrive_file.name)
+        output = Path()
+    else:
+        output = Path(output)
+    if output.is_dir():
+        root_folder = output.joinpath(gdrive_file.name)
     else:
         root_folder = output
-    directory_structure = get_directory_structure(gdrive_file, root_folder)
-    if not osp.exists(root_folder):
-        os.makedirs(root_folder)
+
+    directory_structure = get_directory_structure(
+        gdrive_file, str(root_folder.absolute())
+    )
+    root_folder.mkdir(parents=True, exist_ok=True)
 
     if not quiet:
         print("Building directory structure completed")
