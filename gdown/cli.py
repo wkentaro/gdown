@@ -122,11 +122,12 @@ def main():
         else:
             args.output = sys.stdout
 
-    if args.id:
+    url_or_id = args.url_or_id.lstrip()
+    if args.id or not re.match("^https?\:", url_or_id):
         url = None
-        id = args.url_or_id
+        id = url_or_id
     else:
-        url = args.url_or_id
+        url = url_or_id
         id = None
 
     if args.folder:
