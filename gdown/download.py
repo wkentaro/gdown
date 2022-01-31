@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import glob
 import json
 import os
 import os.path as osp
@@ -201,12 +200,29 @@ def download(
         output = osp.join(output, filename_from_url)
 
     if output_is_path:
-        existing_tmp_files = glob.glob("{}*".format(output))
+        existing_tmp_files = []
+        for file in os.listdir(osp.dirname(output) or "."):
+            if file.startswith(osp.basename(output)):
+                existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
+            if len(existing_tmp_files) != 1:
+                print(
+                    "There are multiple temporary files to resume:",
+                    file=sys.stderr,
+                )
+                print("\n")
+                for file in existing_tmp_files:
+                    print("\t", file, file=sys.stderr)
+                print("\n")
+                print(
+                    "Please remove them except one to resume downloading.",
+                    file=sys.stderr,
+                )
+                return
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
-            tmp_file = tempfile.mktemp(
+            _, tmp_file = tempfile.mkstemp(
                 suffix=tempfile.template,
                 prefix=osp.basename(output),
                 dir=osp.dirname(output),
