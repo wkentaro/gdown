@@ -39,9 +39,9 @@ def file_size(argv):
         if unit == "KB":
             size *= 1024
         elif unit == "MB":
-            size *= 1024 ** 2
+            size *= 1024**2
         elif unit == "GB":
-            size *= 1024 ** 3
+            size *= 1024**3
         elif unit == "B":
             pass
         return size
