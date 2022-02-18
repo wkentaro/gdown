@@ -32,6 +32,9 @@ Supports downloading from Google Drive folders (max 50 files per folder).
 
 ```bash
 pip install gdown
+
+# to upgrade
+# pip install --upgrade gdown
 ```
 
 
