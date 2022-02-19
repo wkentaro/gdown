@@ -70,7 +70,7 @@ $ # --fuzzy option also works with Microsoft Powerpoint files
 $ gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing&ouid=117512221203072002113&rtpof=true&sd=true"
 
 $ # a folder
-$ gdown https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj -O /tmp/folder --folder
+$ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
 
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
@@ -89,14 +89,14 @@ $ ls gdown-4.0.0
 ```python
 import gdown
 
-url = 'https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU'
-output = '20150428_collected_images.tgz'
+url = "https://drive.google.com/uc?id=0B9P1L--7Wd2vNm9zMTJWOGxobkU"
+output = "20150428_collected_images.tgz"
 gdown.download(url, output, quiet=False)
 
-md5 = 'fa837a88f0c40c513d975104edf3da17'
+md5 = "fa837a88f0c40c513d975104edf3da17"
 gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
 
-url = 'https://drive.google.com/drive/folders/1ivUsJd88C8rl4UpqpxIcdI5YLmRD0Mfj'
+url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
 gdown.download_folder(url, quiet=True, no_cookies=True)
 ```
 
