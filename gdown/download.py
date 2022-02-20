@@ -220,7 +220,9 @@ def download(
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
-            _, tmp_file = tempfile.mkstemp(
+            # mkstemp is preferred, but does not work on Windows
+            # https://github.com/wkentaro/gdown/issues/153
+            tmp_file = tempfile.mktemp(
                 suffix=tempfile.template,
                 prefix=osp.basename(output),
                 dir=osp.dirname(output),
