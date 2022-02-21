@@ -97,7 +97,7 @@ md5 = "fa837a88f0c40c513d975104edf3da17"
 gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
 
 url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
-gdown.download_folder(url, quiet=True, no_cookies=True)
+gdown.download_folder(url, quiet=True, use_cookies=False)
 ```
 
 
