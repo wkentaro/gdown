@@ -98,6 +98,19 @@ gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
 
 url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
 gdown.download_folder(url, quiet=True, use_cookies=False)
+
+# Download file or folder using file id
+# To get file id
+# https://drive.google.com/file/d/<FILE_ID_START>1f9WkZorEZnuQ-pApf9grP0trd3RtDvyZ<FILE_ID_END>/view?usp=sharing
+gdrive_file_id = "1f9WkZorEZnuQ-pApf9grP0trd3RtDvyZ"
+output_dir = "dir/data_file.csv"
+gdown.download(id=gdrive_file_id, output=output_dir, quiet=False) # Ensure output dir exists
+
+# To get folder id
+# https://drive.google.com/drive/folders/<FOLDER_ID_START>1cz2pcnDWAJVxj-YUDR-YKhL75BhPEZZc<FOLDER_ID_END>?usp=sharing
+gdrive_folder_id = "1cz2pcnDWAJVxj-YUDR-YKhL75BhPEZZc"
+output_dir = "dir/"
+gdown.download_folder(id=gdrive_file_id, output=output_dir, quiet=False) # Ensure output dir exists
 ```
 
 
