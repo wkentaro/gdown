@@ -34,7 +34,7 @@ Supports downloading from Google Drive folders (max 50 files per folder).
 pip install gdown
 
 # to upgrade
-# pip install --upgrade gdown
+pip install --upgrade gdown
 ```
 
 
@@ -52,9 +52,11 @@ usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id] [--proxy PROXY]
 
 $ # a large file (~500MB)
 $ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
-$ # gdown 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 $ md5sum fcn8s_from_caffe.npz
 256c2a8235c1c65e62e48d3284fbd384
+
+$ # same as the above but with the file ID
+$ gdown 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 
 $ # a small file
 $ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
@@ -81,7 +83,8 @@ $ cat ip.json
 
 $ # write stdout and pipe to extract
 $ gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - --quiet | tar zxvf -
-$ ls gdown-4.0.0
+$ ls gdown-4.0.0/
+gdown  github2pypi  LICENSE  MANIFEST.in  pyproject.toml  README.md  setup.cfg  setup.py  tests
 ```
 
 ### From Python
