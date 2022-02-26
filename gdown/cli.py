@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import re
 import sys
+import warnings
 
 import pkg_resources
 import six
@@ -73,7 +74,7 @@ def main():
     parser.add_argument(
         "--id",
         action="store_true",
-        help="flag to specify file/folder id instead of url",
+        help="[DEPRECATED] flag to specify file/folder id instead of url",
     )
     parser.add_argument(
         "--proxy",
@@ -123,11 +124,21 @@ def main():
             args.output = sys.stdout
 
     if args.id:
+        warnings.warn(
+            "Option `--id` was deprecated in version 4.3.1 "
+            "and will be removed in 5.0. You don't need to "
+            "pass it anymore to use a file ID.",
+            category=FutureWarning,
+        )
         url = None
         id = args.url_or_id
     else:
-        url = args.url_or_id
-        id = None
+        if re.match("^https?://.*", args.url_or_id):
+            url = args.url_or_id
+            id = None
+        else:
+            url = None
+            id = args.url_or_id
 
     if args.folder:
         filenames = download_folder(

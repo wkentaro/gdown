@@ -85,7 +85,7 @@ jobs:
         success=0
         while IFS=, read -r file_id md5
         do
-            gdown --id $file_id -O $output --quiet || continue
+            gdown $file_id -O $output --quiet || continue
             test $(md5sum $output | awk '{print $1}') = $md5 && success=1 && break
         done < tests/data/file_ids_large.csv
         test $success = 1
