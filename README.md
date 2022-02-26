@@ -44,15 +44,15 @@ pip install gdown
 
 ```bash
 $ gdown --help
-usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id]  [--proxy PROXY]
+usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id] [--proxy PROXY]
              [--speed SPEED] [--no-cookies] [--no-check-certificate]
-             [--continue] [--folder]
+             [--continue] [--folder] [--remaining-ok]
              url_or_id
 ...
 
 $ # a large file (~500MB)
 $ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
-$ # gdown --id 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
+$ # gdown 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 $ md5sum fcn8s_from_caffe.npz
 256c2a8235c1c65e62e48d3284fbd384
 
