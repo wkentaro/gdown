@@ -117,7 +117,7 @@ def parse_google_drive_file(folder, content, use_cookies=True):
 
     gdrive_file = GoogleDriveFile(
         id=folder.split("/")[-1],
-        name=" - ".join(folder_soup.title.contents[0].split(" - ")[:-1]),
+        name=folder_soup.title.contents[0].rsplit(" – ",1)[0],
         type=folder_type,
     )
 
@@ -200,6 +200,7 @@ def download_and_parse_google_drive_link(
             folders_url + child_id,
             use_cookies=use_cookies,
             quiet=quiet,
+            remaining_ok=remaining_ok,
         )
         if not return_code:
             return return_code, None
