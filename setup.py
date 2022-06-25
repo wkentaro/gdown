@@ -9,7 +9,7 @@ from setuptools import find_packages
 from setuptools import setup
 
 
-version = "4.4.0"
+version = "4.5.0"
 
 
 if sys.argv[1] == "release":
