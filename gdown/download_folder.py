@@ -200,6 +200,7 @@ def download_and_parse_google_drive_link(
             folders_url + child_id,
             use_cookies=use_cookies,
             quiet=quiet,
+            remaining_ok=remaining_ok,
         )
         if not return_code:
             return return_code, None
