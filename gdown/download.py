@@ -185,6 +185,7 @@ def download(
         )
         m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
         filename_from_url = m.groups()[0]
+        filename_from_url = filename_from_url.replace(osp.sep, "_")
     else:
         filename_from_url = osp.basename(url)
 

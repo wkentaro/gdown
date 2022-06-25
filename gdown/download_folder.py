@@ -244,6 +244,7 @@ def get_directory_structure(gdrive_file, previous_path):
     """
     directory_structure = []
     for file in gdrive_file.children:
+        file.name = file.name.replace(osp.sep, "_")
         if file.is_folder():
             directory_structure.append(
                 (None, osp.join(previous_path, file.name))
