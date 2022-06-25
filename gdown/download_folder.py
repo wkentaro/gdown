@@ -115,9 +115,16 @@ def parse_google_drive_file(folder, content, use_cookies=True):
 
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
 
+    seps = [" - ", " – "]  # unicode dash and endash
+    for sep in seps:
+        splitted = folder_soup.title.contents[0].split(sep)
+        if len(splitted) >= 2:
+            name = sep.join(splitted[:-1])
+            break
+
     gdrive_file = GoogleDriveFile(
         id=folder.split("/")[-1],
-        name=" - ".join(folder_soup.title.contents[0].split(" - ")[:-1]),
+        name=name,
         type=folder_type,
     )
 
