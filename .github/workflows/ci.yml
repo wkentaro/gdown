@@ -112,12 +112,12 @@ jobs:
     - name: Try to download a folder with a file count more than the limit from Google Drive, without remaining ok
       run: |
         output=/tmp/folder-limit/
-        gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder && exit 1 || exit 0
+        gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O $output --quiet --folder && exit 1 || exit 0
 
     - name: Download a folder with a file count more than the limit from Google Drive
       run: |
         output=/tmp/folder-limit/
-        gdown https://drive.google.com/drive/folders/1uPuNWXOLX77I_erCv7fv0XrlmPVlsrp6 -O $output --quiet --folder --remaining-ok
+        gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O $output --quiet --folder --remaining-ok
         test "$(tree $output | tail -1)" = '1 directory, 50 files'
         actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort | md5sum | awk '{print $1}')
         echo $actual_hash
