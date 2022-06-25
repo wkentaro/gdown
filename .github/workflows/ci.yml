@@ -77,7 +77,7 @@ jobs:
     - name: Download small file from Google Drive
       run: |
         output=/tmp/spam.txt
-        gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O $output --quiet
+        gdown https://drive.google.com/uc?id=1cKSdgtWrPgvEsBGmjWALOH33taGyVXKb -O $output --quiet
         test $(cat $output) = spam
         rm -rf $output
 
@@ -101,14 +101,14 @@ jobs:
     - name: Download folder from Google Drive
       run: |
         output=/tmp/folder/
-        gdown https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks -O $output --quiet --folder
-        test "$(tree $output | tail -1)" = '6 directories, 6 files'
-        actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort | md5sum | awk '{print $1}')
-        echo $actual_hash
-        test $actual_hash = 9d9f7949b5d3320f0bf34abb11f169a9
-        # check if both dirs are empty
-        test $(ls -A $output/gdown_folder_test/directory-0) 0
-        test $(ls -A $output/gdown_folder_test/directory-1/directory-1-1) 0
+        success=0
+        while IFS=, read -r folder_id md5
+        do
+          gdown $folder_id -O $output --quiet --folder || continue
+          actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort | md5sum | awk '{print $1}')
+          test $actual_hash = $md5 || echo "$folder_id, $actual_hash" && success=1 && break
+        done < tests/data/folder_ids.csv
+        test $success = 1
         rm -rf $output
       if: matrix.python-version == env.LATEST_PYTHON_VERSION  # avoid too many access
 
@@ -122,9 +122,7 @@ jobs:
       run: |
         output=/tmp/folder-limit/
         gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O $output --quiet --folder --remaining-ok
-        test "$(tree $output | tail -1)" = '1 directory, 50 files'
         actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort | md5sum | awk '{print $1}')
-        echo $actual_hash
         test $actual_hash = b0e45acb8d9c7d9200ce8fe38896c790
         rm -rf $output
       if: matrix.python-version == env.LATEST_PYTHON_VERSION  # avoid too many access
