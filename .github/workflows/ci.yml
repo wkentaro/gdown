@@ -108,11 +108,13 @@ jobs:
         test $(ls -A $output/gdown_folder_test/directory-0) 0
         test $(ls -A $output/gdown_folder_test/directory-1/directory-1-1) 0
         rm -rf $output
+      if: matrix.python-version == '3.9'  # avoid too many access
 
     - name: Try to download a folder with a file count more than the limit from Google Drive, without remaining ok
       run: |
         output=/tmp/folder-limit/
         gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O $output --quiet --folder && exit 1 || exit 0
+      if: matrix.python-version == '3.9'  # avoid too many access
 
     - name: Download a folder with a file count more than the limit from Google Drive
       run: |
@@ -123,6 +125,7 @@ jobs:
         echo $actual_hash
         test $actual_hash = b0e45acb8d9c7d9200ce8fe38896c790
         rm -rf $output
+      if: matrix.python-version == '3.9'  # avoid too many access
 
     - name: Install from dist
       run: |
