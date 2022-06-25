@@ -75,8 +75,13 @@ jobs:
     - name: Download small file from Google Drive
       run: |
         output=/tmp/spam.txt
-        gdown https://drive.google.com/uc?id=1cKSdgtWrPgvEsBGmjWALOH33taGyVXKb -O $output --quiet
-        test $(cat $output) = spam
+        success=0
+        while read -r file_id
+        do
+          gdown $file_id -O $output --quiet || continue
+          test $(cat $output) = spam && success=1 && break
+        done < tests/data/file_ids.csv
+        test $success = 1
         rm -rf $output
 
     - name: Download large file from Google Drive
