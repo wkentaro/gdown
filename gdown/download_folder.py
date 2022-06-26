@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 from __future__ import print_function
 
 from itertools import islice
@@ -351,7 +353,7 @@ def download_folder(
 
         filename = download(
             files_url + file_id,
-            output=str(file_path),
+            output=file_path,
             quiet=quiet,
             proxy=proxy,
             speed=speed,
