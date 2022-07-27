@@ -117,10 +117,10 @@ def parse_google_drive_file(folder, content, use_cookies=True):
     folder_arr = json.loads(decoded)
 
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
+
     seps = [" - ", " – "]  # unicode dash and endash
     for sep in seps:
         splitted = unicodedata.normalize("NFKD", folder_soup.title.contents[0]).split(sep)
-        print(f"SPLITTED: {splitted}")
         if len(splitted) >= 2:
             name = sep.join(splitted[:-1])
             break
