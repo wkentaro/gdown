@@ -107,6 +107,17 @@ url = "https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ"
 output = "fcn8s_from_caffe.npz"
 gdown.download(url, output, quiet=False)
 
+
+# downloa file with user cookies
+cookies = {
+ 	"__Secure-1PAPISID": "XXXXXXXX",
+ 	"__Secure-1PSID": "XXXXXXX",
+ 	...
+ 	"SSID": "XXXXXXXXX"
+}
+id = "15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
+gdown.download_folder(id=id, cookies = cookies)
+
 # same as the above, but with the file ID
 id = "0B9P1L--7Wd2vNm9zMTJWOGxobkU"
 gdown.download(id=id, output=output, quiet=False)
@@ -127,6 +138,9 @@ gdown.download_folder(url, quiet=True, use_cookies=False)
 id = "15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
 gdown.download_folder(id=id, quiet=True, use_cookies=False)
 ```
+
+
+
 
 
 ## License
