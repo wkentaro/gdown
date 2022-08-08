@@ -79,7 +79,7 @@ $ # my_cookies.txt
 $ # {
 $ # 		"__Secure-1PAPISID": "XXXXXXXX",
 $ # 		"__Secure-1PSID": "XXXXXXX",
-$ #      ...
+$ # 		...
 $ # 		"SSID": "XXXXXXXXX"
 $ # }
 $ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --cookies=my_cookies.txt
