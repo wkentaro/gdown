@@ -96,6 +96,12 @@ def main():
         help="don't check the server's TLS certificate",
     )
     parser.add_argument(
+        "--cookies",
+        action="store",
+        const=None,
+        help="read the cookies from file",
+    )
+    parser.add_argument(
         "--continue",
         "-c",
         dest="continue_",
@@ -149,6 +155,7 @@ def main():
             proxy=args.proxy,
             speed=args.speed,
             use_cookies=not args.no_cookies,
+            cookies=args.cookies,
             remaining_ok=args.remaining_ok,
         )
         success = filenames is not None
@@ -160,6 +167,7 @@ def main():
             proxy=args.proxy,
             speed=args.speed,
             use_cookies=not args.no_cookies,
+            cookies=args.cookies,
             verify=not args.no_check_certificate,
             id=id,
             fuzzy=args.fuzzy,

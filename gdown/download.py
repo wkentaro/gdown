@@ -13,7 +13,7 @@ import time
 import requests
 import six
 import tqdm
-
+from ast import literal_eval
 from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
@@ -72,6 +72,7 @@ def download(
     id=None,
     fuzzy=False,
     resume=False,
+    cookies=None,
 ):
     """Download file from URL.
 
@@ -89,6 +90,8 @@ def download(
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
     use_cookies: bool
         Flag to use cookies. Default is True.
+    cookies: str or dictionary
+        the text cookies file as the python dictionary or python dictionary
     verify: bool or string
         Either a bool, in which case it controls whether the server's TLS
         certificate is verified, or a string, in which case it must be a path
@@ -109,10 +112,29 @@ def download(
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is not None:
-        url = "https://drive.google.com/uc?id={id}".format(id=id)
+        url = "https://drive.google.com/uc?export=download&id={id}".format(id=id)
 
     url_origin = url
     sess = requests.session()
+
+
+    # Load cookies
+    if isinstance(cookies, dict):
+        sess.cookies.update(cookies)
+        use_cookies = False
+    elif isinstance(cookies, str):
+        try:
+            with open(cookies, 'r') as r:
+                cookies_str = r.read()
+                cookies = literal_eval(cookies_str)
+                sess.cookies.update(cookies)
+        except Exception as e:
+            print("Cannot parse [{}] as a cookies file:".format(cookies))
+            error = "\n".join(textwrap.wrap(str(e)))
+            error = indent(error, "\t")
+            print("\n", error, "\n", file=sys.stderr)
+            return
+        use_cookies = False
 
     # Load cookies
     cache_dir = osp.join(home, ".cache", "gdown")
@@ -125,9 +147,13 @@ def download(
         for k, v in cookies:
             sess.cookies[k] = v
 
-    if proxy is not None:
-        sess.proxies = {"http": proxy, "https": proxy}
-        print("Using proxy:", proxy, file=sys.stderr)
+    if isinstance(proxy, dict):
+        sess.proxies.update(proxy)
+        print("Using proxy :", sess.proxies)
+    else:
+        if proxy is not None:
+            sess.proxies = {"http": proxy, "https": proxy}
+            print("Using proxy:", sess.proxies, file=sys.stderr)
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
 
@@ -140,6 +166,7 @@ def download(
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA
     }
+
 
     while True:
         try:

@@ -74,6 +74,15 @@ $ gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsI
 $ # a folder
 $ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
 
+$ # using a cookie files
+$ # my_cookies.txt
+$ # {
+$ # 		"__Secure-1PAPISID": "XXXXXXXX",
+$ # 		"__Secure-1PSID": "XXXXXXX",
+$ # 		"SSID": "XXXXXXXXX"
+$ # }
+$ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --cookies=my_cookies.txt
+
 $ # as an alternative to curl/wget
 $ gdown https://httpbin.org/ip -O ip.json
 $ cat ip.json
