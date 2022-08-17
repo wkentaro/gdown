@@ -117,12 +117,23 @@ def parse_google_drive_file(folder, content, use_cookies=True):
 
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
 
+    if folder_soup.title is None:
+        raise RuntimeError("Cannot retrieve the title from the page")
+
+    title = folder_soup.title.contents[0]
+    # Managing Latin1 (ISO 8859-1) encoding
+    title = title.replace(u"\xa0", u" ")
+
     seps = [" - ", " – "]  # unicode dash and endash
+    name = None
     for sep in seps:
-        splitted = folder_soup.title.contents[0].split(sep)
+        splitted = title.split(sep)
         if len(splitted) >= 2:
             name = sep.join(splitted[:-1])
             break
+
+    if name is None:
+        raise RuntimeError("Cannot recover the folder name")
 
     gdrive_file = GoogleDriveFile(
         id=folder.split("/")[-1],
