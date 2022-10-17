@@ -1,30 +1,24 @@
 from __future__ import print_function
 
 import argparse
+import os.path
 import re
 import sys
 import warnings
 
-import pkg_resources
 import six
 
+from . import __version__
 from .download import download
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
 
-distribution = pkg_resources.get_distribution("gdown")
-
 
 class _ShowVersionAction(argparse.Action):
-    def __init__(self, *args, **kwargs):
-        kwargs["nargs"] = 0
-        self.version = kwargs.pop("version")
-        super(self.__class__, self).__init__(*args, **kwargs)
-
     def __call__(self, parser, namespace, values, option_string=None):
         print(
             "gdown {ver} at {pos}".format(
-                ver=self.version, pos=distribution.location
+                ver=__version__, pos=os.path.dirname(os.path.dirname(__file__))
             )
         )
         parser.exit()
@@ -55,9 +49,9 @@ def main():
     parser.add_argument(
         "-V",
         "--version",
-        version=distribution.version,
         action=_ShowVersionAction,
         help="display version",
+        nargs=0,
     )
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
