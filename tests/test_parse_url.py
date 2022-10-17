@@ -1,5 +1,6 @@
-from gdown.parse_url import parse_url
 import pytest
+
+from gdown.parse_url import parse_url
 
 
 def test_parse_url():

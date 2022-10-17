@@ -2,20 +2,19 @@
 
 from __future__ import print_function
 
-from itertools import islice
 import json
 import os
 import os.path as osp
 import re
 import sys
 import textwrap
+from itertools import islice
 
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 
 from .download import download
 from .download import indent
-
 
 client = requests.session()
 

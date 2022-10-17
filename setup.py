@@ -8,7 +8,6 @@ import sys
 from setuptools import find_packages
 from setuptools import setup
 
-
 version = "4.5.1"
 
 

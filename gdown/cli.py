@@ -9,8 +9,8 @@ import pkg_resources
 import six
 
 from .download import download
-from .download_folder import download_folder
 from .download_folder import MAX_NUMBER_FILES
+from .download_folder import download_folder
 
 distribution = pkg_resources.get_distribution("gdown")
 
