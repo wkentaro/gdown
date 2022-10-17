@@ -17,18 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Cache cache directory
-      uses: actions/cache@v1
-      env:
-        cache-name: cache-cache-dir
-      with:
-        path: ~/.cache
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.python-version }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
