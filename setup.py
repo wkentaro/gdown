@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import distutils.spawn
+import re
 import shlex
 import subprocess
 import sys
@@ -8,7 +9,20 @@ import sys
 from setuptools import find_packages
 from setuptools import setup
 
-version = "4.5.1"
+
+def get_version():
+    filename = "gdown/__init__.py"
+    with open(filename) as f:
+        match = re.search(
+            r"""^__version__ = ['"]([^'"]*)['"]""", f.read(), re.M
+        )
+    if not match:
+        raise RuntimeError("{} doesn't contain __version__".format(filename))
+    version = match.groups()[0]
+    return version
+
+
+version = get_version()
 
 
 if sys.argv[1] == "release":
