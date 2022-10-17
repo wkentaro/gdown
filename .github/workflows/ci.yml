@@ -33,8 +33,13 @@ jobs:
 
     - name: Flake8
       run: |
-        pip install hacking
+        pip install flake8
         flake8 .
+
+    - name: isort
+      run: |
+        pip install isort
+        isort --check .
 
     - name: Black
       run: |
