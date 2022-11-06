@@ -139,6 +139,9 @@ def parse_google_drive_file(folder, content, use_cookies=True):
 
 def download_and_parse_google_drive_link(
     folder,
+    exclude_folder,
+    exclude_file,
+    exclude_filetype,    
     quiet=False,
     use_cookies=True,
     remaining_ok=False,
@@ -187,13 +190,14 @@ def download_and_parse_google_drive_link(
                     child_id,
                     child_name,
                 )
-            gdrive_file.children.append(
-                GoogleDriveFile(
-                    id=child_id,
-                    name=child_name,
-                    type=child_type,
+            if ("*"+osp.splitext(child_name)[1] not in exclude_filetype) and (child_name not in exclude_file) and (gdrive_file.name not in exclude_folder):    
+                gdrive_file.children.append(
+                    GoogleDriveFile(
+                        id=child_id,
+                        name=child_name,
+                        type=child_type,
+                    )
                 )
-            )
             if not return_code:
                 return return_code, None
             continue
@@ -206,6 +210,9 @@ def download_and_parse_google_drive_link(
             )
         return_code, child = download_and_parse_google_drive_link(
             folders_url + child_id,
+            exclude_folder,
+            exclude_file,
+            exclude_filetype,            
             use_cookies=use_cookies,
             quiet=quiet,
             remaining_ok=remaining_ok,
@@ -262,6 +269,9 @@ def get_directory_structure(gdrive_file, previous_path):
 
 
 def download_folder(
+    exclude_folder,
+    exclude_file,
+    exclude_filetype,    
     url=None,
     id=None,
     output=None,
@@ -269,7 +279,7 @@ def download_folder(
     proxy=None,
     speed=None,
     use_cookies=True,
-    remaining_ok=False,
+    remaining_ok=False,  
 ):
     """Downloads entire folder from URL.
 
@@ -318,6 +328,9 @@ def download_folder(
             quiet=quiet,
             use_cookies=use_cookies,
             remaining_ok=remaining_ok,
+            exclude_folder=exclude_folder,
+            exclude_file=exclude_file,
+            exclude_filetype=exclude_filetype,            
         )
     except RuntimeError as e:
         print("Failed to retrieve folder contents:", file=sys.stderr)
