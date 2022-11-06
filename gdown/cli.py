@@ -57,19 +57,19 @@ def main():
         "-exclude_folder",
         nargs='+',
         default=[],
-        help="will not download the content of the specified folder, usage : -exclude_folder folder1 folder2 folder3 ...etc , --folder must be specified",
+        help="will not download the content of the specified folders, usage : -exclude_folder folder1 folder2 folder3 ...etc , --folder must be specified",
     )    
     parser.add_argument(
         "-exclude_file",
         nargs='+',
         default=[],
-        help="will not download the specified file, usage : -exclude_file file1 file2 file3 ...etc , --folder must be specified",
+        help="will not download the specified files, usage : -exclude_file file1 file2 file3 ...etc , --folder must be specified",
     )    
     parser.add_argument(
         "-exclude_filetype",
         nargs='+',
         default=[],
-        help="will not download the specified file type, usage : -exclude_filetype .type1, .type2, .type3 ...etc, --folder must be specified",
+        help="will not download the specified file types, usage : -exclude_filetype .type1, .type2, .type3 ...etc, --folder must be specified",
     )   
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
