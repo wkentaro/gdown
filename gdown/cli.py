@@ -52,7 +52,25 @@ def main():
         action=_ShowVersionAction,
         help="display version",
         nargs=0,
-    )
+    )    
+    parser.add_argument(
+        "-exclude_folder",
+        type=str,
+        default='[]',
+        help="will not download the content of the specified folder, usage : -exclude_folder='[folder1, folder2, folder3 ...etc ]', --folder must be specified",
+    )    
+    parser.add_argument(
+        "-exclude_file",
+        type=str,
+        default='[]',
+        help="will not download the specified file usage : -exclude_file='[file1, file2, file3 ...etc ]', --folder must be specified",
+    )    
+    parser.add_argument(
+        "-exclude_filetype",
+        type=str,
+        default='[]',
+        help="will not download the specified file type, usage : -exclude_filetype='[*.type1, *.type2, *.type3 ...etc ]', --folder must be specified",
+    )   
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
     )
@@ -144,6 +162,9 @@ def main():
             speed=args.speed,
             use_cookies=not args.no_cookies,
             remaining_ok=args.remaining_ok,
+            exclude_folder=args.exclude_folder,
+            exclude_file=args.exclude_file,
+            exclude_filetype=args.exclude_filetype,            
         )
         success = filenames is not None
     else:
