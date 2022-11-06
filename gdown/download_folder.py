@@ -190,7 +190,7 @@ def download_and_parse_google_drive_link(
                     child_id,
                     child_name,
                 )
-            if ("*"+osp.splitext(child_name)[1] not in exclude_filetype) and (child_name not in exclude_file) and (gdrive_file.name not in exclude_folder):    
+            if (osp.splitext(child_name)[1] not in exclude_filetype) and (child_name not in exclude_file) and (gdrive_file.name not in exclude_folder):    
                 gdrive_file.children.append(
                     GoogleDriveFile(
                         id=child_id,
