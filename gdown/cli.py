@@ -69,7 +69,7 @@ def main():
         "-exclude_filetype",
         nargs='+',
         default=[],
-        help="will not download the specified file types, usage : -exclude_filetype .type1, .type2, .type3 ...etc, --folder must be specified",
+        help="will not download the specified file types, usage : -exclude_filetype .type1 .type2 .type3 ...etc, --folder must be specified",
     )   
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
