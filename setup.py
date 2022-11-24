@@ -33,7 +33,7 @@ if sys.argv[1] == "release":
         sys.exit(1)
 
     try:
-        import build
+        import build  # NOQA
     except ImportError:
         print(
             "Please install build:\n\n\tpip install build\n", file=sys.stderr
