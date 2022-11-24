@@ -37,7 +37,7 @@ def get_url_from_gdrive_confirmation(contents):
             url = "https://docs.google.com" + m.groups()[0]
             url = url.replace("&amp;", "&")
             break
-        m = re.search('id="downloadForm" action="(.+?)"', line)
+        m = re.search('id="download-form" action="(.+?)"', line)
         if m:
             url = m.groups()[0]
             url = url.replace("&amp;", "&")
