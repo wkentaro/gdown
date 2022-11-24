@@ -32,12 +32,20 @@ if sys.argv[1] == "release":
         )
         sys.exit(1)
 
+    try:
+        import build
+    except ImportError:
+        print(
+            "Please install build:\n\n\tpip install build\n", file=sys.stderr
+        )
+        sys.exit(1)
+
     commands = [
         "git pull origin main",
         "git tag v{:s}".format(version),
         "git push origin main --tags",
-        "python setup.py sdist",
-        "twine upload dist/gdown-{:s}.tar.gz".format(version),
+        "python -m build",
+        "twine upload dist/gdown-{:s}*".format(version),
     ]
     for cmd in commands:
         subprocess.check_call(shlex.split(cmd))
