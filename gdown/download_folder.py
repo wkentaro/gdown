@@ -94,17 +94,16 @@ def _parse_google_drive_file(folder, content):
 
 
 def _download_and_parse_google_drive_link(
-    client,
+    sess,
     folder,
     quiet=False,
-    use_cookies=True,
     remaining_ok=False,
 ):
     """Get folder structure of Google Drive folder URL."""
 
     return_code = True
 
-    folder_page = client.get(folder)
+    folder_page = sess.get(folder)
 
     if folder_page.status_code != 200:
         return False, None
@@ -140,9 +139,8 @@ def _download_and_parse_google_drive_link(
                 child_name,
             )
         return_code, child = _download_and_parse_google_drive_link(
-            client,
+            sess,
             "https://drive.google.com/drive/folders/" + child_id,
-            use_cookies=use_cookies,
             quiet=quiet,
             remaining_ok=remaining_ok,
         )
@@ -226,7 +224,6 @@ def download_folder(
     gdown.download_folder(
         "https://drive.google.com/drive/folders/" +
         "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2",
-        use_cookies=True
     )
     """
     if not (id is None) ^ (url is None):
@@ -234,16 +231,26 @@ def download_folder(
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
 
-    client = requests.session()
+    sess = requests.session()
+
+    # Load cookies
+    cache_dir = osp.join(home, ".cache", "gdown")
+    if not osp.exists(cache_dir):
+        os.makedirs(cache_dir)
+    cookies_file = osp.join(cache_dir, "cookies.json")
+    if osp.exists(cookies_file) and use_cookies:
+        with open(cookies_file) as f:
+            cookies = json.load(f)
+        for k, v in cookies:
+            sess.cookies[k] = v
 
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)
     try:
         return_code, gdrive_file = _download_and_parse_google_drive_link(
-            client,
+            sess,
             url,
             quiet=quiet,
-            use_cookies=use_cookies,
             remaining_ok=remaining_ok,
         )
     except RuntimeError as e:
