@@ -16,8 +16,6 @@ from bs4 import BeautifulSoup
 from .download import download
 from .download import indent
 
-client = requests.session()
-
 
 MAX_NUMBER_FILES = 50
 
@@ -133,6 +131,7 @@ def _parse_google_drive_file(folder, content):
 
 
 def _download_and_parse_google_drive_link(
+    client,
     folder,
     quiet=False,
     use_cookies=True,
@@ -200,6 +199,7 @@ def _download_and_parse_google_drive_link(
                 child_name,
             )
         return_code, child = _download_and_parse_google_drive_link(
+            client,
             "https://drive.google.com/drive/folders/" + child_id,
             use_cookies=use_cookies,
             quiet=quiet,
@@ -305,10 +305,13 @@ def download_folder(
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
 
+    client = requests.session()
+
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)
     try:
         return_code, gdrive_file = _download_and_parse_google_drive_link(
+            client,
             url,
             quiet=quiet,
             use_cookies=use_cookies,
