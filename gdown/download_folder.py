@@ -20,8 +20,6 @@ client = requests.session()
 
 folder_type = "application/vnd.google-apps.folder"
 
-string_regex = re.compile(r"'((?:[^'\\]|\\.)*)'")
-
 
 MAX_NUMBER_FILES = 50
 
@@ -91,7 +89,9 @@ def parse_google_drive_file(folder, content, use_cookies=True):
 
         if "_DRIVE_ivd" in inner_html:
             # first js string is _DRIVE_ivd, the second one is the encoded arr
-            regex_iter = string_regex.finditer(inner_html)
+            regex_iter = re.compile(r"'((?:[^'\\]|\\.)*)'").finditer(
+                inner_html
+            )
             # get the second elem in the iter
             try:
                 encoded_data = next(islice(regex_iter, 1, None)).group(1)
