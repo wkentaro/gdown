@@ -18,7 +18,6 @@ from .download import indent
 
 client = requests.session()
 
-folders_url = "https://drive.google.com/drive/folders/"
 files_url = "https://drive.google.com/uc?id="
 folder_type = "application/vnd.google-apps.folder"
 
@@ -205,7 +204,7 @@ def download_and_parse_google_drive_link(
                 child_name,
             )
         return_code, child = download_and_parse_google_drive_link(
-            folders_url + child_id,
+            "https://drive.google.com/drive/folders/" + child_id,
             use_cookies=use_cookies,
             quiet=quiet,
             remaining_ok=remaining_ok,
