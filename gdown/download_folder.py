@@ -132,7 +132,7 @@ def _parse_google_drive_file(folder, content):
     return gdrive_file, id_name_type_iter
 
 
-def download_and_parse_google_drive_link(
+def _download_and_parse_google_drive_link(
     folder,
     quiet=False,
     use_cookies=True,
@@ -199,7 +199,7 @@ def download_and_parse_google_drive_link(
                 child_id,
                 child_name,
             )
-        return_code, child = download_and_parse_google_drive_link(
+        return_code, child = _download_and_parse_google_drive_link(
             "https://drive.google.com/drive/folders/" + child_id,
             use_cookies=use_cookies,
             quiet=quiet,
@@ -308,7 +308,7 @@ def download_folder(
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)
     try:
-        return_code, gdrive_file = download_and_parse_google_drive_link(
+        return_code, gdrive_file = _download_and_parse_google_drive_link(
             url,
             quiet=quiet,
             use_cookies=use_cookies,
