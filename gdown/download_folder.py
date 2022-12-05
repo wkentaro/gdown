@@ -34,23 +34,8 @@ class _GoogleDriveFile(object):
 
 
 def _parse_google_drive_file(folder, content):
-    """Extracts information about the current page file and its children
+    """Extracts information about the current page file and its children."""
 
-    Parameters
-    ----------
-    folder: str
-        URL of the Google Drive folder.
-        Must be of the format 'https://drive.google.com/drive/folders/{url}'.
-    content: str
-        Google Drive's raw string
-
-    Returns
-    -------
-    gdrive_file: _GoogleDriveFile
-        Current _GoogleDriveFile, with empty children
-    id_name_type_iter: Iterator
-        Tuple iterator of each children id, name, type
-    """
     folder_soup = BeautifulSoup(content, features="html.parser")
 
     # finds the script tag with window['_DRIVE_ivd']
@@ -113,30 +98,8 @@ def _download_and_parse_google_drive_link(
     use_cookies=True,
     remaining_ok=False,
 ):
-    """Get folder structure of Google Drive folder URL.
+    """Get folder structure of Google Drive folder URL."""
 
-    Parameters
-    ----------
-    folder: str
-        URL of the Google Drive folder.
-        Must be of the format 'https://drive.google.com/drive/folders/{url}'.
-    quiet: bool, optional
-        Suppress terminal output.
-    use_cookies: bool, optional
-        Flag to use cookies. Default is True.
-    remaining_ok: bool, optional
-        Flag that ensures that is ok to let some file to not be downloaded,
-        since there is a limitation of how many items gdown can download,
-        default is False.
-
-    Returns
-    -------
-    return_code: bool
-        Returns False if the download completed unsuccessfully.
-        May be due to invalid URLs, permission errors, rate limits, etc.
-    gdrive_file: _GoogleDriveFile
-        Returns the folder structure of the Google Drive folder.
-    """
     return_code = True
 
     folder_page = client.get(folder)
@@ -200,20 +163,8 @@ def _download_and_parse_google_drive_link(
 
 
 def _get_directory_structure(gdrive_file, previous_path):
-    """Converts a Google Drive folder structure into a local directory list.
+    """Converts a Google Drive folder structure into a local directory list."""
 
-    Parameters
-    ----------
-    gdrive_file: _GoogleDriveFile
-        Google Drive folder structure.
-    previous_path: str
-        Path containing the parent's file path.
-
-    Returns
-    -------
-    directory_structure: list
-        List containing a tuple of the files' ID and file path.
-    """
     directory_structure = []
     for file in gdrive_file.children:
         file.name = file.name.replace(osp.sep, "_")
