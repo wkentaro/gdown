@@ -1,6 +1,6 @@
 import os.path as osp
 
-from gdown.download_folder import parse_google_drive_file
+from gdown.download_folder import _parse_google_drive_file
 
 here = osp.dirname(osp.abspath(__file__))
 
@@ -15,7 +15,7 @@ def test_valid_page():
             "/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks",
         ]
     )
-    gdrive_file, id_name_type_iter = parse_google_drive_file(
+    gdrive_file, id_name_type_iter = _parse_google_drive_file(
         folder,
         content,
     )
