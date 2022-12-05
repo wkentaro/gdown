@@ -18,7 +18,6 @@ from .download import indent
 
 client = requests.session()
 
-files_url = "https://drive.google.com/uc?id="
 folder_type = "application/vnd.google-apps.folder"
 
 string_regex = re.compile(r"'((?:[^'\\]|\\.)*)'")
@@ -350,7 +349,7 @@ def download_folder(
             continue
 
         filename = download(
-            files_url + file_id,
+            "https://drive.google.com/uc?id=" + file_id,
             output=file_path,
             quiet=quiet,
             proxy=proxy,
