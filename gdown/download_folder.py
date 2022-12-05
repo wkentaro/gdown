@@ -18,8 +18,6 @@ from .download import indent
 
 client = requests.session()
 
-folder_type = "application/vnd.google-apps.folder"
-
 
 MAX_NUMBER_FILES = 50
 
@@ -40,6 +38,8 @@ class GoogleDriveFile(object):
 
     """
 
+    TYPE_FOLDER = "application/vnd.google-apps.folder"
+
     def __init__(self, id, name, type, children=None):
         self.id = id
         self.name = name
@@ -47,7 +47,7 @@ class GoogleDriveFile(object):
         self.children = children if children is not None else []
 
     def is_folder(self):
-        return self.type == folder_type
+        return self.type == self.TYPE_FOLDER
 
     def __repr__(self):
         template = "(id={id}, name={name}, type={type}, children={children})"
@@ -124,7 +124,7 @@ def parse_google_drive_file(folder, content, use_cookies=True):
     gdrive_file = GoogleDriveFile(
         id=folder.split("/")[-1],
         name=name,
-        type=folder_type,
+        type=GoogleDriveFile.TYPE_FOLDER,
     )
 
     id_name_type_iter = [
@@ -178,7 +178,7 @@ def download_and_parse_google_drive_link(
     )
 
     for child_id, child_name, child_type in id_name_type_iter:
-        if child_type != folder_type:
+        if child_type != GoogleDriveFile.TYPE_FOLDER:
             if not quiet:
                 print(
                     "Processing file",
