@@ -223,7 +223,7 @@ def download_and_parse_google_drive_link(
     return return_code, gdrive_file
 
 
-def get_directory_structure(gdrive_file, previous_path):
+def _get_directory_structure(gdrive_file, previous_path):
     """Converts a Google Drive folder structure into a local directory list.
 
     Parameters
@@ -245,7 +245,7 @@ def get_directory_structure(gdrive_file, previous_path):
             directory_structure.append(
                 (None, osp.join(previous_path, file.name))
             )
-            for i in get_directory_structure(
+            for i in _get_directory_structure(
                 file, osp.join(previous_path, file.name)
             ):
                 directory_structure.append(i)
@@ -332,7 +332,7 @@ def download_folder(
         root_folder = osp.join(output, gdrive_file.name)
     else:
         root_folder = output
-    directory_structure = get_directory_structure(gdrive_file, root_folder)
+    directory_structure = _get_directory_structure(gdrive_file, root_folder)
     if not osp.exists(root_folder):
         os.makedirs(root_folder)
 
