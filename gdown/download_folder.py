@@ -59,7 +59,7 @@ class GoogleDriveFile(object):
         )
 
 
-def parse_google_drive_file(folder, content, use_cookies=True):
+def _parse_google_drive_file(folder, content):
     """Extracts information about the current page file and its children
 
     Parameters
@@ -78,9 +78,6 @@ def parse_google_drive_file(folder, content, use_cookies=True):
         Tuple iterator of each children id, name, type
     """
     folder_soup = BeautifulSoup(content, features="html.parser")
-
-    if not use_cookies:
-        client.cookies.clear()
 
     # finds the script tag with window['_DRIVE_ivd']
     encoded_data = None
@@ -172,7 +169,7 @@ def download_and_parse_google_drive_link(
     if folder_page.status_code != 200:
         return False, None
 
-    gdrive_file, id_name_type_iter = parse_google_drive_file(
+    gdrive_file, id_name_type_iter = _parse_google_drive_file(
         folder,
         folder_page.text,
     )
