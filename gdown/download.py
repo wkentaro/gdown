@@ -61,6 +61,26 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
+def _get_session(use_cookies, return_cookies_file=False):
+    sess = requests.session()
+
+    # Load cookies
+    cache_dir = osp.join(home, ".cache", "gdown")
+    if not osp.exists(cache_dir):
+        os.makedirs(cache_dir)
+    cookies_file = osp.join(cache_dir, "cookies.json")
+    if osp.exists(cookies_file) and use_cookies:
+        with open(cookies_file) as f:
+            cookies = json.load(f)
+        for k, v in cookies:
+            sess.cookies[k] = v
+
+    if return_cookies_file:
+        return sess, cookies_file
+    else:
+        return sess
+
+
 def download(
     url=None,
     output=None,
@@ -112,18 +132,10 @@ def download(
         url = "https://drive.google.com/uc?id={id}".format(id=id)
 
     url_origin = url
-    sess = requests.session()
 
-    # Load cookies
-    cache_dir = osp.join(home, ".cache", "gdown")
-    if not osp.exists(cache_dir):
-        os.makedirs(cache_dir)
-    cookies_file = osp.join(cache_dir, "cookies.json")
-    if osp.exists(cookies_file) and use_cookies:
-        with open(cookies_file) as f:
-            cookies = json.load(f)
-        for k, v in cookies:
-            sess.cookies[k] = v
+    sess, cookies_file = _get_session(
+        use_cookies=use_cookies, return_cookies_file=True
+    )
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}

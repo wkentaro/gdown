@@ -11,8 +11,8 @@ import sys
 import textwrap
 
 import bs4
-import requests
 
+from .download import _get_session
 from .download import download
 from .download import indent
 
@@ -231,18 +231,7 @@ def download_folder(
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
 
-    sess = requests.session()
-
-    # Load cookies
-    cache_dir = osp.join(home, ".cache", "gdown")
-    if not osp.exists(cache_dir):
-        os.makedirs(cache_dir)
-    cookies_file = osp.join(cache_dir, "cookies.json")
-    if osp.exists(cookies_file) and use_cookies:
-        with open(cookies_file) as f:
-            cookies = json.load(f)
-        for k, v in cookies:
-            sess.cookies[k] = v
+    sess = _get_session(use_cookies=use_cookies)
 
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)
