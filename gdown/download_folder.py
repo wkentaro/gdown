@@ -71,12 +71,16 @@ def _parse_google_drive_file(folder, content):
 
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
 
-    seps = [" - ", " – "]  # unicode dash and endash
-    for sep in seps:
-        splitted = folder_soup.title.contents[0].split(sep)
-        if len(splitted) >= 2:
-            name = sep.join(splitted[:-1])
-            break
+    sep = " - "  # unicode dash
+    splitted = folder_soup.title.contents[0].split(sep)
+    if len(splitted) >= 2:
+        name = sep.join(splitted[:-1])
+    else:
+        raise RuntimeError(
+            "file/folder name cannot be extracted from: {}".format(
+                folder_soup.title.contents[0]
+            )
+        )
 
     gdrive_file = _GoogleDriveFile(
         id=folder.split("/")[-1],
@@ -101,6 +105,12 @@ def _download_and_parse_google_drive_link(
     """Get folder structure of Google Drive folder URL."""
 
     return_code = True
+
+    # canonicalize the language into English
+    if "?" in folder:
+        folder += "&hl=en"
+    else:
+        folder += "?hl=en"
 
     folder_page = sess.get(folder)
 
