@@ -2,16 +2,16 @@
 
 from __future__ import print_function
 
+import itertools
 import json
 import os
 import os.path as osp
 import re
 import sys
 import textwrap
-from itertools import islice
 
+import bs4
 import requests
-from bs4 import BeautifulSoup
 
 from .download import download
 from .download import indent
@@ -36,7 +36,7 @@ class _GoogleDriveFile(object):
 def _parse_google_drive_file(folder, content):
     """Extracts information about the current page file and its children."""
 
-    folder_soup = BeautifulSoup(content, features="html.parser")
+    folder_soup = bs4.BeautifulSoup(content, features="html.parser")
 
     # finds the script tag with window['_DRIVE_ivd']
     encoded_data = None
@@ -50,7 +50,9 @@ def _parse_google_drive_file(folder, content):
             )
             # get the second elem in the iter
             try:
-                encoded_data = next(islice(regex_iter, 1, None)).group(1)
+                encoded_data = next(
+                    itertools.islice(regex_iter, 1, None)
+                ).group(1)
             except StopIteration:
                 raise RuntimeError(
                     "Couldn't find the folder encoded JS string"
