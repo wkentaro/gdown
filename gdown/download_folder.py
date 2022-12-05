@@ -152,7 +152,7 @@ def _download_and_parse_google_drive_link(
         err_msg = " ".join(
             [
                 "The gdrive folder with url: {url}".format(url=folder),
-                "has at least {max} files,".format(max=MAX_NUMBER_FILES),
+                "has more than {max} files,".format(max=MAX_NUMBER_FILES),
                 "gdrive can't download more than this limit,",
                 "if you are ok with this,",
                 "please run again with --remaining-ok flag.",
