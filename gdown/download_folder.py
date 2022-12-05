@@ -20,22 +20,7 @@ from .download import indent
 MAX_NUMBER_FILES = 50
 
 
-class GoogleDriveFile(object):
-    """Represent Google Drive file objects structure.
-
-    Attributes
-    ----------
-    id: str
-        Unique id, used to build the download URL.
-    name: str
-        Actual name, used as file name.
-    type: str
-        MIME type, or application/vnd.google-apps.folder if it is a folder
-    children: List[GoogleDriveFile]
-        If it is a directory, it contains the folder files/directories
-
-    """
-
+class _GoogleDriveFile(object):
     TYPE_FOLDER = "application/vnd.google-apps.folder"
 
     def __init__(self, id, name, type, children=None):
@@ -46,15 +31,6 @@ class GoogleDriveFile(object):
 
     def is_folder(self):
         return self.type == self.TYPE_FOLDER
-
-    def __repr__(self):
-        template = "(id={id}, name={name}, type={type}, children={children})"
-        return "GoogleDriveFile" + template.format(
-            id=self.id,
-            name=self.name,
-            type=self.type,
-            children=self.children,
-        )
 
 
 def _parse_google_drive_file(folder, content):
@@ -70,8 +46,8 @@ def _parse_google_drive_file(folder, content):
 
     Returns
     -------
-    gdrive_file: GoogleDriveFile
-        Current GoogleDriveFile, with empty children
+    gdrive_file: _GoogleDriveFile
+        Current _GoogleDriveFile, with empty children
     id_name_type_iter: Iterator
         Tuple iterator of each children id, name, type
     """
@@ -116,10 +92,10 @@ def _parse_google_drive_file(folder, content):
             name = sep.join(splitted[:-1])
             break
 
-    gdrive_file = GoogleDriveFile(
+    gdrive_file = _GoogleDriveFile(
         id=folder.split("/")[-1],
         name=name,
-        type=GoogleDriveFile.TYPE_FOLDER,
+        type=_GoogleDriveFile.TYPE_FOLDER,
     )
 
     id_name_type_iter = [
@@ -158,7 +134,7 @@ def _download_and_parse_google_drive_link(
     return_code: bool
         Returns False if the download completed unsuccessfully.
         May be due to invalid URLs, permission errors, rate limits, etc.
-    gdrive_file: GoogleDriveFile
+    gdrive_file: _GoogleDriveFile
         Returns the folder structure of the Google Drive folder.
     """
     return_code = True
@@ -174,7 +150,7 @@ def _download_and_parse_google_drive_link(
     )
 
     for child_id, child_name, child_type in id_name_type_iter:
-        if child_type != GoogleDriveFile.TYPE_FOLDER:
+        if child_type != _GoogleDriveFile.TYPE_FOLDER:
             if not quiet:
                 print(
                     "Processing file",
@@ -182,7 +158,7 @@ def _download_and_parse_google_drive_link(
                     child_name,
                 )
             gdrive_file.children.append(
-                GoogleDriveFile(
+                _GoogleDriveFile(
                     id=child_id,
                     name=child_name,
                     type=child_type,
@@ -228,7 +204,7 @@ def _get_directory_structure(gdrive_file, previous_path):
 
     Parameters
     ----------
-    gdrive_file: GoogleDriveFile
+    gdrive_file: _GoogleDriveFile
         Google Drive folder structure.
     previous_path: str
         Path containing the parent's file path.
