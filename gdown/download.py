@@ -65,7 +65,7 @@ def _get_session(use_cookies, return_cookies_file=False):
     sess = requests.session()
 
     # Load cookies
-    cache_dir = osp.join(home, ".cache", "gdown")
+    cache_dir = os.getenv("GDOWN_CACHE") or osp.join(home, ".cache", "gdown")
     if not osp.exists(cache_dir):
         os.makedirs(cache_dir)
     cookies_file = osp.join(cache_dir, "cookies.json")

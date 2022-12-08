@@ -11,7 +11,7 @@ import filelock
 
 from .download import download
 
-cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
+cache_root = os.getenv("GDOWN_CACHE") or osp.join(osp.expanduser("~"), ".cache/gdown")
 if not osp.exists(cache_root):
     try:
         os.makedirs(cache_root)
