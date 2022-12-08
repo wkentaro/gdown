@@ -25,42 +25,6 @@ def get_version():
 version = get_version()
 
 
-if sys.argv[1] == "release":
-    if not distutils.spawn.find_executable("twine"):
-        print(
-            "Please install twine:\n\n\tpip install twine\n", file=sys.stderr
-        )
-        sys.exit(1)
-
-    try:
-        import github2pypi  # NOQA
-    except ImportError:
-        print(
-            "Please install github2pypi:\n\n\tpip install github2pypi\n",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    try:
-        import build  # NOQA
-    except ImportError:
-        print(
-            "Please install build:\n\n\tpip install build\n", file=sys.stderr
-        )
-        sys.exit(1)
-
-    commands = [
-        "git pull origin main",
-        "git tag v{:s}".format(version),
-        "git push origin main --tags",
-        "python -m build",
-        "twine upload dist/gdown-{:s}*".format(version),
-    ]
-    for cmd in commands:
-        subprocess.check_call(shlex.split(cmd))
-    sys.exit(0)
-
-
 def get_long_description():
     with open("README.md") as f:
         long_description = f.read()
