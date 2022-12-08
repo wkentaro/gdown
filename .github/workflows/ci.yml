@@ -38,13 +38,13 @@ jobs:
       run: |
         pip install black
         black --check .
-      if: matrix.python-version != "2.7"
+      if: matrix.python-version != '2.7'
 
     - name: Mypy
       run: |
         pip install mypy
         mypy --install-types --non-interactive --ignore-missing-imports -p gdown
-      if: matrix.python-version != "2.7"
+      if: matrix.python-version != '2.7'
 
     - name: Test with pytest
       run: |
