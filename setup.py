@@ -66,7 +66,7 @@ def get_long_description():
         long_description = f.read()
 
     try:
-        import github2pypi
+        import github2pypi  # NOQA
 
         return github2pypi.replace_url(
             slug="wkentaro/gdown", content=long_description
