@@ -33,6 +33,15 @@ if sys.argv[1] == "release":
         sys.exit(1)
 
     try:
+        import github2pypi  # NOQA
+    except ImportError:
+        print(
+            "Please install github2pypi:\n\n\tpip install github2pypi\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
         import build  # NOQA
     except ImportError:
         print(
