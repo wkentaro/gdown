@@ -101,6 +101,7 @@ def _download_and_parse_google_drive_link(
     folder,
     quiet=False,
     remaining_ok=False,
+    verify=True,
 ):
     """Get folder structure of Google Drive folder URL."""
 
@@ -112,7 +113,7 @@ def _download_and_parse_google_drive_link(
     else:
         folder += "?hl=en"
 
-    folder_page = sess.get(folder)
+    folder_page = sess.get(folder, verify=verify)
 
     if folder_page.status_code != 200:
         return False, None
@@ -201,6 +202,7 @@ def download_folder(
     speed=None,
     use_cookies=True,
     remaining_ok=False,
+    verify=True,
 ):
     """Downloads entire folder from URL.
 
@@ -222,6 +224,10 @@ def download_folder(
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
     use_cookies: bool, optional
         Flag to use cookies. Default is True.
+    verify: bool or string
+        Either a bool, in which case it controls whether the server's TLS
+        certificate is verified, or a string, in which case it must be a path
+        to a CA bundle to use. Default is True.
 
     Returns
     -------
@@ -250,6 +256,7 @@ def download_folder(
             url,
             quiet=quiet,
             remaining_ok=remaining_ok,
+            verify=verify
         )
     except RuntimeError as e:
         print("Failed to retrieve folder contents:", file=sys.stderr)
@@ -289,6 +296,7 @@ def download_folder(
             proxy=proxy,
             speed=speed,
             use_cookies=use_cookies,
+            verify=verify
         )
 
         if filename is None:

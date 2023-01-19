@@ -143,6 +143,7 @@ def main():
             proxy=args.proxy,
             speed=args.speed,
             use_cookies=not args.no_cookies,
+            verify=not args.no_check_certificate,
             remaining_ok=args.remaining_ok,
         )
         success = filenames is not None
