@@ -256,7 +256,7 @@ def download_folder(
             url,
             quiet=quiet,
             remaining_ok=remaining_ok,
-            verify=verify
+            verify=verify,
         )
     except RuntimeError as e:
         print("Failed to retrieve folder contents:", file=sys.stderr)
@@ -296,7 +296,7 @@ def download_folder(
             proxy=proxy,
             speed=speed,
             use_cookies=use_cookies,
-            verify=verify
+            verify=verify,
         )
 
         if filename is None:
