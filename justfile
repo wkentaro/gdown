@@ -5,6 +5,7 @@ default:
 
 publish: clean
   @if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then exit 1; fi
+  @git push origin main
   @python -c 'import github2pypi' &>/dev/null || (echo "\"pip install github2pypi\"?"; exit 1)
   @python -c 'import build' &>/dev/null || (echo "\"pip install build\"?"; exit 1)
   @which twine &>/dev/null || (echo "\"pip install twine\"?"; exit 1)
