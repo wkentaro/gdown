@@ -161,14 +161,15 @@ def download(
             print(e, file=sys.stderr)
             return
 
-        # Save cookies
-        with open(cookies_file, "w") as f:
-            cookies = [
-                (k, v)
-                for k, v in sess.cookies.items()
-                if not k.startswith("download_warning_")
-            ]
-            json.dump(cookies, f, indent=2)
+        if use_cookies:
+            # Save cookies
+            with open(cookies_file, "w") as f:
+                cookies = [
+                    (k, v)
+                    for k, v in sess.cookies.items()
+                    if not k.startswith("download_warning_")
+                ]
+                json.dump(cookies, f, indent=2)
 
         if "Content-Disposition" in res.headers:
             # This is the file
