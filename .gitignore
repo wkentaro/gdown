@@ -1,3 +1,4 @@
 *.py[cdo]
+build/
 dist/
 *.egg-info
