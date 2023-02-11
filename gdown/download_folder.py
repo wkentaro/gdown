@@ -33,7 +33,7 @@ class _GoogleDriveFile(object):
         return self.type == self.TYPE_FOLDER
 
 
-def _parse_google_drive_file(folder, content):
+def _parse_google_drive_file(url, content):
     """Extracts information about the current page file and its children."""
 
     folder_soup = bs4.BeautifulSoup(content, features="html.parser")
@@ -86,7 +86,7 @@ def _parse_google_drive_file(folder, content):
         )
 
     gdrive_file = _GoogleDriveFile(
-        id=folder.split("/")[-1],
+        id=url.split("/")[-1],
         name=name,
         type=_GoogleDriveFile.TYPE_FOLDER,
     )
@@ -101,7 +101,7 @@ def _parse_google_drive_file(folder, content):
 
 def _download_and_parse_google_drive_link(
     sess,
-    folder,
+    url,
     quiet=False,
     remaining_ok=False,
     verify=True,
@@ -111,19 +111,19 @@ def _download_and_parse_google_drive_link(
     return_code = True
 
     # canonicalize the language into English
-    if "?" in folder:
-        folder += "&hl=en"
+    if "?" in url:
+        url += "&hl=en"
     else:
-        folder += "?hl=en"
+        url += "?hl=en"
 
-    folder_page = sess.get(folder, verify=verify)
+    folder_page = sess.get(url, verify=verify)
 
     if folder_page.status_code != 200:
         return False, None
 
     gdrive_file, id_name_type_iter = _parse_google_drive_file(
-        folder,
-        folder_page.text,
+        url=url,
+        content=folder_page.text,
     )
 
     for child_id, child_name, child_type in id_name_type_iter:
@@ -152,8 +152,8 @@ def _download_and_parse_google_drive_link(
                 child_name,
             )
         return_code, child = _download_and_parse_google_drive_link(
-            sess,
-            "https://drive.google.com/drive/folders/" + child_id,
+            sess=sess,
+            url="https://drive.google.com/drive/folders/" + child_id,
             quiet=quiet,
             remaining_ok=remaining_ok,
         )
@@ -164,7 +164,7 @@ def _download_and_parse_google_drive_link(
     if not remaining_ok and has_at_least_max_files:
         err_msg = " ".join(
             [
-                "The gdrive folder with url: {url}".format(url=folder),
+                "The gdrive folder with url: {url}".format(url=url),
                 "has more than {max} files,".format(max=MAX_NUMBER_FILES),
                 "gdrive can't download more than this limit,",
                 "if you are ok with this,",
@@ -293,7 +293,7 @@ def download_folder(
             continue
 
         filename = download(
-            "https://drive.google.com/uc?id=" + file_id,
+            url="https://drive.google.com/uc?id=" + file_id,
             output=file_path,
             quiet=quiet,
             proxy=proxy,
