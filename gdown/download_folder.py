@@ -9,6 +9,7 @@ import os.path as osp
 import re
 import sys
 import textwrap
+import warnings
 
 import bs4
 
@@ -66,7 +67,9 @@ def _parse_google_drive_file(folder, content):
         )
 
     # decodes the array and evaluates it as a python array
-    decoded = encoded_data.encode("utf-8").decode("unicode_escape")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        decoded = encoded_data.encode("utf-8").decode("unicode_escape")
     folder_arr = json.loads(decoded)
 
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
