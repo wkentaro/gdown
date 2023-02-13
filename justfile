@@ -9,7 +9,7 @@ publish: clean
   @python -c 'import github2pypi' &>/dev/null || (echo "\"pip install github2pypi\"?"; exit 1)
   @python -c 'import build' &>/dev/null || (echo "\"pip install build\"?"; exit 1)
   @which twine &>/dev/null || (echo "\"pip install twine\"?"; exit 1)
-  gh release create "v{{version}}"
+  @git tag "v{{version}}" && git push origin "v{{version}}"
   python -m build --sdist --wheel .
   twine upload dist/*
 
