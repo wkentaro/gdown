@@ -64,11 +64,8 @@ def get_url_from_gdrive_confirmation(contents):
 def _get_session(use_cookies, return_cookies_file=False):
     sess = requests.session()
 
-    # Load cookies
-    cache_dir = osp.join(home, ".cache", "gdown")
-    if not osp.exists(cache_dir):
-        os.makedirs(cache_dir)
-    cookies_file = osp.join(cache_dir, "cookies.json")
+    # Load cookies if exists
+    cookies_file = osp.join(home, ".cache/gdown/cookies.json")
     if osp.exists(cookies_file) and use_cookies:
         with open(cookies_file) as f:
             cookies = json.load(f)
@@ -162,6 +159,8 @@ def download(
             return
 
         if use_cookies:
+            if not osp.exists(osp.dirname(cookies_file)):
+                os.makedirs(osp.dirname(cookies_file))
             # Save cookies
             with open(cookies_file, "w") as f:
                 cookies = [
