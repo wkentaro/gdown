@@ -14,7 +14,10 @@ import requests
 import six
 import tqdm
 
+from .igdown_states import IGDownStatesInterface
+from .gdown_states import GDownStates
 from .parse_url import parse_url
+from http import HTTPStatus
 
 CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
@@ -89,6 +92,7 @@ def download(
     id=None,
     fuzzy=False,
     resume=False,
+    states_cb=None
 ):
     """Download file from URL.
 
@@ -130,15 +134,26 @@ def download(
 
     url_origin = url
 
+    # just a informal interface for now
+    if states_cb is None:
+        states_cb = IGDownStatesInterface()
+    elif states_cb is not None and issubclass(states_cb.__class__,
+                                              IGDownStatesInterface) is False:
+        states_cb = IGDownStatesInterface()
+
     sess, cookies_file = _get_session(
         use_cookies=use_cookies, return_cookies_file=True
     )
+
+    states_cb.changed(GDownStates.FILE_SESSION_CREATED, {"data": sess})
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
         print("Using proxy:", proxy, file=sys.stderr)
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
+    states_cb.changed(GDownStates.FILE_URL_PARSED,
+                      {"data": [gdrive_file_id, is_gdrive_download_link]})
 
     if fuzzy and gdrive_file_id:
         # overwrite the url with fuzzy match of a file id
@@ -179,10 +194,19 @@ def download(
         # Need to redirect with confirmation
         try:
             url = get_url_from_gdrive_confirmation(res.text)
+            states_cb.changed(GDownStates.FILE_URL_CONFIRMATION_DONE,
+                              {"status": res.status_code, "data": url})
         except RuntimeError as e:
+            if (res.status_code == HTTPStatus.TOO_MANY_REQUESTS.value):
+                print("Too many requests from this host in short time")
+                states_cb.changed(GDownStates.FILE_DOWNLOAD_FAILED)
+                return
+
             print("Access denied with the following error:")
             error = "\n".join(textwrap.wrap(str(e)))
             error = indent(error, "\t")
+            states_cb.changed(GDownStates.FILE_INVALID_PUBLIC_LINK,
+                              {"status": res.status_code, "data": error})
             print("\n", error, "\n", file=sys.stderr)
             print(
                 "You may still be able to access the file from the browser:",
@@ -247,6 +271,7 @@ def download(
 
     if tmp_file is not None and f.tell() != 0:
         headers["Range"] = "bytes={}-".format(f.tell())
+        states_cb.changed(GDownStates.FILE_RESUMING_DOWNLOAD)
         res = sess.get(url, headers=headers, stream=True, verify=verify)
 
     if not quiet:
@@ -262,6 +287,8 @@ def download(
 
     try:
         total = res.headers.get("Content-Length")
+        states_cb.changed(GDownStates.FILE_DOWNLOADING,
+                          {"status": res.status_code, "data": total})
         if total is not None:
             total = int(total)
         if not quiet:
@@ -283,8 +310,11 @@ def download(
             shutil.move(tmp_file, output)
     except IOError as e:
         print(e, file=sys.stderr)
+        states_cb.changed(GDownStates.FILE_DOWNLOAD_FAILED,
+                          {"status": res.status_code, "data": e})
         return
     finally:
         sess.close()
 
+    states_cb.changed(GDownStates.FILE_DOWNLOAD_COMPLETED)
     return output

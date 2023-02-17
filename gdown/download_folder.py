@@ -17,6 +17,9 @@ from .download import _get_session
 from .download import download
 from .download import indent
 
+from .igdown_states import IGDownStatesInterface
+from .gdown_states import GDownStates
+
 MAX_NUMBER_FILES = 50
 
 
@@ -206,6 +209,7 @@ def download_folder(
     use_cookies=True,
     remaining_ok=False,
     verify=True,
+    states_cb=None
 ):
     """Downloads entire folder from URL.
 
@@ -249,10 +253,19 @@ def download_folder(
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
 
+    # just a informal interface for now
+    if states_cb is None:
+        states_cb = IGDownStatesInterface()
+    elif states_cb is not None and issubclass(states_cb.__class__,
+                                              IGDownStatesInterface) is False:
+        states_cb = IGDownStatesInterface()
+
     sess = _get_session(use_cookies=use_cookies)
+    states_cb.changed(GDownStates.FOLDER_SESSION_CREATED, {"data": sess})
 
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)
+        states_cb.changed(GDownStates.FOLDER_SCANNING, {"data": sess})
     try:
         return_code, gdrive_file = _download_and_parse_google_drive_link(
             sess,
@@ -261,6 +274,8 @@ def download_folder(
             remaining_ok=remaining_ok,
             verify=verify,
         )
+        states_cb.changed(GDownStates.FOLDER_URL_PARSED,
+                          {"status": return_code, "data": return_code})
     except RuntimeError as e:
         print("Failed to retrieve folder contents:", file=sys.stderr)
         error = "\n".join(textwrap.wrap(str(e)))
@@ -280,6 +295,7 @@ def download_folder(
     else:
         root_folder = output
     directory_structure = _get_directory_structure(gdrive_file, root_folder)
+    states_cb.changed(GDownStates.FOLDER_GET_DIR_STRUCTURE)
     if not osp.exists(root_folder):
         os.makedirs(root_folder)
 
@@ -300,13 +316,16 @@ def download_folder(
             speed=speed,
             use_cookies=use_cookies,
             verify=verify,
+            states_cb=states_cb
         )
 
         if filename is None:
             if not quiet:
                 print("Download ended unsuccessfully", file=sys.stderr)
+            states_cb.changed(GDownStates.FOLDER_DOWNLOAD_ERROR)
             return
         filenames.append(filename)
     if not quiet:
         print("Download completed", file=sys.stderr)
+    states_cb.changed(GDownStates.FOLDER_DOWNLOAD_COMPLETED)
     return filenames
