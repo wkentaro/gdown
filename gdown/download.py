@@ -5,14 +5,14 @@ import os
 import os.path as osp
 import re
 import shutil
-import sys
 import tempfile
 import textwrap
 import time
 
 import requests
 import six
-import tqdm
+from requests import HTTPError, RequestException
+from requests.exceptions import ProxyError
 
 from .parse_url import parse_url
 
@@ -89,6 +89,7 @@ def download(
     id=None,
     fuzzy=False,
     resume=False,
+    progress=None
 ):
     """Download file from URL.
 
@@ -117,6 +118,8 @@ def download(
     resume: bool
         Resume the download from existing tmp file if possible.
         Default is False.
+    progress: tqdm.tqdm
+        callback implementing tqdm progress interface
 
     Returns
     -------
@@ -127,6 +130,9 @@ def download(
         raise ValueError("Either url or id has to be specified")
     if id is not None:
         url = "https://drive.google.com/uc?id={id}".format(id=id)
+    if progress is None:
+        import tqdm
+        progress = lambda total: tqdm.tqdm(total=total, unit="B", unit_scale=True)
 
     url_origin = url
 
@@ -136,7 +142,7 @@ def download(
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
-        print("Using proxy:", proxy, file=sys.stderr)
+        print("Using proxy:", proxy)
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
 
@@ -153,10 +159,8 @@ def download(
     while True:
         try:
             res = sess.get(url, headers=headers, stream=True, verify=verify)
-        except requests.exceptions.ProxyError as e:
-            print("An error has occurred using proxy:", proxy, file=sys.stderr)
-            print(e, file=sys.stderr)
-            return
+        except ProxyError as e:
+            raise ProxyError(f"An error has occurred using proxy: ${proxy}", code=407) from e
 
         if use_cookies:
             if not osp.exists(osp.dirname(cookies_file)):
@@ -180,16 +184,14 @@ def download(
         try:
             url = get_url_from_gdrive_confirmation(res.text)
         except RuntimeError as e:
-            print("Access denied with the following error:")
-            error = "\n".join(textwrap.wrap(str(e)))
-            error = indent(error, "\t")
-            print("\n", error, "\n", file=sys.stderr)
-            print(
-                "You may still be able to access the file from the browser:",
-                file=sys.stderr,
-            )
-            print("\n\t", url_origin, "\n", file=sys.stderr)
-            return
+            raise HTTPError(
+                    "Access denied with the following error:\n" +
+                    indent("\n".join(textwrap.wrap(str(e))), "\t") +
+                    "\n" +
+                    "You may still be able to access the file from the browser:" +
+                    "\n\t" + url_origin + "\n",
+                    code=403
+                    ) from e
 
     if gdrive_file_id and is_gdrive_download_link:
         content_disposition = six.moves.urllib_parse.unquote(
@@ -217,19 +219,11 @@ def download(
                 existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
             if len(existing_tmp_files) != 1:
-                print(
-                    "There are multiple temporary files to resume:",
-                    file=sys.stderr,
+                raise RequestException(
+                    "There are multiple temporary files to resume:\n" +
+                    "\t".join(existing_tmp_files) + "\n" +
+                    "Please remove them except one to resume downloading."
                 )
-                print("\n")
-                for file in existing_tmp_files:
-                    print("\t", file, file=sys.stderr)
-                print("\n")
-                print(
-                    "Please remove them except one to resume downloading.",
-                    file=sys.stderr,
-                )
-                return
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
@@ -250,14 +244,13 @@ def download(
         res = sess.get(url, headers=headers, stream=True, verify=verify)
 
     if not quiet:
-        print("Downloading...", file=sys.stderr)
+        print("Downloading...")
         if resume:
-            print("Resume:", tmp_file, file=sys.stderr)
-        print("From:", url_origin, file=sys.stderr)
+            print("Resume:", tmp_file)
+        print("From:", url_origin)
         print(
             "To:",
-            osp.abspath(output) if output_is_path else output,
-            file=sys.stderr,
+            osp.abspath(output) if output_is_path else output
         )
 
     try:
@@ -265,7 +258,7 @@ def download(
         if total is not None:
             total = int(total)
         if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", unit_scale=True)
+            pbar = progress(total=total)
         t_start = time.time()
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
@@ -281,9 +274,6 @@ def download(
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)
-    except IOError as e:
-        print(e, file=sys.stderr)
-        return
     finally:
         sess.close()
 

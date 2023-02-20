@@ -12,6 +12,7 @@ import textwrap
 import warnings
 
 import bs4
+from requests import RequestException, HTTPError
 
 from .download import _get_session
 from .download import download
@@ -252,7 +253,7 @@ def download_folder(
     sess = _get_session(use_cookies=use_cookies)
 
     if not quiet:
-        print("Retrieving folder list", file=sys.stderr)
+        print("Retrieving folder list")
     try:
         return_code, gdrive_file = _download_and_parse_google_drive_link(
             sess,
@@ -262,17 +263,16 @@ def download_folder(
             verify=verify,
         )
     except RuntimeError as e:
-        print("Failed to retrieve folder contents:", file=sys.stderr)
-        error = "\n".join(textwrap.wrap(str(e)))
-        error = indent(error, "\t")
-        print("\n", error, "\n", file=sys.stderr)
-        return
+        raise RequestException(
+                "Failed to retrieve folder contents:" +
+                indent("\n".join(textwrap.wrap(str(e))), "\t")
+                ) from e
 
     if not return_code:
         return return_code
     if not quiet:
-        print("Retrieving folder list completed", file=sys.stderr)
-        print("Building directory structure", file=sys.stderr)
+        print("Retrieving folder list completed")
+        print("Building directory structure")
     if output is None:
         output = os.getcwd() + osp.sep
     if output.endswith(osp.sep):
@@ -303,10 +303,8 @@ def download_folder(
         )
 
         if filename is None:
-            if not quiet:
-                print("Download ended unsuccessfully", file=sys.stderr)
-            return
+            raise HTTPError("Download ended unsuccessfully")
         filenames.append(filename)
     if not quiet:
-        print("Download completed", file=sys.stderr)
+        print("Download completed")
     return filenames
