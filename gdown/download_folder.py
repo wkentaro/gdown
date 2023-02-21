@@ -12,6 +12,7 @@ import textwrap
 import warnings
 
 import bs4
+import requests
 
 from .download import _get_session
 from .download import download
@@ -116,14 +117,21 @@ def _download_and_parse_google_drive_link(
     else:
         url += "?hl=en"
 
-    folder_page = sess.get(url, verify=verify)
+    try:
+        res = sess.get(url, verify=verify)
+    except requests.exceptions.ProxyError as e:
+        print(
+            "An error has occurred using proxy:", sess.proxies, file=sys.stderr
+        )
+        print(e, file=sys.stderr)
+        return False, None
 
-    if folder_page.status_code != 200:
+    if res.status_code != 200:
         return False, None
 
     gdrive_file, id_name_type_iter = _parse_google_drive_file(
         url=url,
-        content=folder_page.text,
+        content=res.text,
     )
 
     for child_id, child_name, child_type in id_name_type_iter:
@@ -249,7 +257,7 @@ def download_folder(
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
 
-    sess = _get_session(use_cookies=use_cookies)
+    sess = _get_session(proxy=proxy, use_cookies=use_cookies)
 
     if not quiet:
         print("Retrieving folder list", file=sys.stderr)

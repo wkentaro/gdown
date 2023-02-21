@@ -61,8 +61,16 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
-def _get_session(use_cookies, return_cookies_file=False):
+def _get_session(proxy, use_cookies, return_cookies_file=False):
     sess = requests.session()
+
+    sess.headers.update(
+        {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)"}
+    )
+
+    if proxy is not None:
+        sess.proxies = {"http": proxy, "https": proxy}
+        print("Using proxy:", proxy, file=sys.stderr)
 
     # Load cookies if exists
     cookies_file = osp.join(home, ".cache/gdown/cookies.json")
@@ -131,12 +139,8 @@ def download(
     url_origin = url
 
     sess, cookies_file = _get_session(
-        use_cookies=use_cookies, return_cookies_file=True
+        proxy=proxy, use_cookies=use_cookies, return_cookies_file=True
     )
-
-    if proxy is not None:
-        sess.proxies = {"http": proxy, "https": proxy}
-        print("Using proxy:", proxy, file=sys.stderr)
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
 
@@ -146,15 +150,15 @@ def download(
         url_origin = url
         is_gdrive_download_link = True
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA
-    }
-
     while True:
         try:
-            res = sess.get(url, headers=headers, stream=True, verify=verify)
+            res = sess.get(url, stream=True, verify=verify)
         except requests.exceptions.ProxyError as e:
-            print("An error has occurred using proxy:", proxy, file=sys.stderr)
+            print(
+                "An error has occurred using proxy:",
+                sess.proxies,
+                file=sys.stderr,
+            )
             print(e, file=sys.stderr)
             return
 
@@ -246,7 +250,7 @@ def download(
         f = output
 
     if tmp_file is not None and f.tell() != 0:
-        headers["Range"] = "bytes={}-".format(f.tell())
+        headers = {"Range": "bytes={}-".format(f.tell())}
         res = sess.get(url, headers=headers, stream=True, verify=verify)
 
     if not quiet:
