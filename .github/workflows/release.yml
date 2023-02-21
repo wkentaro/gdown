@@ -20,8 +20,16 @@ jobs:
             {
                 "categories": [
                     {
-                        "title": "## :bug: Bugfix",
-                        "labels": ["bugfix"]
+                        "title": "## 🚀 Features",
+                        "labels": ["feature"]
+                    },
+                    {
+                        "title": "## 🐛 Fixes",
+                        "labels": ["fix"]
+                    },
+                    {
+                        "title": "## 💬 Other",
+                        "labels": ["other"]
                     }
                 ]
             }
