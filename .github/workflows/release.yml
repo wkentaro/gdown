@@ -15,6 +15,16 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          configurationJson: |
+            {
+                "categories": [
+                    {
+                        "title": "## :bug: Bugfix",
+                        "labels": ["bugfix"]
+                    }
+                ]
+            }
 
       - name: Create Release
         uses: mikepenz/action-gh-release@v0.2.0-a03
