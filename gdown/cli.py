@@ -134,33 +134,37 @@ def main():
             url = None
             id = args.url_or_id
 
-    if args.folder:
-        filenames = download_folder(
-            url=url,
-            id=id,
-            output=args.output,
-            quiet=args.quiet,
-            proxy=args.proxy,
-            speed=args.speed,
-            use_cookies=not args.no_cookies,
-            verify=not args.no_check_certificate,
-            remaining_ok=args.remaining_ok,
-        )
-        success = filenames is not None
-    else:
-        filename = download(
-            url=url,
-            output=args.output,
-            quiet=args.quiet,
-            proxy=args.proxy,
-            speed=args.speed,
-            use_cookies=not args.no_cookies,
-            verify=not args.no_check_certificate,
-            id=id,
-            fuzzy=args.fuzzy,
-            resume=args.continue_,
-        )
-        success = filename is not None
+    try:
+        if args.folder:
+            filenames = download_folder(
+                url=url,
+                id=id,
+                output=args.output,
+                quiet=args.quiet,
+                proxy=args.proxy,
+                speed=args.speed,
+                use_cookies=not args.no_cookies,
+                verify=not args.no_check_certificate,
+                remaining_ok=args.remaining_ok,
+            )
+            success = filenames is not None
+        else:
+            filename = download(
+                url=url,
+                output=args.output,
+                quiet=args.quiet,
+                proxy=args.proxy,
+                speed=args.speed,
+                use_cookies=not args.no_cookies,
+                verify=not args.no_check_certificate,
+                id=id,
+                fuzzy=args.fuzzy,
+                resume=args.continue_,
+            )
+            success = filename is not None
+    except Exception as e:
+        print(e, file=sys.stderr)
+        success = False
 
     if not success:
         sys.exit(1)

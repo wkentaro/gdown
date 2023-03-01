@@ -13,6 +13,8 @@ import time
 import requests
 import six
 import tqdm
+from requests import HTTPError, RequestException
+from requests.exceptions import ProxyError
 
 from .parse_url import parse_url
 
@@ -153,14 +155,11 @@ def download(
     while True:
         try:
             res = sess.get(url, stream=True, verify=verify)
-        except requests.exceptions.ProxyError as e:
-            print(
-                "An error has occurred using proxy:",
-                sess.proxies,
-                file=sys.stderr,
-            )
-            print(e, file=sys.stderr)
-            return
+        except ProxyError as e:
+            raise ProxyError(
+                f"An error has occurred using proxy: ${sess.proxies}",
+                code=407
+            ) from e
 
         if use_cookies:
             if not osp.exists(osp.dirname(cookies_file)):
@@ -184,16 +183,14 @@ def download(
         try:
             url = get_url_from_gdrive_confirmation(res.text)
         except RuntimeError as e:
-            print("Access denied with the following error:")
-            error = "\n".join(textwrap.wrap(str(e)))
-            error = indent(error, "\t")
-            print("\n", error, "\n", file=sys.stderr)
-            print(
-                "You may still be able to access the file from the browser:",
-                file=sys.stderr,
-            )
-            print("\n\t", url_origin, "\n", file=sys.stderr)
-            return
+            raise HTTPError(
+                "Access denied with the following error:\n" +
+                indent("\n".join(textwrap.wrap(str(e))), "\t") +
+                "\n" +
+                "You may still be able to access the file from the browser:" +
+                "\n\t" + url_origin + "\n",
+                code=403
+            ) from e
 
     if gdrive_file_id and is_gdrive_download_link:
         content_disposition = six.moves.urllib_parse.unquote(
@@ -221,19 +218,11 @@ def download(
                 existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
             if len(existing_tmp_files) != 1:
-                print(
-                    "There are multiple temporary files to resume:",
-                    file=sys.stderr,
+                raise RequestException(
+                    "There are multiple temporary files to resume:\n" +
+                    "\t".join(existing_tmp_files) + "\n" +
+                    "Please remove them except one to resume downloading."
                 )
-                print("\n")
-                for file in existing_tmp_files:
-                    print("\t", file, file=sys.stderr)
-                print("\n")
-                print(
-                    "Please remove them except one to resume downloading.",
-                    file=sys.stderr,
-                )
-                return
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
@@ -285,9 +274,6 @@ def download(
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)
-    except IOError as e:
-        print(e, file=sys.stderr)
-        return
     finally:
         sess.close()
 

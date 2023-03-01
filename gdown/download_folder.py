@@ -12,7 +12,7 @@ import textwrap
 import warnings
 
 import bs4
-import requests
+from requests.exceptions import RequestException, HTTPError, ProxyError
 
 from .download import _get_session
 from .download import download
@@ -119,12 +119,8 @@ def _download_and_parse_google_drive_link(
 
     try:
         res = sess.get(url, verify=verify)
-    except requests.exceptions.ProxyError as e:
-        print(
-            "An error has occurred using proxy:", sess.proxies, file=sys.stderr
-        )
-        print(e, file=sys.stderr)
-        return False, None
+    except ProxyError as e:
+        raise ProxyError(f"An error has occurred using proxy: {sess.proxies}")
 
     if res.status_code != 200:
         return False, None
@@ -270,11 +266,10 @@ def download_folder(
             verify=verify,
         )
     except RuntimeError as e:
-        print("Failed to retrieve folder contents:", file=sys.stderr)
-        error = "\n".join(textwrap.wrap(str(e)))
-        error = indent(error, "\t")
-        print("\n", error, "\n", file=sys.stderr)
-        return
+        raise RequestException(
+                "Failed to retrieve folder contents:" +
+                indent("\n".join(textwrap.wrap(str(e))), "\t")
+                ) from e
 
     if not return_code:
         return return_code
@@ -311,9 +306,7 @@ def download_folder(
         )
 
         if filename is None:
-            if not quiet:
-                print("Download ended unsuccessfully", file=sys.stderr)
-            return
+            raise HTTPError("Download ended unsuccessfully")
         filenames.append(filename)
     if not quiet:
         print("Download completed", file=sys.stderr)
