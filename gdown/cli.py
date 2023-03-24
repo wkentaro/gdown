@@ -108,6 +108,11 @@ def main():
         help="(folder only) asserts that is ok to download max "
         "{max} files per folder.".format(max=MAX_NUMBER_FILES),
     )
+    parser.add_argument(
+        "--format",
+        help="Format of Google Docs, Spreadsheets and Slides. "
+        "Default is Google Docs: 'docx', Spreadsheet: 'xlsx', Slides: 'pptx'.",
+    )
 
     args = parser.parse_args()
 
@@ -159,6 +164,7 @@ def main():
             id=id,
             fuzzy=args.fuzzy,
             resume=args.continue_,
+            format=args.format,
         )
         success = filename is not None
 

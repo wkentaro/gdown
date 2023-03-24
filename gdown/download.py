@@ -97,6 +97,7 @@ def download(
     id=None,
     fuzzy=False,
     resume=False,
+    format=None,
 ):
     """Download file from URL.
 
@@ -125,6 +126,11 @@ def download(
     resume: bool
         Resume the download from existing tmp file if possible.
         Default is False.
+    format: str, optional
+        Format of Google Docs, Spreadsheets and Slides. Default is:
+            - Google Docs: 'docx'
+            - Google Spreadsheet: 'xlsx'
+            - Google Slides: 'pptx'
 
     Returns
     -------
@@ -161,6 +167,45 @@ def download(
             )
             print(e, file=sys.stderr)
             return
+
+        if url == url_origin and res.status_code == 500:
+            # The file could be Google Docs or Spreadsheets.
+            url = "https://drive.google.com/open?id={id}".format(
+                id=gdrive_file_id
+            )
+            continue
+        m = re.search("<title>(.+)</title>", res.text)
+        if m and m.groups()[0].endswith(" - Google Docs"):
+            url = (
+                "https://docs.google.com/document/d/{id}/export"
+                "?format={format}".format(
+                    id=gdrive_file_id,
+                    format="docx" if format is None else format,
+                )
+            )
+            continue
+        elif m and m.groups()[0].endswith(" - Google Sheets"):
+            url = (
+                "https://docs.google.com/spreadsheets/d/{id}/export"
+                "?format={format}".format(
+                    id=gdrive_file_id,
+                    format="xlsx" if format is None else format,
+                )
+            )
+            continue
+        elif (m and m.groups()[0].endswith(" - Google Slides")) or (
+            "Content-Disposition" in res.headers
+            and res.headers["Content-Disposition"].endswith("pptx")
+            and format not in {None, "pptx"}
+        ):
+            url = (
+                "https://docs.google.com/presentation/d/{id}/export"
+                "?format={format}".format(
+                    id=gdrive_file_id,
+                    format="pptx" if format is None else format,
+                )
+            )
+            continue
 
         if use_cookies:
             if not osp.exists(osp.dirname(cookies_file)):
