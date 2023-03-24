@@ -105,6 +105,33 @@ jobs:
         output=/tmp/folder-limit/
         gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O $output --quiet --folder && exit 1 || exit 0
 
+    - name: Download docs from Google Drive
+      run: |
+        output=/tmp/file.pdf
+        file_id=1TFYNzuZJTgNGzGmjraZ58ZVOh9_YoKeBnU-opWgXQL4
+        md5=e4a174e8fe11765fbf241ec4295156e3
+        gdown $file_id -O $output --quiet --format pdf
+        actual_hash=$(md5sum $output | awk '{print $1}')
+        test $actual_hash = $md5
+
+    - name: Download spreadsheets from Google Drive
+      run: |
+        output=/tmp/file.pdf
+        file_id=1h6wQX7ATSJDOSWFEjHPmv_nukJzZD_zZ30Jvy6XNiTE
+        md5=5be20dd8a23afa06365714edc24856f3
+        gdown $file_id -O $output --quiet --format pdf
+        actual_hash=$(md5sum $output | awk '{print $1}')
+        test $actual_hash = $md5
+
+    - name: Download slides from Google Drive
+      run: |
+        output=/tmp/file.pdf
+        file_id=13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a
+        md5=96704c6c40e308a68d3842e83a0136b9
+        gdown $file_id -O $output --quiet --format pdf
+        actual_hash=$(md5sum $output | awk '{print $1}')
+        test $actual_hash = $md5
+
     # FIXME: too unstable
     # - name: Download a folder with a file count more than the limit from Google Drive
     #   run: |
