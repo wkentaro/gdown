@@ -18,6 +18,7 @@ jobs:
         with:
           configurationJson: |
             {
+                "template": "#{{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\nIf you find this project useful, please consider [sponsoring](https://github.com/sponsors/wkentaro) its development.",
                 "categories": [
                     {
                         "title": "## 🚀 Features",
@@ -31,8 +32,7 @@ jobs:
                         "title": "## 💬 Other",
                         "labels": ["other"]
                     }
-                ],
-                "template": "${{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n${{UNCATEGORIZED}}\n</details>\n\nIf you find this project useful, please consider [sponsoring](https://github.com/sponsors/wkentaro) its development."
+                ]
             }
 
       - name: Create Release
