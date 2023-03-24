@@ -24,7 +24,12 @@ def parse_url(url, warning=True):
         if len(file_ids) == 1:
             file_id = file_ids[0]
     else:
-        patterns = [r"^/file/d/(.*?)/view$", r"^/presentation/d/(.*?)/edit$"]
+        patterns = [
+            r"^/file/d/(.*?)/view$",
+            r"^/document/d/(.*?)/(view|edit)$",
+            r"^/presentation/d/(.*?)/(view|edit)$",
+            r"^/spreadsheets/u/0/d/(.*?)/(htmlview|edit)$",
+        ]
         for pattern in patterns:
             match = re.match(pattern, parsed.path)
             if match:
