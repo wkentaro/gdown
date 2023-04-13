@@ -107,10 +107,10 @@ jobs:
 
     - name: Download docs from Google Drive
       run: |
-        output=/tmp/file.pdf
+        output=/tmp/file.txt
         file_id=1TFYNzuZJTgNGzGmjraZ58ZVOh9_YoKeBnU-opWgXQL4
-        md5=e4a174e8fe11765fbf241ec4295156e3
-        gdown $file_id -O $output --quiet --format pdf
+        md5=6c17d87d3d01405ac5c9bb65ee2d2fc2
+        gdown $file_id -O $output --quiet --format txt
         actual_hash=$(md5sum $output | awk '{print $1}')
         test $actual_hash = $md5
 
