@@ -12,7 +12,6 @@ import textwrap
 import warnings
 
 import bs4
-import requests
 
 from .download import _get_session
 from .download import download
@@ -117,14 +116,7 @@ def _download_and_parse_google_drive_link(
     else:
         url += "?hl=en"
 
-    try:
-        res = sess.get(url, verify=verify)
-    except requests.exceptions.ProxyError as e:
-        print(
-            "An error has occurred using proxy:", sess.proxies, file=sys.stderr
-        )
-        print(e, file=sys.stderr)
-        return False, None
+    res = sess.get(url, verify=verify)
 
     if res.status_code != 200:
         return False, None
