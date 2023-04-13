@@ -92,6 +92,7 @@ def cached_download(
             assert_md5sum(path, md5, quiet=quiet)
             return path
         except AssertionError as e:
+            # show warning and overwrite if md5 doesn't match
             print(e, file=sys.stderr)
 
     # download
