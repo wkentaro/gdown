@@ -63,7 +63,10 @@ def main():
     )
     parser.add_argument("-O", "--output", help="output file name / path")
     parser.add_argument(
-        "-q", "--quiet", action="store_true", help="suppress standard output"
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="suppress logging except errors",
     )
     parser.add_argument(
         "--fuzzy",
