@@ -14,20 +14,12 @@ import requests
 import six
 import tqdm
 
+from ._indent import indent
 from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
-
-
-# textwrap.indent for Python2
-def indent(text, prefix):
-    def prefixed_lines():
-        for line in text.splitlines(True):
-            yield (prefix + line if line.strip() else line)
-
-    return "".join(prefixed_lines())
 
 
 def get_url_from_gdrive_confirmation(contents):
