@@ -14,6 +14,7 @@ import requests
 import six
 import tqdm
 
+from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
@@ -51,9 +52,9 @@ def get_url_from_gdrive_confirmation(contents):
         m = re.search('<p class="uc-error-subcaption">(.*)</p>', line)
         if m:
             error = m.groups()[0]
-            raise RuntimeError(error)
+            raise FileURLRetrievalError(error)
     if not url:
-        raise RuntimeError(
+        raise FileURLRetrievalError(
             "Cannot retrieve the public link of the file. "
             "You may need to change the permission to "
             "'Anyone with the link', or have had many accesses."
@@ -230,17 +231,17 @@ def download(
         # Need to redirect with confirmation
         try:
             url = get_url_from_gdrive_confirmation(res.text)
-        except RuntimeError as e:
-            print("Access denied with the following error:")
-            error = "\n".join(textwrap.wrap(str(e)))
-            error = indent(error, "\t")
-            print("\n", error, "\n", file=sys.stderr)
-            print(
-                "You may still be able to access the file from the browser:",
-                file=sys.stderr,
+        except FileURLRetrievalError as e:
+            message = (
+                "Failed to retrieve file url:\n\n{}\n\n"
+                "You may still be able to access the file from the browser:"
+                "\n\n\t{}\n\n"
+                "but Gdown can't. Please check connections and permissions."
+            ).format(
+                indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
+                url_origin,
             )
-            print("\n\t", url_origin, "\n", file=sys.stderr)
-            return
+            raise FileURLRetrievalError(message)
 
     if gdrive_file_id and is_gdrive_download_link:
         content_disposition = six.moves.urllib_parse.unquote(
