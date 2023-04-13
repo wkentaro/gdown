@@ -4,12 +4,15 @@ import argparse
 import os.path
 import re
 import sys
+import textwrap
 import warnings
 
+import requests
 import six
 
 from . import __version__
 from .download import download
+from .download import indent
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
 
@@ -166,6 +169,15 @@ def main():
                 resume=args.continue_,
                 format=args.format,
             )
+    except requests.exceptions.ProxyError as e:
+        print(
+            "Failed to use proxy:\n\n{}\n\n"
+            "Please check your proxy settings.".format(
+                indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
+            ),
+            file=sys.stderr,
+        )
+        sys.exit(1)
     except Exception as e:
         print(
             "Error:\n\n{}\n\nTo report issues, please visit "

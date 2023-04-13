@@ -157,16 +157,7 @@ def download(
         is_gdrive_download_link = True
 
     while True:
-        try:
-            res = sess.get(url, stream=True, verify=verify)
-        except requests.exceptions.ProxyError as e:
-            print(
-                "An error has occurred using proxy:",
-                sess.proxies,
-                file=sys.stderr,
-            )
-            print(e, file=sys.stderr)
-            return
+        res = sess.get(url, stream=True, verify=verify)
 
         if url == url_origin and res.status_code == 500:
             # The file could be Google Docs or Spreadsheets.
