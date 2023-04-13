@@ -11,8 +11,8 @@ import requests
 import six
 
 from . import __version__
+from ._indent import indent
 from .download import download
-from .download import indent
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
 from .exceptions import FileURLRetrievalError
