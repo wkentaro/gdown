@@ -329,9 +329,6 @@ def download(
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)
-    except IOError as e:
-        print(e, file=sys.stderr)
-        return
     finally:
         sess.close()
 
