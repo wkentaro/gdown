@@ -15,6 +15,7 @@ from .download import download
 from .download import indent
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
+from .exceptions import FileURLRetrievalError
 from .exceptions import FolderContentsMaximumLimitError
 
 
@@ -170,6 +171,9 @@ def main():
                 resume=args.continue_,
                 format=args.format,
             )
+    except FileURLRetrievalError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
     except FolderContentsMaximumLimitError as e:
         print(
             "Failed to retrieve folder contents:\n\n{}\n\n"
