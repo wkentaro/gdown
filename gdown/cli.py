@@ -15,6 +15,7 @@ from .download import download
 from .download import indent
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
+from .exceptions import FolderContentsMaximumLimitError
 
 
 class _ShowVersionAction(argparse.Action):
@@ -169,6 +170,15 @@ def main():
                 resume=args.continue_,
                 format=args.format,
             )
+    except FolderContentsMaximumLimitError as e:
+        print(
+            "Failed to retrieve folder contents:\n\n{}\n\n"
+            "You can use `--remaining-ok` option to ignore this error.".format(
+                indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
+            ),
+            file=sys.stderr,
+        )
+        sys.exit(1)
     except requests.exceptions.ProxyError as e:
         print(
             "Failed to use proxy:\n\n{}\n\n"

@@ -8,14 +8,13 @@ import os
 import os.path as osp
 import re
 import sys
-import textwrap
 import warnings
 
 import bs4
 
 from .download import _get_session
 from .download import download
-from .download import indent
+from .exceptions import FolderContentsMaximumLimitError
 
 MAX_NUMBER_FILES = 50
 
@@ -162,16 +161,14 @@ def _download_and_parse_google_drive_link(
         gdrive_file.children.append(child)
     has_at_least_max_files = len(gdrive_file.children) == MAX_NUMBER_FILES
     if not remaining_ok and has_at_least_max_files:
-        err_msg = " ".join(
+        message = " ".join(
             [
                 "The gdrive folder with url: {url}".format(url=url),
                 "has more than {max} files,".format(max=MAX_NUMBER_FILES),
-                "gdrive can't download more than this limit,",
-                "if you are ok with this,",
-                "please run again with --remaining-ok flag.",
+                "gdrive can't download more than this limit.",
             ]
         )
-        raise RuntimeError(err_msg)
+        raise FolderContentsMaximumLimitError(message)
     return return_code, gdrive_file
 
 
@@ -252,26 +249,19 @@ def download_folder(
     sess = _get_session(proxy=proxy, use_cookies=use_cookies)
 
     if not quiet:
-        print("Retrieving folder list", file=sys.stderr)
-    try:
-        return_code, gdrive_file = _download_and_parse_google_drive_link(
-            sess,
-            url,
-            quiet=quiet,
-            remaining_ok=remaining_ok,
-            verify=verify,
-        )
-    except RuntimeError as e:
-        print("Failed to retrieve folder contents:", file=sys.stderr)
-        error = "\n".join(textwrap.wrap(str(e)))
-        error = indent(error, "\t")
-        print("\n", error, "\n", file=sys.stderr)
-        return
+        print("Retrieving folder contents", file=sys.stderr)
+    return_code, gdrive_file = _download_and_parse_google_drive_link(
+        sess,
+        url,
+        quiet=quiet,
+        remaining_ok=remaining_ok,
+        verify=verify,
+    )
 
     if not return_code:
         return return_code
     if not quiet:
-        print("Retrieving folder list completed", file=sys.stderr)
+        print("Retrieving folder contents completed", file=sys.stderr)
         print("Building directory structure", file=sys.stderr)
     if output is None:
         output = os.getcwd() + osp.sep
