@@ -139,36 +139,41 @@ def main():
             url = None
             id = args.url_or_id
 
-    if args.folder:
-        filenames = download_folder(
-            url=url,
-            id=id,
-            output=args.output,
-            quiet=args.quiet,
-            proxy=args.proxy,
-            speed=args.speed,
-            use_cookies=not args.no_cookies,
-            verify=not args.no_check_certificate,
-            remaining_ok=args.remaining_ok,
+    try:
+        if args.folder:
+            download_folder(
+                url=url,
+                id=id,
+                output=args.output,
+                quiet=args.quiet,
+                proxy=args.proxy,
+                speed=args.speed,
+                use_cookies=not args.no_cookies,
+                verify=not args.no_check_certificate,
+                remaining_ok=args.remaining_ok,
+            )
+        else:
+            download(
+                url=url,
+                output=args.output,
+                quiet=args.quiet,
+                proxy=args.proxy,
+                speed=args.speed,
+                use_cookies=not args.no_cookies,
+                verify=not args.no_check_certificate,
+                id=id,
+                fuzzy=args.fuzzy,
+                resume=args.continue_,
+                format=args.format,
+            )
+    except Exception as e:
+        print(
+            "Error:\n\n{}\n\nTo report issues, please visit "
+            "https://github.com/wkentaro/gdown/issues.".format(
+                indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
+            ),
+            file=sys.stderr,
         )
-        success = filenames is not None
-    else:
-        filename = download(
-            url=url,
-            output=args.output,
-            quiet=args.quiet,
-            proxy=args.proxy,
-            speed=args.speed,
-            use_cookies=not args.no_cookies,
-            verify=not args.no_check_certificate,
-            id=id,
-            fuzzy=args.fuzzy,
-            resume=args.continue_,
-            format=args.format,
-        )
-        success = filename is not None
-
-    if not success:
         sys.exit(1)
 
 
