@@ -298,7 +298,7 @@ def download(
         if resume:
             print("Resume:", tmp_file, file=sys.stderr)
         if url_origin != url:
-            print("From (uriginal):", url_origin, file=sys.stderr)
+            print("From (original):", url_origin, file=sys.stderr)
             print("From (redirected):", url, file=sys.stderr)
         else:
             print("From:", url, file=sys.stderr)
