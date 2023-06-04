@@ -158,8 +158,8 @@ def download(
                 id=gdrive_file_id
             )
             continue
-
-        if res.headers["Content-Type"].startswith("text/html"):
+            
+        if "text/html" in res.headers.get("content-type", ''):
             m = re.search("<title>(.+)</title>", res.text)
             if m and m.groups()[0].endswith(" - Google Docs"):
                 url = (
