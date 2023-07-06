@@ -203,6 +203,7 @@ def download_folder(
     use_cookies=True,
     remaining_ok=False,
     verify=True,
+    resume=False
 ):
     """Downloads entire folder from URL.
 
@@ -290,6 +291,7 @@ def download_folder(
             speed=speed,
             use_cookies=use_cookies,
             verify=verify,
+            resume=resume,
         )
 
         if filename is None:
