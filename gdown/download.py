@@ -9,6 +9,7 @@ import sys
 import tempfile
 import textwrap
 import time
+from http.cookiejar import MozillaCookieJar
 
 import requests
 import six
@@ -66,12 +67,21 @@ def _get_session(proxy, use_cookies, return_cookies_file=False):
         print("Using proxy:", proxy, file=sys.stderr)
 
     # Load cookies if exists
-    cookies_file = osp.join(home, ".cache/gdown/cookies.json")
-    if osp.exists(cookies_file) and use_cookies:
-        with open(cookies_file) as f:
-            cookies = json.load(f)
-        for k, v in cookies:
-            sess.cookies[k] = v
+    cookies_file = osp.join(home, ".cache/gdown/cookies.txt")
+    if use_cookies:
+        if osp.exists(cookies_file):
+            # standard netscape cookies.txt format
+            cj = MozillaCookieJar(cookies_file)
+            cj.load()
+            sess.cookies.update(cj)
+        else:
+            # old cookies format
+            old_cookies_file = osp.join(home, ".cache/gdown/cookies.json")
+            if osp.exists(old_cookies_file):
+                with open(old_cookies_file) as f:
+                    cookies = json.load(f)
+                for k, v in cookies:
+                    sess.cookies[k] = v
 
     if return_cookies_file:
         return sess, cookies_file
@@ -205,14 +215,11 @@ def download(
         if use_cookies:
             if not osp.exists(osp.dirname(cookies_file)):
                 os.makedirs(osp.dirname(cookies_file))
-            # Save cookies
-            with open(cookies_file, "w") as f:
-                cookies = [
-                    (k, v)
-                    for k, v in sess.cookies.items()
-                    if not k.startswith("download_warning_")
-                ]
-                json.dump(cookies, f, indent=2)
+            # Save cookies with netscape format
+            cj = MozillaCookieJar(cookies_file)
+            for cookie in sess.cookies:
+                cj.set_cookie(cookie)
+            cj.save()
 
         if "Content-Disposition" in res.headers:
             # This is the file
