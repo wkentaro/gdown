@@ -58,7 +58,14 @@ def main():
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
     )
-    parser.add_argument("-O", "--output", help="output file name / path")
+    parser.add_argument(
+        "-O",
+        "--output",
+        help=(
+            f'output file name/path; end with "{os.path.sep}"'
+            "to create a new directory"
+        ),
+    )
     parser.add_argument(
         "-q",
         "--quiet",
