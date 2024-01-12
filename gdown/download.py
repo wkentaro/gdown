@@ -150,7 +150,8 @@ def download(
         is_gdrive_download_link = True
 
     while True:
-        res = sess.get(url, stream=True, verify=verify)
+        headers = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA }
+        res = sess.get(url, stream=True, headers=headers, verify=verify)
 
         if url == url_origin and res.status_code == 500:
             # The file could be Google Docs or Spreadsheets.
@@ -240,7 +241,10 @@ def download(
             res.headers["Content-Disposition"]
         )
         m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
-        filename_from_url = m.groups()[0]
+        if m is None and output is not None:
+            filename_from_url = osp.basename(output)
+        else:
+            filename_from_url = m.groups()[0]
         filename_from_url = filename_from_url.replace(osp.sep, "_")
     else:
         filename_from_url = osp.basename(url)
