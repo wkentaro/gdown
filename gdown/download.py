@@ -150,7 +150,7 @@ def download(
         is_gdrive_download_link = True
 
     while True:
-        headers = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA }
+        headers = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"}
         res = sess.get(url, stream=True, headers=headers, verify=verify)
 
         if url == url_origin and res.status_code == 500:
