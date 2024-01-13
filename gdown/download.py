@@ -54,11 +54,12 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
+CANNED_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA
 def _get_session(proxy, use_cookies, return_cookies_file=False):
     sess = requests.session()
 
     sess.headers.update(
-        {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)"}
+        {"User-Agent": os.getenv('GDOWN_USER_AGENT') or CANNED_USER_AGENT}
     )
 
     if proxy is not None:
