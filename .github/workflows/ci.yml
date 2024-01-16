@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["2.7", "3.7", "3.10"]
+        python-version: ["3.7", "3.10"]
 
     steps:
     - uses: actions/setup-python@v4
@@ -38,13 +38,11 @@ jobs:
       run: |
         pip install black
         black --check .
-      if: matrix.python-version != '2.7'
 
     - name: Mypy
       run: |
         pip install mypy
         mypy --install-types --non-interactive --ignore-missing-imports -p gdown
-      if: matrix.python-version != '2.7'
 
     - name: Test with pytest
       run: |
@@ -140,7 +138,6 @@ jobs:
     #     actual_hash=$(find $output -type f -exec md5sum {} \; | awk '{print $1}' | sort | md5sum | awk '{print $1}')
     #     test $actual_hash = b0e45acb8d9c7d9200ce8fe38896c790
     #     rm -rf $output
-    #  if: matrix.python-version != '2.7'
 
     - name: Install from dist
       run: |
