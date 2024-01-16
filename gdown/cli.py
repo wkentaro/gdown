@@ -121,6 +121,10 @@ def main():
         help="Format of Google Docs, Spreadsheets and Slides. "
         "Default is Google Docs: 'docx', Spreadsheet: 'xlsx', Slides: 'pptx'.",
     )
+    parser.add_argument(
+        "--user-agent",
+        help="User-Agent to use for downloading file.",
+    )
 
     args = parser.parse_args()
 
@@ -159,6 +163,7 @@ def main():
                 use_cookies=not args.no_cookies,
                 verify=not args.no_check_certificate,
                 remaining_ok=args.remaining_ok,
+                user_agent=args.user_agent,
             )
         else:
             download(
@@ -173,6 +178,7 @@ def main():
                 fuzzy=args.fuzzy,
                 resume=args.continue_,
                 format=args.format,
+                user_agent=args.user_agent,
             )
     except FileURLRetrievalError as e:
         print(e, file=sys.stderr)
