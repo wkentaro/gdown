@@ -203,6 +203,7 @@ def download_folder(
     use_cookies=True,
     remaining_ok=False,
     verify=True,
+    user_agent=None,
 ):
     """Downloads entire folder from URL.
 
@@ -228,6 +229,8 @@ def download_folder(
         Either a bool, in which case it controls whether the server's TLS
         certificate is verified, or a string, in which case it must be a path
         to a CA bundle to use. Default is True.
+    user_agent: str, optional
+        User-agent to use in the HTTP request.
 
     Returns
     -------
@@ -245,8 +248,13 @@ def download_folder(
         raise ValueError("Either url or id has to be specified")
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
+    if user_agent is None:
+        # We need to use different user agent for folder download c.f., file
+        user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
 
-    sess = _get_session(proxy=proxy, use_cookies=use_cookies)
+    sess = _get_session(
+        proxy=proxy, use_cookies=use_cookies, user_agent=user_agent
+    )
 
     if not quiet:
         print("Retrieving folder contents", file=sys.stderr)

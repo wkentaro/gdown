@@ -54,12 +54,10 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
-def _get_session(proxy, use_cookies, return_cookies_file=False):
+def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
     sess = requests.session()
 
-    sess.headers.update(
-        {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)"}
-    )
+    sess.headers.update({"User-Agent": user_agent})
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
@@ -91,6 +89,7 @@ def download(
     fuzzy=False,
     resume=False,
     format=None,
+    user_agent=None,
 ):
     """Download file from URL.
 
@@ -124,6 +123,8 @@ def download(
             - Google Docs: 'docx'
             - Google Spreadsheet: 'xlsx'
             - Google Slides: 'pptx'
+    user_agent: str, optional
+        User-agent to use in the HTTP request.
 
     Returns
     -------
@@ -134,11 +135,17 @@ def download(
         raise ValueError("Either url or id has to be specified")
     if id is not None:
         url = "https://drive.google.com/uc?id={id}".format(id=id)
+    if user_agent is None:
+        # We need to use different user agent for file download c.f., folder
+        user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA: E501
 
     url_origin = url
 
     sess, cookies_file = _get_session(
-        proxy=proxy, use_cookies=use_cookies, return_cookies_file=True
+        proxy=proxy,
+        use_cookies=use_cookies,
+        user_agent=user_agent,
+        return_cookies_file=True,
     )
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
