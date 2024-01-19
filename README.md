@@ -121,4 +121,4 @@ gdown.download_folder(id=id, quiet=True, use_cookies=False)
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT
