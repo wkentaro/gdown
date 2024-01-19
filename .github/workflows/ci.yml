@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.10"]
+        python-version: ["3.12"]
 
     steps:
     - uses: actions/setup-python@v4
@@ -22,32 +22,15 @@ jobs:
 
     - name: Install main
       run: |
-        pip install .
+        pip install .[test]
 
-    - name: Flake8
+    - name: Lint
       run: |
-        pip install flake8
-        flake8 .
+        make lint
 
-    - name: isort
+    - name: Test
       run: |
-        pip install isort
-        isort --check .
-
-    - name: Black
-      run: |
-        pip install black
-        black --check .
-
-    - name: Mypy
-      run: |
-        pip install mypy
-        mypy --install-types --non-interactive --ignore-missing-imports -p gdown
-
-    - name: Test with pytest
-      run: |
-        pip install pytest
-        pytest tests
+        make test
 
     - name: Download from URL other than Gdrive
       run: |
