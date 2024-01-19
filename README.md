@@ -13,8 +13,8 @@
 </div>
 
 <div align="center">
-  <img src=".readme/cli.png" width="90%">
-  <img src=".readme/python.png" width="90%">
+  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="90%">
+  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="90%">
 </div>
 
 <br/>
