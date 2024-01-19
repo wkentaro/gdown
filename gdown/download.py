@@ -7,9 +7,9 @@ import sys
 import tempfile
 import textwrap
 import time
+import urllib
 
 import requests
-import six
 import tqdm
 
 from ._indent import indent
@@ -241,7 +241,7 @@ def download(
             raise FileURLRetrievalError(message)
 
     if gdrive_file_id and is_gdrive_download_link:
-        content_disposition = six.moves.urllib_parse.unquote(
+        content_disposition = urllib.parse.unquote(
             res.headers["Content-Disposition"]
         )
         m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
@@ -253,7 +253,7 @@ def download(
     if output is None:
         output = filename_from_url
 
-    output_is_path = isinstance(output, six.string_types)
+    output_is_path = isinstance(output, str)
     if output_is_path and output.endswith(osp.sep):
         if not osp.exists(output):
             os.makedirs(output)

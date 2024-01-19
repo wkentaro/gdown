@@ -6,7 +6,6 @@ import textwrap
 import warnings
 
 import requests
-import six
 
 from . import __version__
 from ._indent import indent
@@ -127,10 +126,7 @@ def main():
     args = parser.parse_args()
 
     if args.output == "-":
-        if six.PY3:
-            args.output = sys.stdout.buffer
-        else:
-            args.output = sys.stdout
+        args.output = sys.stdout.buffer
 
     if args.id:
         warnings.warn(
