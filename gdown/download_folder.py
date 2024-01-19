@@ -1,5 +1,3 @@
-# -*- encoding: utf-8 -*-
-
 import itertools
 import json
 import os
