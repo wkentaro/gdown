@@ -1,9 +1,104 @@
-[tool.black]
-line-length = 79
-exclude = '''
-(
-    ^/\..*
-  | ^/docs/
-  | ^/github2pypi/
-)
-'''
+[build-system]
+requires = ["hatchling>=1.20.0", "hatch-vcs", "hatch-fancy-pypi-readme"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gdown"
+description = "Google Drive Public File/Folder Downloader"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+authors = [
+  { name = "Kentaro Wada", email = "www.kentaro.wada@gmail.com" },
+]
+keywords = [
+  "google-drive",
+  "download",
+  "wget",
+  "curl",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+  "filelock",
+  "requests[socks]",
+  "six",
+  "tqdm",
+  "beautifulsoup4",
+]
+dynamic = ["readme", "version"]
+
+[project.optional-dependencies]
+test = [
+  "build",
+  "mypy",
+  "pytest",
+  "ruff",
+  "twine",
+  "types-requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/wkentaro/gdown"
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+fragments = [
+  { path = "README.md" },
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[project.scripts]
+gdown = "gdown.cli:main"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.ruff]
+exclude = [
+  ".conda",
+  ".git",
+  "src",
+]
+
+line-length = 79  # 88
+indent-width = 4
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`), pycodestyle (`E`), isort (`I`).
+select = ["E", "F", "I"]
+ignore = []
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.ruff.isort]
+force-single-line = true
