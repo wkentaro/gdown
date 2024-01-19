@@ -1,34 +1,25 @@
-<h1 align="center">
-  gdown
-</h1>
-
-<h4 align="center">
-  Download a large file from Google Drive.
-</h4>
-
 <div align="center">
-  <a href="https://pypi.python.org/pypi/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
-  <a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/pyversions/gdown.svg"></a>
-  <a href="https://github.com/wkentaro/gdown/actions"><img src="https://github.com/wkentaro/gdown/workflows/ci/badge.svg"></a>
+  <h1>gdown</h1>
+  <p><b>Google Drive Public File/Folder Downloader</b></p>
+  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="70%">
+  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="70%">
+  <br>
+  <br>
 </div>
 
-<div align="center">
-  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="90%">
-  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="90%">
-</div>
 
-<br/>
+*Gdown* downloads a public file/folder from Google Drive.
 
-
-## Description
-
-Download a large file from Google Drive.  
-If you use curl/wget, it fails with a large file because of
-the security warning from Google Drive.
-Supports downloading from Google Drive folders (max 50 files per folder).
+*Gdown* provides what's curl/wget doesn't for Google Drive:
+- **Skip the security notice** allowing you to download large files;
+- **Recursive download** of files in a folder (maximum 50 files per folder);
+- **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
 
 
 ## Installation
+
+<a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/pyversions/gdown.svg"></a>
+<a href="https://pypi.python.org/pypi/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
 
 ```bash
 pip install gdown
