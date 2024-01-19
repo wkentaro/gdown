@@ -124,6 +124,6 @@ jobs:
 
     - name: Install from dist
       run: |
-        rm -f dist/*.tar.gz
-        python setup.py sdist
-        pip install dist/*.tar.gz
+        make build
+        pip install dist/gdown-*.tar.gz
+        pip install dist/gdown-*.whl
