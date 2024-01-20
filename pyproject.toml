@@ -74,7 +74,7 @@ exclude = [
   "src",
 ]
 
-line-length = 79  # 88
+line-length = 88
 indent-width = 4
 
 [tool.ruff.lint]

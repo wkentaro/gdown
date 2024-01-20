@@ -159,9 +159,7 @@ def download(
 
         if url == url_origin and res.status_code == 500:
             # The file could be Google Docs or Spreadsheets.
-            url = "https://drive.google.com/open?id={id}".format(
-                id=gdrive_file_id
-            )
+            url = "https://drive.google.com/open?id={id}".format(id=gdrive_file_id)
             continue
 
         if res.headers["Content-Type"].startswith("text/html"):
@@ -241,9 +239,7 @@ def download(
             raise FileURLRetrievalError(message)
 
     if gdrive_file_id and is_gdrive_download_link:
-        content_disposition = urllib.parse.unquote(
-            res.headers["Content-Disposition"]
-        )
+        content_disposition = urllib.parse.unquote(res.headers["Content-Disposition"])
         m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
         filename_from_url = m.groups()[0]
         filename_from_url = filename_from_url.replace(osp.sep, "_")

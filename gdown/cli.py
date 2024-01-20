@@ -188,8 +188,7 @@ def main():
         sys.exit(1)
     except requests.exceptions.ProxyError as e:
         print(
-            "Failed to use proxy:\n\n{}\n\n"
-            "Please check your proxy settings.".format(
+            "Failed to use proxy:\n\n{}\n\n" "Please check your proxy settings.".format(
                 indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
             ),
             file=sys.stderr,
