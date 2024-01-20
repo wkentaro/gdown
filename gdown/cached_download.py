@@ -32,13 +32,11 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
     if not (isinstance(md5, str) and len(md5) == 32):
         raise ValueError("MD5 must be 32 chars: {}".format(md5))
 
-    if not quiet:
-        print("Computing MD5: {}".format(filename), file=sys.stderr)
     md5_actual = md5sum(filename)
 
     if md5_actual == md5:
         if not quiet:
-            print("MD5 matches: {}".format(filename), file=sys.stderr)
+            print(f"MD5 matches: {filename!r} == {md5!r}", file=sys.stderr)
         return True
 
     raise AssertionError(
