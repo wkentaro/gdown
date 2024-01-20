@@ -87,7 +87,7 @@ def main():
     parser.add_argument(
         "--no-cookies",
         action="store_true",
-        help="don't use cookies in ~/.cache/gdown/cookies.json",
+        help="don't use cookies in ~/.cache/gdown/cookies.txt",
     )
     parser.add_argument(
         "--no-check-certificate",
