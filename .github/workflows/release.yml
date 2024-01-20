@@ -18,7 +18,7 @@ jobs:
         with:
           configurationJson: |
             {
-                "template": "#{{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\n---\n\n- For my daily development update, check [my Twitter/X](https://twitter.com/wkentaro_)\n- If you'd like to support this project, check [my sponsoring page](https://github.com/sponsors/wkentaro).",
+                "template": "#{{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n#{{UNCATEGORIZED}}\n</details>\n\n---\n\n- For my daily development update, check [my Twitter/X](https://twitter.com/wkentaro_).\n- If you'd like to support this project, check [my sponsoring page](https://github.com/sponsors/wkentaro).",
                 "categories": [
                     {
                         "title": "## 🚀 Features",
