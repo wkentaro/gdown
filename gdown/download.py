@@ -156,6 +156,9 @@ def download(
     while True:
         res = sess.get(url, stream=True, verify=verify)
 
+        if not (gdrive_file_id and is_gdrive_download_link):
+            break
+
         if url == url_origin and res.status_code == 500:
             # The file could be Google Docs or Spreadsheets.
             url = "https://drive.google.com/open?id={id}".format(id=gdrive_file_id)
@@ -212,8 +215,6 @@ def download(
 
         if "Content-Disposition" in res.headers:
             # This is the file
-            break
-        if not (gdrive_file_id and is_gdrive_download_link):
             break
 
         # Need to redirect with confirmation
