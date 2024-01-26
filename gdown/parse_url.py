@@ -3,6 +3,11 @@ import urllib
 import warnings
 
 
+def is_google_drive_url(url):
+    parsed = urllib.parse.urlparse(url)
+    return parsed.hostname in ["drive.google.com", "docs.google.com"]
+
+
 def parse_url(url, warning=True):
     """Parse URLs especially for Google Drive links.
 
@@ -11,7 +16,7 @@ def parse_url(url, warning=True):
     """
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
-    is_gdrive = parsed.hostname in ["drive.google.com", "docs.google.com"]
+    is_gdrive = is_google_drive_url(url=url)
     is_download_link = parsed.path.endswith("/uc")
 
     if not is_gdrive:
