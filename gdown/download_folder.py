@@ -11,6 +11,7 @@ import bs4
 from .download import _get_session
 from .download import download
 from .exceptions import FolderContentsMaximumLimitError
+from .parse_url import is_google_drive_url
 
 MAX_NUMBER_FILES = 50
 
@@ -99,16 +100,26 @@ def _download_and_parse_google_drive_link(
 
     return_code = True
 
-    # canonicalize the language into English
-    if "?" in url:
-        url += "&hl=en"
-    else:
-        url += "?hl=en"
+    for _ in range(2):
+        if is_google_drive_url(url):
+            # canonicalize the language into English
+            if "?" in url:
+                url += "&hl=en"
+            else:
+                url += "?hl=en"
 
-    res = sess.get(url, verify=verify)
+        res = sess.get(url, verify=verify)
+        if res.status_code != 200:
+            return False, None
 
-    if res.status_code != 200:
-        return False, None
+        if is_google_drive_url(url):
+            break
+
+        if not is_google_drive_url(res.url):
+            break
+
+        # need to try with canonicalized url if the original url redirects to gdrive
+        url = res.url
 
     gdrive_file, id_name_type_iter = _parse_google_drive_file(
         url=url,
