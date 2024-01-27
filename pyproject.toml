@@ -62,7 +62,7 @@ fragments = [
 source = "vcs"
 
 [project.scripts]
-gdown = "gdown.cli:main"
+gdown = "gdown.__main__:main"
 
 [tool.mypy]
 ignore_missing_imports = true
