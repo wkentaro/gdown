@@ -13,7 +13,7 @@ format:
 	ruff check --fix
 
 test:
-	python -m pytest -v tests
+	python -m pytest -n auto -v tests
 
 clean:
 	rm -rf build dist *.egg-info

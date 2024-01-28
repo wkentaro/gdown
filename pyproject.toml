@@ -44,6 +44,7 @@ test = [
   "build",
   "mypy",
   "pytest",
+  "pytest-xdist",
   "ruff",
   "twine",
   "types-requests",
