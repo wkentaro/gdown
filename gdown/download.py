@@ -6,9 +6,10 @@ import sys
 import tempfile
 import textwrap
 import time
-import urllib
+import urllib.parse
 from http.cookiejar import MozillaCookieJar
 
+import bs4
 import requests
 import tqdm
 
@@ -28,10 +29,16 @@ def get_url_from_gdrive_confirmation(contents):
             url = "https://docs.google.com" + m.groups()[0]
             url = url.replace("&amp;", "&")
             break
-        m = re.search('id="download-form" action="(.+?)"', line)
-        if m:
-            url = m.groups()[0]
-            url = url.replace("&amp;", "&")
+        soup = bs4.BeautifulSoup(line, features="html.parser")
+        form = soup.select_one("#download-form")
+        if form is not None:
+            url = form["action"].replace("&amp;", "&")
+            url_components = urllib.parse.urlsplit(url)
+            query_params = urllib.parse.parse_qs(url_components.query)
+            for param in form.findChildren("input", attrs={"type": "hidden"}):
+                query_params[param["name"]] = param["value"]
+            query = urllib.parse.urlencode(query_params, doseq=True)
+            url = urllib.parse.urlunsplit(url_components._replace(query=query))
             break
         m = re.search('"downloadUrl":"([^"]+)', line)
         if m:
@@ -50,6 +57,22 @@ def get_url_from_gdrive_confirmation(contents):
             "'Anyone with the link', or have had many accesses."
         )
     return url
+
+
+def get_filename_from_response(res):
+    content_disposition = urllib.parse.unquote(res.headers["Content-Disposition"])
+
+    m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
+    if m:
+        filename = m.groups()[0]
+        return filename.replace(osp.sep, "_")
+
+    m = re.search("attachment; filename=\"(.*?)\"", content_disposition)
+    if m:
+        filename = m.groups()[0]
+        return filename
+
+    return None
 
 
 def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
@@ -232,13 +255,7 @@ def download(
             )
             raise FileURLRetrievalError(message)
 
-    if gdrive_file_id and is_gdrive_download_link:
-        content_disposition = urllib.parse.unquote(res.headers["Content-Disposition"])
-        m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
-        filename_from_url = m.groups()[0]
-        filename_from_url = filename_from_url.replace(osp.sep, "_")
-    else:
-        filename_from_url = osp.basename(url)
+    filename_from_url = get_filename_from_response(res) or osp.basename(url)
 
     if output is None:
         output = filename_from_url
