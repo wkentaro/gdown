@@ -30,7 +30,7 @@ def md5sum(filename, blocksize=None):
 
 def assert_md5sum(filename, md5, quiet=False, blocksize=None):
     if not (isinstance(md5, str) and len(md5) == 32):
-        raise ValueError("MD5 must be 32 chars: {}".format(md5))
+        raise ValueError(f"MD5 must be 32 chars: {md5}")
 
     md5_actual = md5sum(filename)
 
@@ -39,9 +39,7 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
             print(f"MD5 matches: {filename!r} == {md5!r}", file=sys.stderr)
         return True
 
-    raise AssertionError(
-        "MD5 doesn't match:\nactual: {}\nexpected: {}".format(md5_actual, md5)
-    )
+    raise AssertionError(f"MD5 doesn't match:\nactual: {md5_actual}\nexpected: {md5}")
 
 
 def cached_download(
@@ -81,7 +79,7 @@ def cached_download(
     # check existence
     if osp.exists(path) and not md5:
         if not quiet:
-            print("File exists: {}".format(path), file=sys.stderr)
+            print(f"File exists: {path}", file=sys.stderr)
         return path
     elif osp.exists(path) and md5:
         try:
@@ -104,9 +102,9 @@ def cached_download(
         if not quiet:
             msg = "Cached Downloading"
             if path:
-                msg = "{}: {}".format(msg, path)
+                msg = f"{msg}: {path}"
             else:
-                msg = "{}...".format(msg)
+                msg = f"{msg}..."
             print(msg, file=sys.stderr)
 
         download(url, temp_path, quiet=quiet, **kwargs)
