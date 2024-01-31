@@ -108,6 +108,11 @@ def main():
         "(max {max} files per folder)".format(max=MAX_NUMBER_FILES),
     )
     parser.add_argument(
+        "--file_rgx",
+        type=str,
+        help="(folder only) regular expression to filter files by name in a folder",
+    )
+    parser.add_argument(
         "--remaining-ok",
         action="store_true",
         help="(folder only) asserts that is ok to download max "
@@ -150,6 +155,7 @@ def main():
             download_folder(
                 url=url,
                 id=id,
+                file_rgx=args.file_rgx,
                 output=args.output,
                 quiet=args.quiet,
                 proxy=args.proxy,

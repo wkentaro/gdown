@@ -92,6 +92,7 @@ def _parse_google_drive_file(url, content):
 def _download_and_parse_google_drive_link(
     sess,
     url,
+    file_rgx,
     quiet=False,
     remaining_ok=False,
     verify=True,
@@ -128,6 +129,10 @@ def _download_and_parse_google_drive_link(
 
     for child_id, child_name, child_type in id_name_type_iter:
         if child_type != _GoogleDriveFile.TYPE_FOLDER:
+            if (
+                re.search(file_rgx, child_name) is None
+            ):  # filename does not match filter
+                continue
             if not quiet:
                 print(
                     "Processing file",
@@ -192,6 +197,7 @@ def download_folder(
     url=None,
     id=None,
     output=None,
+    file_rgx=None,
     quiet=False,
     proxy=None,
     speed=None,
@@ -212,6 +218,8 @@ def download_folder(
     output: str, optional
         String containing the path of the output folder.
         Defaults to current working directory.
+    file_rgx: str, optional
+        Regular expression to filter files by name in a folder.
     quiet: bool, optional
         Suppress terminal output.
     proxy: str, optional
@@ -243,6 +251,18 @@ def download_folder(
         raise ValueError("Either url or id has to be specified")
     if id is not None:
         url = "https://drive.google.com/drive/folders/{id}".format(id=id)
+    if file_rgx is not None and not remaining_ok:
+        raise ValueError(
+            "The file_rgx filter can only be used with remaining_ok=True as "
+            "some files may not be downloaded."
+        )
+    if file_rgx is None:
+        file_rgx = ".*"
+    else:
+        try:
+            file_rgx = re.compile(file_rgx)
+        except re.error:
+            raise ValueError("Non valid regex pattern. Check your file_rgx input.")
     if user_agent is None:
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
@@ -254,6 +274,7 @@ def download_folder(
     return_code, gdrive_file = _download_and_parse_google_drive_link(
         sess,
         url,
+        file_rgx,
         quiet=quiet,
         remaining_ok=remaining_ok,
         verify=verify,

@@ -96,7 +96,7 @@ def test_download_folder_from_gdrive():
         )
 
 
-def test_download_a_folder_with_remining_ok_false():
+def test_download_a_folder_with_remaining_ok_false():
     with tempfile.TemporaryDirectory() as d:
         cmd = f"gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O {d} --folder"  # noqa: E501
     assert subprocess.call(shlex.split(cmd)) == 1
@@ -129,4 +129,18 @@ def test_download_a_folder_with_file_content_more_than_the_limit():
 
         filenames = sorted(os.listdir(d))
         for i in range(50):
+            assert filenames[i] == f"file_{i:02d}.txt"
+
+
+def test_download_a_folder_with_regex_filter():
+    url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
+
+    with tempfile.TemporaryDirectory() as d:
+        cmd = f"gdown {url} -O {d} --folder --remaining-ok "
+        "--file_rgx file_1[[:alnum:]].txt"
+        subprocess.check_call(shlex.split(cmd))
+
+        filenames = sorted(os.listdir(d))
+        print(filenames)
+        for i in range(10, 20):
             assert filenames[i] == f"file_{i:02d}.txt"
