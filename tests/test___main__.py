@@ -4,7 +4,7 @@ import subprocess
 import sys
 import tempfile
 
-from gdown.cached_download import assert_md5sum
+from gdown.cached_download import _assert_filehash
 
 here = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,7 +15,7 @@ def _test_cli_with_md5(url_or_id, md5, options=None):
         if options is not None:
             cmd = f"{cmd} {options}"
         subprocess.call(shlex.split(cmd))
-        assert_md5sum(filename=f.name, md5=md5)
+        _assert_filehash(path=f.name, hash=f"md5:{md5}")
 
 
 def _test_cli_with_content(url_or_id, content):
@@ -58,9 +58,8 @@ def test_download_large_file_from_gdrive():
             print(e, file=sys.stderr)
             continue
     else:
-        raise AssertionError(
-            f"Failed to download any of the files: {zip(*file_id_and_md5s)[0]}"
-        )
+        file_ids, _ = zip(*file_id_and_md5s)
+        raise AssertionError(f"Failed to download any of the files: {file_ids}")
 
 
 def test_download_and_extract():
@@ -91,8 +90,9 @@ def test_download_folder_from_gdrive():
         except AssertionError as e:
             print(e, file=sys.stderr)
     else:
+        file_ids, md5s = zip(*folder_id_and_md5s)
         raise AssertionError(
-            f"Failed to download any of the folders: {zip(*folder_id_and_md5s)[0]}"
+            f"Failed to download any of the folders: {file_ids}"
         )
 
 
