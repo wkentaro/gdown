@@ -4,7 +4,7 @@ import subprocess
 import sys
 import tempfile
 
-from gdown.cached_download import assert_md5sum
+from gdown.cached_download import _assert_filehash
 
 here = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,7 +15,7 @@ def _test_cli_with_md5(url_or_id, md5, options=None):
         if options is not None:
             cmd = f"{cmd} {options}"
         subprocess.call(shlex.split(cmd))
-        assert_md5sum(filename=f.name, md5=md5)
+        _assert_filehash(path=f.name, hash=f"md5:{md5}")
 
 
 def _test_cli_with_content(url_or_id, content):
