@@ -90,8 +90,9 @@ def test_download_folder_from_gdrive():
         except AssertionError as e:
             print(e, file=sys.stderr)
     else:
+        file_ids, md5s = zip(*folder_id_and_md5s)
         raise AssertionError(
-            f"Failed to download any of the folders: {zip(*folder_id_and_md5s)[0]}"
+            f"Failed to download any of the folders: {file_ids}"
         )
 
 
