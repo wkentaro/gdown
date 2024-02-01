@@ -58,9 +58,8 @@ def test_download_large_file_from_gdrive():
             print(e, file=sys.stderr)
             continue
     else:
-        raise AssertionError(
-            f"Failed to download any of the files: {zip(*file_id_and_md5s)[0]}"
-        )
+        file_ids, _ = zip(*file_id_and_md5s)
+        raise AssertionError(f"Failed to download any of the files: {file_ids}")
 
 
 def test_download_and_extract():
