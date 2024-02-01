@@ -59,7 +59,7 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
-def get_filename_from_response(res):
+def _get_filename_from_response(res):
     content_disposition = urllib.parse.unquote(res.headers["Content-Disposition"])
 
     m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
@@ -257,7 +257,7 @@ def download(
 
     filename_from_url = None
     if gdrive_file_id and is_gdrive_download_link:
-        filename_from_url = get_filename_from_response(res)
+        filename_from_url = _get_filename_from_response(res)
     if filename_from_url is None:
         filename_from_url = osp.basename(url)
 
