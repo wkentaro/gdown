@@ -67,7 +67,7 @@ def get_filename_from_response(res):
         filename = m.groups()[0]
         return filename.replace(osp.sep, "_")
 
-    m = re.search("attachment; filename=\"(.*?)\"", content_disposition)
+    m = re.search('attachment; filename="(.*?)"', content_disposition)
     if m:
         filename = m.groups()[0]
         return filename
