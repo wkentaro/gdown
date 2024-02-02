@@ -110,6 +110,7 @@ def download(
     resume=False,
     format=None,
     user_agent=None,
+    log_messages=None,
 ):
     """Download file from URL.
 
@@ -145,6 +146,10 @@ def download(
             - Google Slides: 'pptx'
     user_agent: str, optional
         User-agent to use in the HTTP request.
+    log_messages: dict, optional
+        Log messages to customize. Currently it supports:
+        - 'start': the message to show the start of the download
+        - 'output': the message to show the output filename
 
     Returns
     -------
@@ -158,6 +163,8 @@ def download(
     if user_agent is None:
         # We need to use different user agent for file download c.f., folder
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA: E501
+    if log_messages is None:
+        log_messages = {}
 
     url_origin = url
 
@@ -310,7 +317,7 @@ def download(
         res = sess.get(url, headers=headers, stream=True, verify=verify)
 
     if not quiet:
-        print("Downloading...", file=sys.stderr)
+        print(log_messages.get("start", "Downloading...\n"), file=sys.stderr, end="")
         if resume:
             print("Resume:", tmp_file, file=sys.stderr)
         if url_origin != url:
@@ -319,9 +326,11 @@ def download(
         else:
             print("From:", url, file=sys.stderr)
         print(
-            "To:",
-            osp.abspath(output) if output_is_path else output,
+            log_messages.get(
+                "output", f"To: {osp.abspath(output) if output_is_path else output}\n"
+            ),
             file=sys.stderr,
+            end="",
         )
 
     try:
