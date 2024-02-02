@@ -275,7 +275,7 @@ def download_folder(
         os.makedirs(root_folder)
 
     if not quiet:
-        print("Building directory structure completed")
+        print("Building directory structure completed", file=sys.stderr)
     filenames = []
     for file_id, file_path in directory_structure:
         if file_id is None:  # folder
