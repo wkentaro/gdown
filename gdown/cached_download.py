@@ -181,8 +181,6 @@ def _assert_filehash(path, hash, quiet=False, blocksize=None):
     hash_actual = _compute_filehash(path=path, algorithm=algorithm)
 
     if hash_actual == hash:
-        if not quiet:
-            print(f"File hash matches: {path!r} == {hash!r}", file=sys.stderr)
         return True
 
     raise AssertionError(

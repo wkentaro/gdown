@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import gdown
@@ -5,9 +6,10 @@ import gdown
 
 def _cached_download(**kwargs):
     url = "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
-    with tempfile.NamedTemporaryFile() as f:
-        for _ in range(2):
-            gdown.cached_download(url=url, path=f.name, **kwargs)
+    path = tempfile.mktemp()
+    for _ in range(2):
+        gdown.cached_download(url=url, path=path, **kwargs)
+    os.remove(path)
 
 
 def test_cached_download_md5():
