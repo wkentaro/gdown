@@ -129,15 +129,17 @@ def cached_download(
     try:
         temp_path = osp.join(temp_root, "dl")
 
-        if not quiet:
-            msg = "Cached Downloading"
-            if path:
-                msg = f"{msg}: {path}"
-            else:
-                msg = f"{msg}..."
-            print(msg, file=sys.stderr)
-
-        download(url, temp_path, quiet=quiet, **kwargs)
+        log_message_hash = f"Hash: {hash}\n" if hash else ""
+        download(
+            url=url,
+            output=temp_path,
+            quiet=quiet,
+            log_messages={
+                "start": f"Cached downloading...\n{log_message_hash}",
+                "output": f"To: {path}\n",
+            },
+            **kwargs,
+        )
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
     except Exception:
