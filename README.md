@@ -1,6 +1,6 @@
 <div align="center">
   <h1>gdown</h1>
-  <p><b>Google Drive Public File/Folder Downloader</b></p>
+  <p><b>Google Drive Public File Downloader when Curl/Wget Fails</b></p>
   <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="80%">
   <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="80%">
   <br>
@@ -11,7 +11,7 @@
 *Gdown* downloads a public file/folder from Google Drive.
 
 *Gdown* provides what's curl/wget doesn't for Google Drive:
-- **Skip the security notice** allowing you to download large files;
+- **Skip the security notice** allowing you to download large files (Curl/Wget fails);
 - **Recursive download** of files in a folder (maximum 50 files per folder);
 - **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
 
