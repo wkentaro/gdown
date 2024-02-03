@@ -31,7 +31,7 @@ pip install --upgrade gdown
 
 ## Usage
 
-### From Command Line
+### via Command Line
 
 ```bash
 $ gdown --help
@@ -78,7 +78,7 @@ $ ls gdown-4.0.0/
 gdown  github2pypi  LICENSE  MANIFEST.in  pyproject.toml  README.md  setup.cfg  setup.py  tests
 ```
 
-### From Python
+### via Python
 
 ```python
 import gdown
