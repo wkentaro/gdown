@@ -54,7 +54,8 @@ def get_url_from_gdrive_confirmation(contents):
         raise FileURLRetrievalError(
             "Cannot retrieve the public link of the file. "
             "You may need to change the permission to "
-            "'Anyone with the link', or have had many accesses."
+            "'Anyone with the link', or have had many accesses. "
+            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
         )
     return url
 

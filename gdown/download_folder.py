@@ -56,7 +56,8 @@ def _parse_google_drive_file(url, content):
         raise RuntimeError(
             "Cannot retrieve the folder information from the link. "
             "You may need to change the permission to "
-            "'Anyone with the link'."
+            "'Anyone with the link', or have had many accesses. "
+            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
         )
 
     # decodes the array and evaluates it as a python array
