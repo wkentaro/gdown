@@ -1,8 +1,8 @@
 <div align="center">
   <h1>gdown</h1>
-  <p><b>Google Drive Public File/Folder Downloader</b></p>
-  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="70%">
-  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="70%">
+  <p><b>Google Drive Public File Downloader when Curl/Wget Fails</b></p>
+  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="80%">
+  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="80%">
   <br>
   <br>
 </div>
@@ -11,7 +11,7 @@
 *Gdown* downloads a public file/folder from Google Drive.
 
 *Gdown* provides what's curl/wget doesn't for Google Drive:
-- **Skip the security notice** allowing you to download large files;
+- **Skip the security notice** allowing you to download large files (curl/wget fails);
 - **Recursive download** of files in a folder (maximum 50 files per folder);
 - **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
 
@@ -31,7 +31,7 @@ pip install --upgrade gdown
 
 ## Usage
 
-### From Command Line
+### via Command Line
 
 ```bash
 $ gdown --help
@@ -78,7 +78,7 @@ $ ls gdown-4.0.0/
 gdown  github2pypi  LICENSE  MANIFEST.in  pyproject.toml  README.md  setup.cfg  setup.py  tests
 ```
 
-### From Python
+### via Python
 
 ```python
 import gdown
@@ -86,27 +86,28 @@ import gdown
 # a file
 url = "https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ"
 output = "fcn8s_from_caffe.npz"
-gdown.download(url, output, quiet=False)
+gdown.download(url, output)
 
 # same as the above, but with the file ID
 id = "0B9P1L--7Wd2vNm9zMTJWOGxobkU"
-gdown.download(id=id, output=output, quiet=False)
+gdown.download(id=id, output=output)
 
 # same as the above, and you can copy-and-paste a URL from Google Drive with fuzzy=True
 url = "https://drive.google.com/file/d/0B9P1L--7Wd2vNm9zMTJWOGxobkU/view?usp=sharing"
-gdown.download(url=url, output=output, quiet=False, fuzzy=True)
+gdown.download(url=url, output=output, fuzzy=True)
 
-# cached download with identity check via MD5
-md5 = "fa837a88f0c40c513d975104edf3da17"
-gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
+# Cached download with identity check via MD5 (or SHA1, SHA256, etc).
+# Pass postprocess function e.g., extracting compressed file.
+md5 = "md5:fa837a88f0c40c513d975104edf3da17"
+gdown.cached_download(url, output, hash=hash, postprocess=gdown.extractall)
 
 # a folder
 url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
-gdown.download_folder(url, quiet=True, use_cookies=False)
+gdown.download_folder(url)
 
 # same as the above, but with the folder ID
 id = "15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
-gdown.download_folder(id=id, quiet=True, use_cookies=False)
+gdown.download_folder(id=id)
 ```
 
 

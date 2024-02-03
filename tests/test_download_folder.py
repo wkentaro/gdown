@@ -1,6 +1,8 @@
 import os.path as osp
+import tempfile
 
 from gdown.download_folder import _parse_google_drive_file
+from gdown.download_folder import download_folder
 
 here = osp.dirname(osp.abspath(__file__))
 
@@ -58,3 +60,14 @@ def test_valid_page():
     assert actual_children_ids == expected_children_ids
     assert actual_children_names == expected_children_names
     assert actual_children_types == expected_children_types
+
+
+def test_download_folder_dry_run():
+    url = "https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks"
+    tmp_dir = tempfile.mkdtemp()
+    files = download_folder(url=url, output=tmp_dir, skip_download=True)
+    assert len(files) == 6
+    for file in files:
+        assert hasattr(file, "id")
+        assert hasattr(file, "path")
+        assert hasattr(file, "local_path")

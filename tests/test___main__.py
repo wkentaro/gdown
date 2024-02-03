@@ -13,7 +13,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 def _test_cli_with_md5(url_or_id: str, md5: str, options: list[str] = []):
     with tempfile.TemporaryDirectory() as d:
         file = os.path.join(d, "temp")
-        cmd = ["gdown", url_or_id, "-O", file, *options]
+        cmd = ["gdown", "--no-cookies", url_or_id, "-O", file, *options]
         subprocess.call(cmd)
         _assert_filehash(path=file, hash=f"md5:{md5}")
 
@@ -21,7 +21,7 @@ def _test_cli_with_md5(url_or_id: str, md5: str, options: list[str] = []):
 def _test_cli_with_content(url_or_id, content):
     with tempfile.TemporaryDirectory() as d:
         file = os.path.join(d, "temp")
-        subprocess.call(["gdown", url_or_id, "-O", file])
+        subprocess.call(["gdown", "--no-cookies", url_or_id, "-O", file])
         with open(file) as f:
             assert f.read() == content
 
@@ -64,7 +64,7 @@ def test_download_large_file_from_gdrive():
 
 
 def test_download_and_extract():
-    cmd = "gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - | tar zxvf -"  # noqa: E501
+    cmd = "gdown --no-cookies https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - | tar zxvf -"  # noqa: E501
     with tempfile.TemporaryDirectory() as d:
         subprocess.call(cmd, shell=True, cwd=d)
         assert os.path.exists(os.path.join(d, "gdown-4.0.0/gdown/__init__.py"))
@@ -78,7 +78,7 @@ def test_download_folder_from_gdrive():
 
     for folder_id, md5 in folder_id_and_md5s:
         with tempfile.TemporaryDirectory() as d:
-            subprocess.call(["gdown", folder_id, "-O", d, "--folder"])
+            subprocess.call(["gdown", "--no-cookies", folder_id, "-O", d, "--folder"])
 
             cmd = "find . -type f -exec md5sum {} \\; | awk '{print $1}' | sort | md5sum | awk '{print $1}'"  # noqa: E501
             md5_actual = (
@@ -98,6 +98,7 @@ def test_download_a_folder_with_remining_ok_false():
     with tempfile.TemporaryDirectory() as d:
         cmd = [
             "gdown",
+            "--no-cookies",
             "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn",
             "-O",
             d,
@@ -130,6 +131,7 @@ def test_download_a_folder_with_file_content_more_than_the_limit():
     with tempfile.TemporaryDirectory() as d:
         cmd = [
             "gdown",
+            "--no-cookies",
             url,
             "-O",
             d,
