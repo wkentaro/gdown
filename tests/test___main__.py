@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import os
-import shlex
 import subprocess
 import sys
 import tempfile
@@ -9,19 +10,19 @@ from gdown.cached_download import _assert_filehash
 here = os.path.dirname(os.path.abspath(__file__))
 
 
-def _test_cli_with_md5(url_or_id, md5, options=None):
-    with tempfile.NamedTemporaryFile() as f:
-        cmd = f"gdown {url_or_id} -O {f.name}"
-        if options is not None:
-            cmd = f"{cmd} {options}"
-        subprocess.call(shlex.split(cmd))
-        _assert_filehash(path=f.name, hash=f"md5:{md5}")
+def _test_cli_with_md5(url_or_id: str, md5: str, options: list[str] = []):
+    with tempfile.TemporaryDirectory() as d:
+        file = os.path.join(d, "temp")
+        cmd = ["gdown", url_or_id, "-O", file, *options]
+        subprocess.call(cmd)
+        _assert_filehash(path=file, hash=f"md5:{md5}")
 
 
 def _test_cli_with_content(url_or_id, content):
-    with tempfile.NamedTemporaryFile() as f:
-        subprocess.call(shlex.split(f"gdown {url_or_id} -O {f.name}"))
-        with open(f.name) as f:
+    with tempfile.TemporaryDirectory() as d:
+        file = os.path.join(d, "temp")
+        subprocess.call(["gdown", url_or_id, "-O", file])
+        with open(file) as f:
             assert f.read() == content
 
 
@@ -77,8 +78,7 @@ def test_download_folder_from_gdrive():
 
     for folder_id, md5 in folder_id_and_md5s:
         with tempfile.TemporaryDirectory() as d:
-            cmd = f"gdown {folder_id} -O {d} --folder"
-            subprocess.call(shlex.split(cmd))
+            subprocess.call(["gdown", folder_id, "-O", d, "--folder"])
 
             cmd = "find . -type f -exec md5sum {} \\; | awk '{print $1}' | sort | md5sum | awk '{print $1}'"  # noqa: E501
             md5_actual = (
@@ -96,8 +96,14 @@ def test_download_folder_from_gdrive():
 
 def test_download_a_folder_with_remining_ok_false():
     with tempfile.TemporaryDirectory() as d:
-        cmd = f"gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O {d} --folder"  # noqa: E501
-    assert subprocess.call(shlex.split(cmd)) == 1
+        cmd = [
+            "gdown",
+            "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn",
+            "-O",
+            d,
+            "--folder",
+        ]
+    assert subprocess.call(cmd) == 1
 
 
 # def test_download_docs_from_gdrive():
@@ -115,15 +121,22 @@ def test_download_a_folder_with_remining_ok_false():
 def test_download_slides_from_gdrive():
     file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
     md5 = "96704c6c40e308a68d3842e83a0136b9"
-    _test_cli_with_md5(url_or_id=file_id, md5=md5, options="--format pdf")
+    _test_cli_with_md5(url_or_id=file_id, md5=md5, options=["--format", "pdf"])
 
 
 def test_download_a_folder_with_file_content_more_than_the_limit():
     url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
 
     with tempfile.TemporaryDirectory() as d:
-        cmd = f"gdown {url} -O {d} --folder --remaining-ok"
-        subprocess.check_call(shlex.split(cmd))
+        cmd = [
+            "gdown",
+            url,
+            "-O",
+            d,
+            "--folder",
+            "--remaining-ok",
+        ]
+        subprocess.check_call(cmd)
 
         filenames = sorted(os.listdir(d))
         for i in range(50):

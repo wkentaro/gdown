@@ -37,3 +37,24 @@ jobs:
         make build
         pip install dist/gdown-*.tar.gz
         pip install dist/gdown-*.whl
+
+  test-windows:
+
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]
+
+    steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/checkout@v3
+
+    - name: Install main
+      run: |
+        pip install .[test]
+
+    - name: Test
+      run: |
+        pytest -n auto -v tests
