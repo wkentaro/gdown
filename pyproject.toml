@@ -48,6 +48,7 @@ test = [
   "ruff",
   "twine",
   "types-requests",
+  "types-setuptools",
 ]
 
 [project.urls]
