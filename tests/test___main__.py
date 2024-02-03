@@ -11,7 +11,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 def _test_cli_with_md5(url_or_id, md5, options=None):
     with tempfile.NamedTemporaryFile() as f:
-        cmd = f"gdown {url_or_id} -O {f.name}"
+        cmd = f"gdown --no-cookies {url_or_id} -O {f.name}"
         if options is not None:
             cmd = f"{cmd} {options}"
         subprocess.call(shlex.split(cmd))
@@ -20,7 +20,7 @@ def _test_cli_with_md5(url_or_id, md5, options=None):
 
 def _test_cli_with_content(url_or_id, content):
     with tempfile.NamedTemporaryFile() as f:
-        subprocess.call(shlex.split(f"gdown {url_or_id} -O {f.name}"))
+        subprocess.call(shlex.split(f"gdown --no-cookies {url_or_id} -O {f.name}"))
         with open(f.name) as f:
             assert f.read() == content
 
@@ -63,7 +63,7 @@ def test_download_large_file_from_gdrive():
 
 
 def test_download_and_extract():
-    cmd = "gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - | tar zxvf -"  # noqa: E501
+    cmd = "gdown --no-cookies https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - | tar zxvf -"  # noqa: E501
     with tempfile.TemporaryDirectory() as d:
         subprocess.call(cmd, shell=True, cwd=d)
         assert os.path.exists(os.path.join(d, "gdown-4.0.0/gdown/__init__.py"))
@@ -77,7 +77,7 @@ def test_download_folder_from_gdrive():
 
     for folder_id, md5 in folder_id_and_md5s:
         with tempfile.TemporaryDirectory() as d:
-            cmd = f"gdown {folder_id} -O {d} --folder"
+            cmd = f"gdown --no-cookies {folder_id} -O {d} --folder"
             subprocess.call(shlex.split(cmd))
 
             cmd = "find . -type f -exec md5sum {} \\; | awk '{print $1}' | sort | md5sum | awk '{print $1}'"  # noqa: E501
@@ -96,7 +96,7 @@ def test_download_folder_from_gdrive():
 
 def test_download_a_folder_with_remining_ok_false():
     with tempfile.TemporaryDirectory() as d:
-        cmd = f"gdown https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O {d} --folder"  # noqa: E501
+        cmd = f"gdown --no-cookies https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O {d} --folder"  # noqa: E501
     assert subprocess.call(shlex.split(cmd)) == 1
 
 
@@ -122,7 +122,7 @@ def test_download_a_folder_with_file_content_more_than_the_limit():
     url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
 
     with tempfile.TemporaryDirectory() as d:
-        cmd = f"gdown {url} -O {d} --folder --remaining-ok"
+        cmd = f"gdown --no-cookies {url} -O {d} --folder --remaining-ok"
         subprocess.check_call(shlex.split(cmd))
 
         filenames = sorted(os.listdir(d))
