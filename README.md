@@ -11,7 +11,7 @@
 *Gdown* downloads a public file/folder from Google Drive.
 
 *Gdown* provides what's curl/wget doesn't for Google Drive:
-- **Skip the security notice** allowing you to download large files (Curl/Wget fails);
+- **Skip the security notice** allowing you to download large files (curl/wget fails);
 - **Recursive download** of files in a folder (maximum 50 files per folder);
 - **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
 
