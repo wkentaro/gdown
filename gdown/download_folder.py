@@ -290,7 +290,7 @@ def download_folder(
         root_dir = osp.join(output, gdrive_file.name)
     else:
         root_dir = output
-    if not osp.exists(root_dir):
+    if not skip_download and not osp.exists(root_dir):
         os.makedirs(root_dir)
 
     files = []
