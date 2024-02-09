@@ -10,7 +10,7 @@
 
 *Gdown* downloads a public file/folder from Google Drive.
 
-*Gdown* provides what's curl/wget doesn't for Google Drive:
+*Gdown* provides what curl/wget doesn't for Google Drive:
 - **Skip the security notice** allowing you to download large files (curl/wget fails);
 - **Recursive download** of files in a folder (maximum 50 files per folder);
 - **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
@@ -113,11 +113,11 @@ gdown.download_folder(id=id)
 
 ## FAQ
 
-### I get 'Permission Denied' error.
+### I get a 'Permission Denied' error.
 
 Have you made sure you set the file permission to 'Anyone with Link'?
 
-### I set the permission 'Anyone with Link', but still can't download.
+### I set the permission 'Anyone with Link', but I still can't download.
 
 Google restricts access to a file when the download is concentrated.
 If you can still access to the file from your browser, downloading cookies file might
