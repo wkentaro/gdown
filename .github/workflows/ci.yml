@@ -8,10 +8,10 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.12"]
 
     steps:
@@ -20,6 +20,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - uses: actions/checkout@v3
 
+    - name: Install Make
+      run: choco install make
+      if: matrix.os == 'windows-latest'
+
     - name: Install main
       run: |
         pip install .[test]
@@ -27,12 +31,15 @@ jobs:
     - name: Lint
       run: |
         make lint
+      if: matrix.os != 'windows-latest'
 
     - name: Test
       run: |
         make test
+      if: matrix.os == 'ubuntu-latest'
 
     - name: Install from dist
+      shell: bash
       run: |
         make build
         pip install dist/gdown-*.tar.gz
