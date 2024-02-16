@@ -152,7 +152,9 @@ def download(
     fuzzy: bool
         Fuzzy extraction of Google Drive's file Id. Default is False.
     resume: bool
-        Resume the download from existing tmp file if possible.
+        Resume interrupted transfers.
+        Completed output files will be skipped.
+        Partial tempfiles will be reused, if the transfer is incomplete.
         Default is False.
     format: str, optional
         Format of Google Docs, Spreadsheets and Slides. Default is:
@@ -295,6 +297,16 @@ def download(
         output = osp.join(output, filename_from_url)
 
     if output_is_path:
+
+        # Shortcut any 100% transfers to avoid excessive GETs,
+        # when it's reasonable to assume that gdown would've been
+        # using tempfiles and atomic renames before.
+        if resume and os.path.isfile(output):
+            if not quiet:
+                print(f"resume: already have {output}")
+            return output
+
+        # Alternatively, resume mode can reuse partial tmp_files.
         existing_tmp_files = []
         for file in os.listdir(osp.dirname(output) or "."):
             if file.startswith(osp.basename(output)):
