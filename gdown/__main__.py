@@ -106,7 +106,11 @@ def main():
         "-c",
         dest="continue_",
         action="store_true",
-        help="resume getting a partially-downloaded file",
+        help=(
+            "resume getting partially-downloaded files "
+            "from their download tempfile, "
+            "and skip fully transferred files"
+        ),
     )
     parser.add_argument(
         "--folder",
