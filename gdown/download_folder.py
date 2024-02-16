@@ -209,6 +209,7 @@ def download_folder(
     verify=True,
     user_agent=None,
     skip_download: bool = False,
+    resume=False,
 ) -> Union[List[str], List[GoogleDriveFileToDownload], None]:
     """Downloads entire folder from URL.
 
@@ -239,6 +240,10 @@ def download_folder(
     skip_download: bool, optional
         If True, return the list of files to download without downloading them.
         Defaults to False.
+    resume: bool
+        Resume interrupted transfers.
+        Partial tempfiles will be reused, if the transfer is incomplete.
+        Default is False.
 
     Returns
     -------
@@ -315,6 +320,7 @@ def download_folder(
                 speed=speed,
                 use_cookies=use_cookies,
                 verify=verify,
+                resume=resume,
             )
             if local_path is None:
                 if not quiet:
