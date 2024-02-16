@@ -242,6 +242,7 @@ def download_folder(
         Defaults to False.
     resume: bool
         Resume interrupted transfers.
+        Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
         Default is False.
 
@@ -312,6 +313,16 @@ def download_folder(
                 GoogleDriveFileToDownload(id=id, path=path, local_path=local_path)
             )
         else:
+            # Shortcut existing 100% transfers here,
+            # instead of invoking download(),
+            # to avoid making unnecessary requests.
+            if resume and os.path.isfile(local_path):
+                # already downloaded this file
+                if not quiet:
+                    print(f"resume: already have {local_path}")
+                files.append(local_path)
+                continue
+
             local_path = download(
                 url="https://drive.google.com/uc?id=" + id,
                 output=local_path,
