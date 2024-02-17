@@ -58,7 +58,14 @@ def main():
     parser.add_argument(
         "url_or_id", help="url or file/folder id (with --id) to download from"
     )
-    parser.add_argument("-O", "--output", help="output file name / path")
+    parser.add_argument(
+        "-O",
+        "--output",
+        help=(
+            f'output file name/path; end with "{os.path.sep}"'
+            "to create a new directory"
+        ),
+    )
     parser.add_argument(
         "-q",
         "--quiet",
@@ -68,7 +75,7 @@ def main():
     parser.add_argument(
         "--fuzzy",
         action="store_true",
-        help="(fild only) extract Google Drive's file ID",
+        help="(file only) extract Google Drive's file ID",
     )
     parser.add_argument(
         "--id",
@@ -99,7 +106,11 @@ def main():
         "-c",
         dest="continue_",
         action="store_true",
-        help="(file only) resume getting a partially-downloaded file",
+        help=(
+            "resume getting partially-downloaded files "
+            "from their download tempfile, "
+            "and skip fully transferred files"
+        ),
     )
     parser.add_argument(
         "--folder",
@@ -158,6 +169,7 @@ def main():
                 verify=not args.no_check_certificate,
                 remaining_ok=args.remaining_ok,
                 user_agent=args.user_agent,
+                resume=args.continue_,
             )
         else:
             download(
