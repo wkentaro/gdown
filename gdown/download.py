@@ -19,6 +19,7 @@ from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
+TEMPFILE_SUFFIX = ".part"
 home = osp.expanduser("~")
 
 
@@ -327,12 +328,13 @@ def download(
                 )
                 return
             tmp_file = existing_tmp_files[0]
+            # Perhaps it should select the biggest one?
         else:
             resume = False
             # mkstemp is preferred, but does not work on Windows
             # https://github.com/wkentaro/gdown/issues/153
             tmp_file = tempfile.mktemp(
-                suffix=tempfile.template,
+                suffix=TEMPFILE_SUFFIX,
                 prefix=osp.basename(output),
                 dir=osp.dirname(output),
             )
