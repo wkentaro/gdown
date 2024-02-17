@@ -310,7 +310,7 @@ def download(
         # Alternatively, resume mode can reuse partial tmp_files.
         existing_tmp_files = []
         for file in os.listdir(osp.dirname(output) or "."):
-            if file.startswith(osp.basename(output)):
+            if file.startswith(osp.basename(output)) and file.endswith(TEMPFILE_SUFFIX):
                 existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
             if len(existing_tmp_files) != 1:
