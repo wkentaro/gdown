@@ -209,6 +209,7 @@ def download_folder(
     verify=True,
     user_agent=None,
     skip_download: bool = False,
+    skip_existed: bool = False,
 ) -> Union[List[str], List[GoogleDriveFileToDownload], None]:
     """Downloads entire folder from URL.
 
@@ -238,7 +239,10 @@ def download_folder(
         User-agent to use in the HTTP request.
     skip_download: bool, optional
         If True, return the list of files to download without downloading them.
-        Defaults to False.
+        Defaults to False
+    skip_existed: bool, optional
+        If True, skip the files that have already been downloaded.
+        Default to False.
 
     Returns
     -------
@@ -296,7 +300,12 @@ def download_folder(
     files = []
     for id, path in directory_structure:
         local_path = osp.join(root_dir, path)
-
+        
+        if skip_existed and os.path.exists(local_path):
+            if not quiet:
+                print(f"Skip existed file: {local_path}.")
+            continue
+            
         if id is None:  # folder
             if not skip_download and not osp.exists(local_path):
                 os.makedirs(local_path)
