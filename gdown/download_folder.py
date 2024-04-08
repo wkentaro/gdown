@@ -209,7 +209,7 @@ def download_folder(
     verify=True,
     user_agent=None,
     skip_download: bool = False,
-    skip_existed: bool = False,
+    skip_existed: bool = True,
 ) -> Union[List[str], List[GoogleDriveFileToDownload], None]:
     """Downloads entire folder from URL.
 
@@ -242,7 +242,7 @@ def download_folder(
         Defaults to False
     skip_existed: bool, optional
         If True, skip the files that have already been downloaded.
-        Default to False.
+        Default to True.
 
     Returns
     -------
