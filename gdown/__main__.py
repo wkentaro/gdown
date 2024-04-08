@@ -68,7 +68,7 @@ def main():
     parser.add_argument(
         "--fuzzy",
         action="store_true",
-        help="(fild only) extract Google Drive's file ID",
+        help="(file only) extract Google Drive's file ID",
     )
     parser.add_argument(
         "--id",
