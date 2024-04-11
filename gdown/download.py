@@ -112,6 +112,7 @@ def download(
     format=None,
     user_agent=None,
     log_messages=None,
+    skip_existed=True,
 ):
     """Download file from URL.
 
@@ -151,7 +152,10 @@ def download(
         Log messages to customize. Currently it supports:
         - 'start': the message to show the start of the download
         - 'output': the message to show the output filename
-
+    skip_existed: bool, optional
+        If True, skip the files that have already been downloaded.
+        Default to True.
+        
     Returns
     -------
     output: str
@@ -271,13 +275,18 @@ def download(
 
     if output is None:
         output = filename_from_url
-
+        
     output_is_path = isinstance(output, str)
     if output_is_path and output.endswith(osp.sep):
         if not osp.exists(output):
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
-
+        
+    if skip_existed and os.path.exists(output):
+        if not quiet:
+            print(f"Skip existed file: {output}.")
+        continue
+        
     if output_is_path:
         existing_tmp_files = []
         for file in os.listdir(osp.dirname(output) or "."):
