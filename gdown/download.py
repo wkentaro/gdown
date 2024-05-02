@@ -1,3 +1,4 @@
+import email.utils as eutils
 import os
 import os.path as osp
 import re
@@ -74,6 +75,16 @@ def _get_filename_from_response(response):
         return filename
 
     return None
+
+def _get_modified_time_from_response(response):
+    if "Last-Modified" not in response.headers:
+        return None
+
+    raw = response.headers["Last-Modified"]
+    if raw is None:
+        return None
+    
+    return eutils.parsedate_to_datetime(raw)
 
 
 def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
@@ -266,8 +277,10 @@ def download(
             raise FileURLRetrievalError(message)
 
     filename_from_url = None
+    last_modified_time = None
     if gdrive_file_id and is_gdrive_download_link:
         filename_from_url = _get_filename_from_response(response=res)
+        last_modified_time = _get_modified_time_from_response(response=res)
     if filename_from_url is None:
         filename_from_url = osp.basename(url)
 
@@ -360,6 +373,9 @@ def download(
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)
+        if output_is_path and last_modified_time:
+            mtime = last_modified_time.timestamp()
+            os.utime(output, (mtime, mtime))
     finally:
         sess.close()
 
