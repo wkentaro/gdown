@@ -36,7 +36,6 @@ jobs:
     - name: Test
       run: |
         make test
-      if: matrix.os == 'ubuntu-latest'
 
     - name: Install from dist
       shell: bash
