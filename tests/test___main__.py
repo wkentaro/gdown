@@ -1,26 +1,28 @@
+import hashlib
 import os
-import shlex
 import subprocess
 import sys
 import tempfile
 
 from gdown.cached_download import _assert_filehash
+from gdown.cached_download import _compute_filehash
 
 here = os.path.dirname(os.path.abspath(__file__))
 
 
 def _test_cli_with_md5(url_or_id, md5, options=None):
     with tempfile.NamedTemporaryFile() as f:
-        cmd = f"gdown --no-cookies {url_or_id} -O {f.name}"
+        cmd = ["gdown", "--no-cookies", url_or_id, "-O", f.name]
         if options is not None:
-            cmd = f"{cmd} {options}"
-        subprocess.call(shlex.split(cmd))
+            cmd.extend(options)
+        subprocess.call(cmd)
         _assert_filehash(path=f.name, hash=f"md5:{md5}")
 
 
 def _test_cli_with_content(url_or_id, content):
     with tempfile.NamedTemporaryFile() as f:
-        subprocess.call(shlex.split(f"gdown --no-cookies {url_or_id} -O {f.name}"))
+        cmd = ["gdown", "--no-cookies", url_or_id, "-O", f.name]
+        subprocess.call(cmd)
         with open(f.name) as f:
             assert f.read() == content
 
@@ -77,13 +79,20 @@ def test_download_folder_from_gdrive():
 
     for folder_id, md5 in folder_id_and_md5s:
         with tempfile.TemporaryDirectory() as d:
-            cmd = f"gdown --no-cookies {folder_id} -O {d} --folder"
-            subprocess.call(shlex.split(cmd))
+            cmd = ["gdown", "--no-cookies", folder_id, "-O", d, "--folder"]
+            subprocess.call(cmd)
 
-            cmd = "find . -type f -exec md5sum {} \\; | awk '{print $1}' | sort | md5sum | awk '{print $1}'"  # noqa: E501
-            md5_actual = (
-                subprocess.check_output(cmd, shell=True, cwd=d).decode().strip()
-            )
+            md5s_actual = []
+            for dirpath, dirnames, filenames in os.walk(d):
+                for filename in filenames:
+                    md5_actual = _compute_filehash(
+                        path=os.path.join(dirpath, filename), algorithm="md5"
+                    )[len("md5:") :]
+                    md5s_actual.append(md5_actual)
+
+            md5_actual = hashlib.md5(
+                ("".join(x + "\n" for x in sorted(md5s_actual))).encode()
+            ).hexdigest()
         try:
             assert md5_actual == md5
             break
@@ -96,8 +105,15 @@ def test_download_folder_from_gdrive():
 
 def test_download_a_folder_with_remining_ok_false():
     with tempfile.TemporaryDirectory() as d:
-        cmd = f"gdown --no-cookies https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn -O {d} --folder"  # noqa: E501
-    assert subprocess.call(shlex.split(cmd)) == 1
+        cmd = [
+            "gdown",
+            "--no-cookies",
+            "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn",
+            "-O",
+            d,
+            "--folder",
+        ]
+    assert subprocess.call(cmd) == 1
 
 
 # def test_download_docs_from_gdrive():
@@ -115,15 +131,15 @@ def test_download_a_folder_with_remining_ok_false():
 def test_download_slides_from_gdrive():
     file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
     md5 = "96704c6c40e308a68d3842e83a0136b9"
-    _test_cli_with_md5(url_or_id=file_id, md5=md5, options="--format pdf")
+    _test_cli_with_md5(url_or_id=file_id, md5=md5, options=["--format", "pdf"])
 
 
 def test_download_a_folder_with_file_content_more_than_the_limit():
     url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
 
     with tempfile.TemporaryDirectory() as d:
-        cmd = f"gdown --no-cookies {url} -O {d} --folder --remaining-ok"
-        subprocess.check_call(shlex.split(cmd))
+        cmd = ["gdown", "--no-cookies", url, "-O", d, "--folder", "--remaining-ok"]
+        subprocess.check_call(cmd)
 
         filenames = sorted(os.listdir(d))
         for i in range(50):
