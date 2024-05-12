@@ -19,7 +19,6 @@ from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
-TEMPFILE_SUFFIX = ".part"
 home = osp.expanduser("~")
 
 
@@ -153,9 +152,7 @@ def download(
     fuzzy: bool
         Fuzzy extraction of Google Drive's file Id. Default is False.
     resume: bool
-        Resume interrupted transfers.
-        Completed output files will be skipped.
-        Partial tempfiles will be reused, if the transfer is incomplete.
+        Resume interrupted downloads while skipping completed ones.
         Default is False.
     format: str, optional
         Format of Google Docs, Spreadsheets and Slides. Default is:
@@ -298,19 +295,14 @@ def download(
         output = osp.join(output, filename_from_url)
 
     if output_is_path:
-
-        # Shortcut any 100% transfers to avoid excessive GETs,
-        # when it's reasonable to assume that gdown would've been
-        # using tempfiles and atomic renames before.
         if resume and os.path.isfile(output):
             if not quiet:
-                print(f"resume: already have {output}")
+                print(f"Skipping already downloaded file {output}", file=sys.stderr)
             return output
 
-        # Alternatively, resume mode can reuse partial tmp_files.
         existing_tmp_files = []
         for file in os.listdir(osp.dirname(output) or "."):
-            if file.startswith(osp.basename(output)) and file.endswith(TEMPFILE_SUFFIX):
+            if file.startswith(osp.basename(output)):
                 existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
             if len(existing_tmp_files) != 1:
@@ -328,13 +320,12 @@ def download(
                 )
                 return
             tmp_file = existing_tmp_files[0]
-            # Perhaps it should select the biggest one?
         else:
             resume = False
             # mkstemp is preferred, but does not work on Windows
             # https://github.com/wkentaro/gdown/issues/153
             tmp_file = tempfile.mktemp(
-                suffix=TEMPFILE_SUFFIX,
+                suffix=tempfile.template,
                 prefix=osp.basename(output),
                 dir=osp.dirname(output),
             )

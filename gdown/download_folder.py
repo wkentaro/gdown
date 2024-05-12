@@ -313,13 +313,12 @@ def download_folder(
                 GoogleDriveFileToDownload(id=id, path=path, local_path=local_path)
             )
         else:
-            # Shortcut existing 100% transfers here,
-            # instead of invoking download(),
-            # to avoid making unnecessary requests.
             if resume and os.path.isfile(local_path):
-                # already downloaded this file
                 if not quiet:
-                    print(f"resume: already have {local_path}")
+                    print(
+                        f"Skipping already downloaded file {local_path}",
+                        file=sys.stderr,
+                    )
                 files.append(local_path)
                 continue
 
