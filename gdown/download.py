@@ -121,8 +121,8 @@ def download(
         URL. Google Drive URL is also supported.
     output: str
         Output filename/directory. Default is basename of URL.
-        If output ends with separator '/' basename will be kept and the 
-        parameter will be treated as parenting directory. 
+        If output ends with separator '/' basename will be kept and the
+        parameter will be treated as parenting directory.
     quiet: bool
         Suppress terminal output. Default is False.
     proxy: str
