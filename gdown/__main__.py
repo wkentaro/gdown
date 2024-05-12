@@ -106,11 +106,8 @@ def main():
         "-c",
         dest="continue_",
         action="store_true",
-        help=(
-            "resume getting partially-downloaded files "
-            "from their download tempfile, "
-            "and skip fully transferred files"
-        ),
+        help="resume getting partially-downloaded files while "
+        "skipping fully downloaded ones",
     )
     parser.add_argument(
         "--folder",
@@ -200,7 +197,7 @@ def main():
         sys.exit(1)
     except requests.exceptions.ProxyError as e:
         print(
-            "Failed to use proxy:\n\n{}\n\n" "Please check your proxy settings.".format(
+            "Failed to use proxy:\n\n{}\n\nPlease check your proxy settings.".format(
                 indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
             ),
             file=sys.stderr,
