@@ -302,7 +302,7 @@ def download(
 
         existing_tmp_files = []
         for file in os.listdir(osp.dirname(output) or "."):
-            if file.startswith(osp.basename(output)):
+            if file.startswith(osp.basename(output)) and file.endswith(".part"):
                 existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
             if len(existing_tmp_files) != 1:
@@ -325,7 +325,7 @@ def download(
             # mkstemp is preferred, but does not work on Windows
             # https://github.com/wkentaro/gdown/issues/153
             tmp_file = tempfile.mktemp(
-                suffix=tempfile.template,
+                suffix=".part",
                 prefix=osp.basename(output),
                 dir=osp.dirname(output),
             )
