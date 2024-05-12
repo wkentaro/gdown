@@ -1,4 +1,4 @@
-import email.utils as eutils
+import email.utils
 import os
 import os.path as osp
 import re
@@ -76,6 +76,7 @@ def _get_filename_from_response(response):
 
     return None
 
+
 def _get_modified_time_from_response(response):
     if "Last-Modified" not in response.headers:
         return None
@@ -83,8 +84,8 @@ def _get_modified_time_from_response(response):
     raw = response.headers["Last-Modified"]
     if raw is None:
         return None
-    
-    return eutils.parsedate_to_datetime(raw)
+
+    return email.utils.parsedate_to_datetime(raw)
 
 
 def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
