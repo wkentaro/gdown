@@ -11,19 +11,25 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 
 def _test_cli_with_md5(url_or_id, md5, options=None):
-    with tempfile.NamedTemporaryFile() as f:
-        cmd = ["gdown", "--no-cookies", url_or_id, "-O", f.name]
+    # We can't use NamedTemporaryFile because Windows doesn't allow the subprocess
+    # to write the file created by the parent process.
+    with tempfile.TemporaryDirectory() as d:
+        file_path = os.path.join(d, "file")
+        cmd = ["gdown", "--no-cookies", url_or_id, "-O", file_path]
         if options is not None:
             cmd.extend(options)
         subprocess.call(cmd)
-        _assert_filehash(path=f.name, hash=f"md5:{md5}")
+        _assert_filehash(path=file_path, hash=f"md5:{md5}")
 
 
 def _test_cli_with_content(url_or_id, content):
-    with tempfile.NamedTemporaryFile() as f:
-        cmd = ["gdown", "--no-cookies", url_or_id, "-O", f.name]
+    # We can't use NamedTemporaryFile because Windows doesn't allow the subprocess
+    # to write the file created by the parent process.
+    with tempfile.TemporaryDirectory() as d:
+        file_path = os.path.join(d, "file")
+        cmd = ["gdown", "--no-cookies", url_or_id, "-O", file_path]
         subprocess.call(cmd)
-        with open(f.name) as f:
+        with open(file_path) as f:
             assert f.read() == content
 
 
