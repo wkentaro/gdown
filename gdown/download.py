@@ -314,8 +314,11 @@ def download(
         f = output
 
     if tmp_file is not None and f.tell() != 0:
-        headers = {"Range": "bytes={}-".format(f.tell())}
+        start_size = f.tell()
+        headers = {"Range": "bytes={}-".format(start_size)}
         res = sess.get(url, headers=headers, stream=True, verify=verify)
+    else:
+        start_size = 0
 
     if not quiet:
         print(log_messages.get("start", "Downloading...\n"), file=sys.stderr, end="")
@@ -337,9 +340,9 @@ def download(
     try:
         total = res.headers.get("Content-Length")
         if total is not None:
-            total = int(total)
+            total = int(total) + start_size
         if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", unit_scale=True)
+            pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
         t_start = time.time()
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
