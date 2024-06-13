@@ -182,13 +182,16 @@ def _get_directory_structure(gdrive_file, previous_path):
 
     directory_structure = []
     for file in gdrive_file.children:
-        file.name = file.name.replace(osp.sep, "_")
+        # Replace path separators and remove leading/trailing whitespace
+        file.name = file.name.replace(osp.sep, "_").strip()
         if file.is_folder():
-            directory_structure.append((None, osp.join(previous_path, file.name)))
-            for i in _get_directory_structure(file, osp.join(previous_path, file.name)):
+            new_path = osp.join(previous_path, file.name)
+            directory_structure.append((None, new_path))
+            for i in _get_directory_structure(file, new_path):
                 directory_structure.append(i)
         elif not file.children:
-            directory_structure.append((file.id, osp.join(previous_path, file.name)))
+            new_path = osp.join(previous_path, file.name)
+            directory_structure.append((file.id, new_path))
     return directory_structure
 
 
