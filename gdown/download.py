@@ -12,7 +12,6 @@ from http.cookiejar import MozillaCookieJar
 
 import bs4
 import requests
-import tqdm
 
 from ._indent import indent
 from .exceptions import FileURLRetrievalError
@@ -124,6 +123,8 @@ def download(
     format=None,
     user_agent=None,
     log_messages=None,
+    *,
+    tqdm=None,
 ):
     """Download file from URL.
 
@@ -165,6 +166,9 @@ def download(
         Log messages to customize. Currently it supports:
         - 'start': the message to show the start of the download
         - 'output': the message to show the output filename
+    tqdm: tqdm-like
+        A tqdm-like object to help report progress. If not provided
+        the default terminal based progress bar will be used.
 
     Returns
     -------
@@ -363,7 +367,10 @@ def download(
         if total is not None:
             total = int(total) + start_size
         if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+            if tqdm is None:
+                # Use the default terminal based progress bar
+                from tqdm import tqdm
+            pbar = tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
         t_start = time.time()
         downloaded = 0
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
