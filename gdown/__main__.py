@@ -62,8 +62,7 @@ def main():
         "-O",
         "--output",
         help=(
-            f'output file name/path; end with "{os.path.sep}"'
-            "to create a new directory"
+            f'output file name/path; end with "{os.path.sep}"to create a new directory'
         ),
     )
     parser.add_argument(
@@ -130,6 +129,10 @@ def main():
         "--user-agent",
         help="User-Agent to use for downloading file.",
     )
+    parser.add_argument(
+        "--workers",
+        help="Number of concurrent workers to use for downloading file.",
+    )
 
     args = parser.parse_args()
 
@@ -167,6 +170,7 @@ def main():
                 remaining_ok=args.remaining_ok,
                 user_agent=args.user_agent,
                 resume=args.continue_,
+                workers=args.workers,
             )
         else:
             download(

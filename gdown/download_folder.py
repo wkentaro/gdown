@@ -3,8 +3,10 @@ import itertools
 import json
 import os
 import os.path as osp
+import queue
 import re
 import sys
+import threading
 import warnings
 from typing import List
 from typing import Union
@@ -197,6 +199,124 @@ GoogleDriveFileToDownload = collections.namedtuple(
 )
 
 
+def _download_worker(
+    output=None,
+    quiet=False,
+    proxy=None,
+    speed=None,
+    use_cookies=True,
+    verify=True,
+    user_agent=None,
+    skip_download: bool = False,
+    resume=False,
+    input_file_queue: queue.Queue = queue.Queue(),
+):
+    while input_file_queue.qsize() > 0:
+        id, path = input_file_queue.get()
+        input_file_queue.task_done()
+        try:
+            if id is None:
+                continue
+            if id is None and path is None:
+                break
+            local_path = osp.join(output, path)
+            if not skip_download:
+                if not osp.exists(osp.dirname(local_path)):
+                    os.makedirs(osp.dirname(local_path))
+                if resume and osp.exists(local_path):
+                    print(f"File {local_path} already exists, skipping download.")
+                    continue
+                saved_file_name = download(
+                    url="https://drive.google.com/uc?id={id}".format(id=id),
+                    output=local_path,
+                    quiet=quiet,
+                    proxy=proxy,
+                    speed=speed,
+                    use_cookies=use_cookies,
+                    verify=verify,
+                    user_agent=user_agent,
+                    resume=resume,
+                )
+
+                if saved_file_name is not None:
+                    print(f"Downloaded file {id} to {saved_file_name}", file=sys.stderr)
+                else:
+                    print(f"Failed to download file {id}", file=sys.stderr)
+                    continue
+        except Exception as e:
+            print(f"Error downloading file {id}: {e}", file=sys.stderr)
+
+
+def _create_download_workers(
+    workers=1,
+    output=None,
+    quiet=False,
+    proxy=None,
+    speed=None,
+    use_cookies=True,
+    verify=True,
+    user_agent=None,
+    skip_download: bool = False,
+    resume=False,
+    input_file_queue: queue.Queue = queue.Queue(),
+) -> List[threading.Thread]:
+    workers_list = []
+    for _ in range(workers):
+        workers_list.append(
+            threading.Thread(
+                target=_download_worker,
+                args=(
+                    output,
+                    quiet,
+                    proxy,
+                    speed,
+                    use_cookies,
+                    verify,
+                    user_agent,
+                    skip_download,
+                    resume,
+                    input_file_queue,
+                ),
+            )
+        )
+    return workers_list
+
+
+def _validate_workers(workers):
+    if workers is None:
+        return 1
+
+    if workers == "auto":
+        return os.cpu_count() or 1
+
+    try:
+        workers = int(workers)
+    except ValueError as e:
+        raise ValueError(
+            "Invalid value for workers: {}. Must be an integer or 'auto'.".format(
+                workers
+            )
+        ) from e
+    except TypeError as e:
+        raise ValueError(
+            "Invalid value for workers: {}. Must be an integer or 'auto'.".format(
+                workers
+            )
+        ) from e
+
+    if workers < 1:
+        raise ValueError("Number of workers must be greater than 0")
+
+    if workers > MAX_NUMBER_FILES:
+        raise ValueError(
+            "Number of workers must be less than or equal to {}.".format(
+                MAX_NUMBER_FILES
+            )
+        )
+
+    return workers
+
+
 def download_folder(
     url=None,
     id=None,
@@ -210,6 +330,7 @@ def download_folder(
     user_agent=None,
     skip_download: bool = False,
     resume=False,
+    workers=1,
 ) -> Union[List[str], List[GoogleDriveFileToDownload], None]:
     """Downloads entire folder from URL.
 
@@ -245,6 +366,10 @@ def download_folder(
         Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
         Default is False.
+    workers: int or str, optional
+        Number of concurrent workers to use for downloading files.
+        If 'auto', it will use the number of CPU cores available.
+        Default is 1.
 
     Returns
     -------
@@ -267,6 +392,8 @@ def download_folder(
     if user_agent is None:
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
+
+    workers = _validate_workers(workers)
 
     sess = _get_session(proxy=proxy, use_cookies=use_cookies, user_agent=user_agent)
 
@@ -299,44 +426,46 @@ def download_folder(
     if not skip_download and not osp.exists(root_dir):
         os.makedirs(root_dir)
 
+    input_file_queue: queue.Queue = queue.Queue()
     files = []
+
     for id, path in directory_structure:
         local_path = osp.join(root_dir, path)
 
-        if id is None:  # folder
-            if not skip_download and not osp.exists(local_path):
-                os.makedirs(local_path)
-            continue
-
-        if skip_download:
+        if skip_download and id is not None:
             files.append(
                 GoogleDriveFileToDownload(id=id, path=path, local_path=local_path)
             )
-        else:
-            if resume and os.path.isfile(local_path):
-                if not quiet:
-                    print(
-                        f"Skipping already downloaded file {local_path}",
-                        file=sys.stderr,
-                    )
-                files.append(local_path)
-                continue
+        elif id is None:
+            if not osp.exists(local_path):
+                os.makedirs(local_path)
+            continue
+        elif id is not None:
+            input_file_queue.put(item=(id, path))
 
-            local_path = download(
-                url="https://drive.google.com/uc?id=" + id,
-                output=local_path,
-                quiet=quiet,
-                proxy=proxy,
-                speed=speed,
-                use_cookies=use_cookies,
-                verify=verify,
-                resume=resume,
-            )
-            if local_path is None:
-                if not quiet:
-                    print("Download ended unsuccessfully", file=sys.stderr)
-                return None
-            files.append(local_path)
-    if not quiet:
-        print("Download completed", file=sys.stderr)
+    if not skip_download:
+        if workers > 1:
+            quiet = True
+        workers_threads = _create_download_workers(
+            workers=workers,
+            output=root_dir,
+            quiet=quiet,
+            proxy=proxy,
+            speed=speed,
+            use_cookies=use_cookies,
+            verify=verify,
+            user_agent=user_agent,
+            skip_download=skip_download,
+            resume=resume,
+            input_file_queue=input_file_queue,
+        )
+
+        for worker in workers_threads:
+            worker.start()
+
+        for worker in workers_threads:
+            worker.join()
+
+        input_file_queue.join()
+
     return files
