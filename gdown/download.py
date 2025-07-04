@@ -370,7 +370,7 @@ def download(
             if not quiet:
                 pbar.update(len(chunk))
             if speed is not None:
-                elapsed_time_expected = 1.0 * pbar.n / speed
+                elapsed_time_expected = 1.0 * (pbar.n - start_size) / speed
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)
