@@ -285,14 +285,19 @@ def download(
     if filename_from_url is None:
         filename_from_url = osp.basename(url)
 
+    # If the file is a Google export and output is a path without extension, append the correct extension
+    export_exts = {'.docx', '.xlsx', '.pptx', '.pdf', '.csv', '.txt', '.ods', '.tsv', '.zip'}
+    ext_from_filename = osp.splitext(filename_from_url)[1]
     if output is None:
         output = filename_from_url
-
     output_is_path = isinstance(output, str)
     if output_is_path and output.endswith(osp.sep):
         if not osp.exists(output):
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
+    # If output is a file path, does not already have the export extension, and the filename_from_url does, append it
+    if output_is_path and ext_from_filename in export_exts and not output.endswith(ext_from_filename):
+        output += ext_from_filename
 
     if output_is_path:
         if resume and os.path.isfile(output):
