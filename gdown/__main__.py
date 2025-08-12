@@ -62,7 +62,7 @@ def main():
         "-O",
         "--output",
         help=(
-            f'output file name/path; end with "{os.path.sep}"to create a new directory'
+            f'output file name/path; end with "{os.path.sep}" to create a new directory'
         ),
     )
     parser.add_argument(
