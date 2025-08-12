@@ -365,12 +365,14 @@ def download(
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
         t_start = time.time()
+        downloaded = 0
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
+            downloaded += len(chunk)
             if not quiet:
                 pbar.update(len(chunk))
             if speed is not None:
-                elapsed_time_expected = 1.0 * pbar.n / speed
+                elapsed_time_expected = downloaded / speed
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)
