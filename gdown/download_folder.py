@@ -16,7 +16,7 @@ from .download import download
 from .exceptions import FolderContentsMaximumLimitError
 from .parse_url import is_google_drive_url
 
-MAX_NUMBER_FILES = 50
+MAX_NUMBER_FILES = 500
 
 
 class _GoogleDriveFile(object):
