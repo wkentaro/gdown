@@ -36,7 +36,7 @@ def get_url_from_gdrive_confirmation(contents):
             url = form["action"].replace("&amp;", "&")
             url_components = urllib.parse.urlsplit(url)
             query_params = urllib.parse.parse_qs(url_components.query)
-            for param in form.findChildren("input", attrs={"type": "hidden"}):
+            for param in form.find_all("input", attrs={"type": "hidden"}):
                 query_params[param["name"]] = param["value"]
             query = urllib.parse.urlencode(query_params, doseq=True)
             url = urllib.parse.urlunsplit(url_components._replace(query=query))
