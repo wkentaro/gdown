@@ -88,14 +88,15 @@ def _get_modified_time_from_response(response):
     return email.utils.parsedate_to_datetime(raw)
 
 
-def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
+def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False, quiet=False):
     sess = requests.session()
 
     sess.headers.update({"User-Agent": user_agent})
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
-        print("Using proxy:", proxy, file=sys.stderr)
+        if not quiet:
+            print("Using proxy:", proxy, file=sys.stderr)
 
     # Load cookies if exists
     cookies_file = osp.join(home, ".cache/gdown/cookies.txt")
@@ -188,6 +189,7 @@ def download(
         use_cookies=use_cookies,
         user_agent=user_agent,
         return_cookies_file=True,
+        quiet=quiet
     )
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
