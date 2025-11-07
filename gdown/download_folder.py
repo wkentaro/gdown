@@ -16,7 +16,7 @@ from .download import download
 from .exceptions import FolderContentsMaximumLimitError
 from .parse_url import is_google_drive_url
 
-MAX_NUMBER_FILES = 50
+MAX_NUMBER_FILES = 1001000
 
 
 class _GoogleDriveFile(object):
@@ -331,6 +331,7 @@ def download_folder(
                 use_cookies=use_cookies,
                 verify=verify,
                 resume=resume,
+                format='md',
             )
             if local_path is None:
                 if not quiet:
