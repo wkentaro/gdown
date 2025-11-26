@@ -366,25 +366,27 @@ def download(
         total = res.headers.get("Content-Length")
         if total is not None:
             total = int(total) + start_size
-        if not quiet:
-            if tqdm is None:
-                # Use the default terminal based progress bar
-                from tqdm import tqdm
-            pbar = tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+        if tqdm is None and not quiet:
+            # Use the default terminal based progress bar
+            from tqdm import tqdm
+        if tqdm is not None:
+            tqdm = tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
         t_start = time.time()
         downloaded = 0
-        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-            f.write(chunk)
-            downloaded += len(chunk)
-            if not quiet:
-                pbar.update(len(chunk))
-            if speed is not None:
-                elapsed_time_expected = downloaded / speed
-                elapsed_time = time.time() - t_start
-                if elapsed_time < elapsed_time_expected:
-                    time.sleep(elapsed_time_expected - elapsed_time)
-        if not quiet:
-            pbar.close()
+        try:
+            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+                f.write(chunk)
+                downloaded += len(chunk)
+                if tqdm is not None:
+                    tqdm.update(len(chunk))
+                if speed is not None:
+                    elapsed_time_expected = downloaded / speed
+                    elapsed_time = time.time() - t_start
+                    if elapsed_time < elapsed_time_expected:
+                        time.sleep(elapsed_time_expected - elapsed_time)
+        finally:
+            if tqdm is not None:
+                tqdm.close()
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)
