@@ -1,0 +1,9 @@
+url = 'https://drive.google.com/uc?id=YOUR_FILE_ID'
+output = 'healthcare_data.csv'  # Name for the local file
+
+# Download the file
+gdown.download(url, output, quiet=False)
+
+# Load into pandas
+import pandas as pd
+df = pd.read_csv(output)
