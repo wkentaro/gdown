@@ -36,6 +36,7 @@ dependencies = [
   "requests[socks]",
   "tqdm",
   "beautifulsoup4",
+  "playwright"
 ]
 dynamic = ["readme", "version"]
 

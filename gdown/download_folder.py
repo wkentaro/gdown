@@ -10,17 +10,17 @@ from typing import List
 from typing import Union
 
 import bs4
+from requests import Session
+from playwright.sync_api import sync_playwright
 
 from .download import _get_session
 from .download import download
-from .exceptions import FolderContentsMaximumLimitError
 from .parse_url import is_google_drive_url
-
-MAX_NUMBER_FILES = 50
 
 
 class _GoogleDriveFile(object):
     TYPE_FOLDER = "application/vnd.google-apps.folder"
+    TYPE_FILE = "file"
 
     def __init__(self, id, name, type, children=None):
         self.id = id
@@ -32,104 +32,75 @@ class _GoogleDriveFile(object):
         return self.type == self.TYPE_FOLDER
 
 
-def _parse_google_drive_file(url, content):
-    """Extracts information about the current page file and its children."""
-
-    folder_soup = bs4.BeautifulSoup(content, features="html.parser")
-
-    # finds the script tag with window['_DRIVE_ivd']
-    encoded_data = None
-    for script in folder_soup.select("script"):
-        inner_html = script.decode_contents()
-
-        if "_DRIVE_ivd" in inner_html:
-            # first js string is _DRIVE_ivd, the second one is the encoded arr
-            regex_iter = re.compile(r"'((?:[^'\\]|\\.)*)'").finditer(inner_html)
-            # get the second elem in the iter
-            try:
-                encoded_data = next(itertools.islice(regex_iter, 1, None)).group(1)
-            except StopIteration:
-                raise RuntimeError("Couldn't find the folder encoded JS string")
-            break
-
-    if encoded_data is None:
-        raise RuntimeError(
-            "Cannot retrieve the folder information from the link. "
-            "You may need to change the permission to "
-            "'Anyone with the link', or have had many accesses. "
-            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
-        )
-
-    # decodes the array and evaluates it as a python array
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        decoded = encoded_data.encode("utf-8").decode("unicode_escape")
-    folder_arr = json.loads(decoded)
-
-    folder_contents = [] if folder_arr[0] is None else folder_arr[0]
-
-    sep = " - "  # unicode dash
-    splitted = folder_soup.title.contents[0].split(sep)
-    if len(splitted) >= 2:
-        name = sep.join(splitted[:-1])
-    else:
-        raise RuntimeError(
-            "file/folder name cannot be extracted from: {}".format(
-                folder_soup.title.contents[0]
-            )
-        )
-
-    gdrive_file = _GoogleDriveFile(
-        id=url.split("/")[-1],
-        name=name,
-        type=_GoogleDriveFile.TYPE_FOLDER,
-    )
-
-    id_name_type_iter = [
-        (e[0], e[2].encode("raw_unicode_escape").decode("utf-8"), e[3])
-        for e in folder_contents
-    ]
-
-    return gdrive_file, id_name_type_iter
-
-
-def _download_and_parse_google_drive_link(
-    sess,
+def _download_and_parse_google_drive_link_folder(
+    sess: Session,
     url,
     quiet=False,
     remaining_ok=False,
     verify=True,
 ):
     """Get folder structure of Google Drive folder URL."""
-
+    id_folder = url.split("/")[-1]
     return_code = True
+    if is_google_drive_url(url):
+        # canonicalize the language into English
+        if "?" in url:
+            url += "&hl=en"
+        else:
+            url += "?hl=en"
 
-    for _ in range(2):
-        if is_google_drive_url(url):
-            # canonicalize the language into English
-            if "?" in url:
-                url += "&hl=en"
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            proxy={
+                "server": (
+                    sess.proxies.get("http").replace("http://", "http=")
+                ),
+                "username": sess.proxies.get("username"),
+                "password": sess.proxies.get("password"),
+            } if sess.proxies.get("http") else None,
+        )
+        context = browser.new_context(
+            user_agent=sess.headers.get("User-Agent", None),
+            ignore_https_errors=not verify,
+        )
+        page = context.new_page()
+        page.goto(url)
+        folder_name = ""
+        count_rows = 0
+        while True:
+            table_elm = page.query_selector("tbody.B3Kdce")
+            rows = table_elm.query_selector_all("tr.qwPkcb.yjl6dc.O5x1db.Ss7qXc")
+            last_elm = rows[-1]
+            last_elm.scroll_into_view_if_needed()
+
+            if len(rows) == count_rows:
+                folder_name = page.query_selector("div.o-Yc-o-T").inner_text()
+                if not quiet:
+                    print("Reached the end of the folder", folder_name, id_folder)
+                break
             else:
-                url += "?hl=en"
+                count_rows = len(rows)
+            page.wait_for_timeout(5000)
 
-        res = sess.get(url, verify=verify)
-        if res.status_code != 200:
-            return False, None
-
-        if is_google_drive_url(url):
-            break
-
-        if not is_google_drive_url(res.url):
-            break
-
-        # need to try with canonicalized url if the original url redirects to gdrive
-        url = res.url
-
-    gdrive_file, id_name_type_iter = _parse_google_drive_file(
-        url=url,
-        content=res.text,
-    )
-
+        current_folder_meta = _GoogleDriveFile(
+            id=id_folder,
+            name=folder_name,
+            type=_GoogleDriveFile.TYPE_FOLDER,
+        )
+        id_name_type_iter = []
+        if len(rows):
+            for i in range(len(rows)):
+                div_name_type = rows[i].query_selector("div.JxSEve")
+                name_att = div_name_type.get_attribute("aria-label")
+                elm_id = rows[i].get_attribute("data-id")
+                elm_name = rows[i].query_selector("div.i92Sbe.a65Cwf").inner_text()
+                if " ".join(name_att.split(" ")[-2:]) == "Shared folder":
+                    elm_type = _GoogleDriveFile.TYPE_FOLDER
+                else:
+                    elm_type = _GoogleDriveFile.TYPE_FILE
+                id_name_type_iter.append((elm_id, elm_name, elm_type))
+        page.wait_for_timeout(5000)
+        browser.close()
     for child_id, child_name, child_type in id_name_type_iter:
         if child_type != _GoogleDriveFile.TYPE_FOLDER:
             if not quiet:
@@ -138,7 +109,7 @@ def _download_and_parse_google_drive_link(
                     child_id,
                     child_name,
                 )
-            gdrive_file.children.append(
+            current_folder_meta.children.append(
                 _GoogleDriveFile(
                     id=child_id,
                     name=child_name,
@@ -155,7 +126,7 @@ def _download_and_parse_google_drive_link(
                 child_id,
                 child_name,
             )
-        return_code, child = _download_and_parse_google_drive_link(
+        return_code, child = _download_and_parse_google_drive_link_folder(
             sess=sess,
             url="https://drive.google.com/drive/folders/" + child_id,
             quiet=quiet,
@@ -163,18 +134,8 @@ def _download_and_parse_google_drive_link(
         )
         if not return_code:
             return return_code, None
-        gdrive_file.children.append(child)
-    has_at_least_max_files = len(gdrive_file.children) == MAX_NUMBER_FILES
-    if not remaining_ok and has_at_least_max_files:
-        message = " ".join(
-            [
-                "The gdrive folder with url: {url}".format(url=url),
-                "has more than {max} files,".format(max=MAX_NUMBER_FILES),
-                "gdrive can't download more than this limit.",
-            ]
-        )
-        raise FolderContentsMaximumLimitError(message)
-    return return_code, gdrive_file
+        current_folder_meta.children.append(child)
+    return True, current_folder_meta
 
 
 def _get_directory_structure(gdrive_file, previous_path):
@@ -272,7 +233,7 @@ def download_folder(
 
     if not quiet:
         print("Retrieving folder contents", file=sys.stderr)
-    is_success, gdrive_file = _download_and_parse_google_drive_link(
+    is_success, gdrive_file = _download_and_parse_google_drive_link_folder(
         sess,
         url,
         quiet=quiet,

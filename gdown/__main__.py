@@ -10,7 +10,6 @@ import requests
 from . import __version__
 from ._indent import indent
 from .download import download
-from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
 from .exceptions import FileURLRetrievalError
 from .exceptions import FolderContentsMaximumLimitError
@@ -112,13 +111,11 @@ def main():
         "--folder",
         action="store_true",
         help="download entire folder instead of a single file "
-        "(max {max} files per folder)".format(max=MAX_NUMBER_FILES),
     )
     parser.add_argument(
         "--remaining-ok",
         action="store_true",
         help="(folder only) asserts that is ok to download max "
-        "{max} files per folder.".format(max=MAX_NUMBER_FILES),
     )
     parser.add_argument(
         "--format",
