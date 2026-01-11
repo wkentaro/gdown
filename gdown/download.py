@@ -12,7 +12,14 @@ from http.cookiejar import MozillaCookieJar
 
 import bs4
 import requests
-import tqdm
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn
+)
 
 from ._indent import indent
 from .exceptions import FileURLRetrievalError
@@ -111,19 +118,20 @@ def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
 
 
 def download(
-    url=None,
-    output=None,
-    quiet=False,
-    proxy=None,
-    speed=None,
-    use_cookies=True,
-    verify=True,
-    id=None,
-    fuzzy=False,
-    resume=False,
-    format=None,
-    user_agent=None,
-    log_messages=None,
+        url=None,
+        output=None,
+        quiet=False,
+        progress=True,
+        proxy=None,
+        speed=None,
+        use_cookies=True,
+        verify=True,
+        id=None,
+        fuzzy=False,
+        resume=False,
+        format=None,
+        user_agent=None,
+        log_messages=None,
 ):
     """Download file from URL.
 
@@ -137,6 +145,8 @@ def download(
         parameter will be treated as parenting directory.
     quiet: bool
         Suppress terminal output. Default is False.
+    progress: bool
+        Enables progress bar. Default is True.
     proxy: str
         Proxy.
     speed: float
@@ -239,9 +249,9 @@ def download(
                 )
                 continue
         elif (
-            "Content-Disposition" in res.headers
-            and res.headers["Content-Disposition"].endswith("pptx")
-            and format not in {None, "pptx"}
+                "Content-Disposition" in res.headers
+                and res.headers["Content-Disposition"].endswith("pptx")
+                and format not in {None, "pptx"}
         ):
             url = (
                 "https://docs.google.com/presentation/d/{id}/export"
@@ -362,22 +372,41 @@ def download(
         total = res.headers.get("Content-Length")
         if total is not None:
             total = int(total) + start_size
-        if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+
         t_start = time.time()
         downloaded = 0
+
+        if progress:
+            pbar = Progress(
+                TextColumn("[bold blue]{task.description}", justify="right"),
+                BarColumn(),
+                "[progress.percentage]{task.percentage:>3.1f}%",
+                "•",
+                DownloadColumn(),
+                "•",
+                TransferSpeedColumn(),
+                "•",
+                TimeRemainingColumn(compact=True, elapsed_when_finished=True),
+            )
+            pbar.start()
+            description = osp.basename(output) if isinstance(output, str) else "Downloading"
+            task_id = pbar.add_task(
+                description, total=total, completed=start_size
+            )
+
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
-            downloaded += len(chunk)
-            if not quiet:
-                pbar.update(len(chunk))
+            chunk_len = len(chunk)
+            downloaded += chunk_len
+            if progress:
+                pbar.update(task_id, advance=chunk_len)
             if speed is not None:
                 elapsed_time_expected = downloaded / speed
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)
-        if not quiet:
-            pbar.close()
+        if progress:
+            pbar.stop()
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)

@@ -34,8 +34,8 @@ classifiers = [
 dependencies = [
   "filelock",
   "requests[socks]",
-  "tqdm",
   "beautifulsoup4",
+  "rich>=14.2.0",
 ]
 dynamic = ["readme", "version"]
 
