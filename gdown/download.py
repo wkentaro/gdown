@@ -16,6 +16,7 @@ from rich.progress import (
     BarColumn,
     DownloadColumn,
     Progress,
+    TaskProgressColumn,
     TextColumn,
     TimeRemainingColumn,
     TransferSpeedColumn
@@ -380,12 +381,9 @@ def download(
             pbar = Progress(
                 TextColumn("[bold blue]{task.description}", justify="right"),
                 BarColumn(),
-                "[progress.percentage]{task.percentage:>3.1f}%",
-                "•",
+                TaskProgressColumn(),
                 DownloadColumn(),
-                "•",
                 TransferSpeedColumn(),
-                "•",
                 TimeRemainingColumn(compact=True, elapsed_when_finished=True),
             )
             pbar.start()
