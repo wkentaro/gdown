@@ -66,6 +66,7 @@ def test_download_folder_dry_run():
     url = "https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks"
     tmp_dir = tempfile.mkdtemp()
     files = download_folder(url=url, output=tmp_dir, skip_download=True)
+    assert files is not None
     assert len(files) == 6
     for file in files:
         assert hasattr(file, "id")

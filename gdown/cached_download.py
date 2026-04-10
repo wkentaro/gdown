@@ -86,6 +86,8 @@ def cached_download(
         Output filename.
     """
     if path is None:
+        if url is None:
+            raise ValueError("url must be specified when path is not specified")
         path = (
             url.replace("/", "-SLASH-")
             .replace(":", "-COLON-")

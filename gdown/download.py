@@ -33,11 +33,17 @@ def get_url_from_gdrive_confirmation(contents):
         soup = bs4.BeautifulSoup(line, features="html.parser")
         form = soup.select_one("#download-form")
         if form is not None:
-            url = form["action"].replace("&amp;", "&")
+            action = form["action"]
+            assert isinstance(action, str)
+            url = action.replace("&amp;", "&")
             url_components = urllib.parse.urlsplit(url)
             query_params = urllib.parse.parse_qs(url_components.query)
-            for param in form.findChildren("input", attrs={"type": "hidden"}):
-                query_params[param["name"]] = param["value"]
+            for param in form.find_all("input", attrs={"type": "hidden"}):
+                param_name = param["name"]
+                param_value = param["value"]
+                assert isinstance(param_name, str)
+                assert isinstance(param_value, str)
+                query_params[param_name] = [param_value]
             query = urllib.parse.urlencode(query_params, doseq=True)
             url = urllib.parse.urlunsplit(url_components._replace(query=query))
             break
@@ -175,6 +181,7 @@ def download(
         raise ValueError("Either url or id has to be specified")
     if id is not None:
         url = f"https://drive.google.com/uc?id={id}"
+    assert url is not None
     if user_agent is None:
         # We need to use different user agent for file download c.f., folder
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA: E501
@@ -288,13 +295,12 @@ def download(
     if output is None:
         output = filename_from_url
 
-    output_is_path = isinstance(output, str)
-    if output_is_path and output.endswith(osp.sep):
+    if isinstance(output, str) and output.endswith(osp.sep):
         if not osp.exists(output):
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
 
-    if output_is_path:
+    if isinstance(output, str):
         if resume and os.path.isfile(output):
             if not quiet:
                 print(f"Skipping already downloaded file {output}", file=sys.stderr)
@@ -322,13 +328,15 @@ def download(
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
-            # mkstemp is preferred, but does not work on Windows
-            # https://github.com/wkentaro/gdown/issues/153
-            tmp_file = tempfile.mktemp(
+            # Avoid mkstemp which doesn't work on Windows (#153)
+            tmp_file_obj = tempfile.NamedTemporaryFile(
                 suffix=".part",
                 prefix=osp.basename(output),
                 dir=osp.dirname(output),
+                delete=False,
             )
+            tmp_file = tmp_file_obj.name
+            tmp_file_obj.close()
         f = open(tmp_file, "ab")
     else:
         tmp_file = None
@@ -352,7 +360,8 @@ def download(
             print("From:", url, file=sys.stderr)
         print(
             log_messages.get(
-                "output", f"To: {osp.abspath(output) if output_is_path else output}\n"
+                "output",
+                f"To: {osp.abspath(output) if isinstance(output, str) else output}\n",
             ),
             file=sys.stderr,
             end="",
@@ -381,7 +390,7 @@ def download(
         if tmp_file:
             f.close()
             shutil.move(tmp_file, output)
-        if output_is_path and last_modified_time:
+        if isinstance(output, str) and last_modified_time:
             mtime = last_modified_time.timestamp()
             os.utime(output, (mtime, mtime))
     finally:
