@@ -7,14 +7,13 @@
   <br>
 </div>
 
-
 *Gdown* downloads a public file/folder from Google Drive.
 
 *Gdown* provides what curl/wget doesn't for Google Drive:
+
 - **Skip the security notice** allowing you to download large files (curl/wget fails);
 - **Recursive download** of files in a folder (maximum 50 files per folder);
 - **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
-
 
 ## Installation
 
@@ -27,7 +26,6 @@ pip install gdown
 # to upgrade
 pip install --upgrade gdown
 ```
-
 
 ## Usage
 
@@ -110,7 +108,6 @@ id = "15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
 gdown.download_folder(id=id)
 ```
 
-
 ## FAQ
 
 ### I get a 'Permission Denied' error.
@@ -123,9 +120,8 @@ Google restricts access to a file when the download is concentrated.
 If you can still access to the file from your browser, downloading cookies file might
 help. Follow this step: 1) download cookies.txt using browser extensions like
 ([Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc));
-2) mv the `cookies.txt` to `~/.cache/gdown/cookies.txt`; 3) run download again.
+2\) mv the `cookies.txt` to `~/.cache/gdown/cookies.txt`; 3) run download again.
 If you're using `gdown>=5.0.0`, it should be able to use the cookies same as your browser.
-
 
 ## License
 
