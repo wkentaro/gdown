@@ -6,7 +6,8 @@ import gdown
 
 def _cached_download(**kwargs):
     url = "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
-    path = tempfile.mktemp()
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
     for _ in range(2):
         gdown.cached_download(url=url, path=path, **kwargs)
     os.remove(path)
