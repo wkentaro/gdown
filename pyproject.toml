@@ -63,6 +63,8 @@ force-single-line = true
 
 [dependency-groups]
 dev = [
+  "mdformat>=0.7.17",
+  "mdformat-frontmatter>=2.0.10",
   "pytest>=8.3.5",
   "pytest-xdist>=3.6.1",
   "ruff>=0.15.10",
