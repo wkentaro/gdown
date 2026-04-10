@@ -27,18 +27,31 @@ classifiers = [
 dependencies = ["filelock", "requests[socks]", "tqdm", "beautifulsoup4"]
 dynamic = ["readme", "version"]
 
+[project.scripts]
+gdown = "gdown.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/wkentaro/gdown"
 
-[tool.hatch.metadata.hooks.fancy-pypi-readme]
-content-type = "text/markdown"
-fragments = [{ path = "README.md" }]
+[dependency-groups]
+dev = [
+  "mdformat>=0.7.17",
+  "mdformat-frontmatter>=2.0.10",
+  "pytest>=8.3.5",
+  "pytest-xdist>=3.6.1",
+  "ruff>=0.15.10",
+  "taplo>=0.9.3",
+  "ty>=0.0.29",
+  "typos>=1.45.0",
+  "yamlfix>=1.16.1",
+]
 
 [tool.hatch.version]
 source = "vcs"
 
-[project.scripts]
-gdown = "gdown.__main__:main"
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+fragments = [{ path = "README.md" }]
 
 [tool.ruff.lint]
 select = [
@@ -54,16 +67,3 @@ force-single-line = true
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-
-[dependency-groups]
-dev = [
-  "mdformat>=0.7.17",
-  "mdformat-frontmatter>=2.0.10",
-  "pytest>=8.3.5",
-  "pytest-xdist>=3.6.1",
-  "ruff>=0.15.10",
-  "taplo>=0.9.3",
-  "ty>=0.0.29",
-  "typos>=1.45.0",
-  "yamlfix>=1.16.1",
-]
