@@ -43,9 +43,6 @@ dynamic = ["readme", "version"]
 test = [
   "build",
   "mypy",
-  "pytest",
-  "pytest-xdist",
-  "ruff",
   "twine",
   "types-requests",
   "types-setuptools",
@@ -83,3 +80,10 @@ force-single-line = true
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-xdist>=3.6.1",
+    "ruff>=0.15.10",
+]

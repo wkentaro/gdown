@@ -471,12 +471,6 @@ test = [
     { name = "mypy", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "mypy", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "mypy", version = "1.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "pytest", version = "8.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
-    { name = "pytest", version = "9.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "pytest-xdist", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "pytest-xdist", version = "3.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "ruff" },
     { name = "twine", version = "6.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "twine", version = "6.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "types-requests", version = "2.32.0.20241016", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -487,22 +481,36 @@ test = [
     { name = "types-setuptools", version = "82.0.0.20260408", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest", version = "8.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
+    { name = "pytest", version = "9.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pytest-xdist", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pytest-xdist", version = "3.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4" },
     { name = "build", marker = "extra == 'test'" },
     { name = "filelock" },
     { name = "mypy", marker = "extra == 'test'" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pytest-xdist", marker = "extra == 'test'" },
     { name = "requests", extras = ["socks"] },
-    { name = "ruff", marker = "extra == 'test'" },
     { name = "tqdm" },
     { name = "twine", marker = "extra == 'test'" },
     { name = "types-requests", marker = "extra == 'test'" },
     { name = "types-setuptools", marker = "extra == 'test'" },
 ]
 provides-extras = ["test"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-xdist", specifier = ">=3.6.1" },
+    { name = "ruff", specifier = ">=0.15.10" },
+]
 
 [[package]]
 name = "id"
