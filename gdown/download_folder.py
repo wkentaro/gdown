@@ -6,8 +6,6 @@ import os.path as osp
 import re
 import sys
 import warnings
-from typing import List
-from typing import Union
 
 import bs4
 
@@ -209,7 +207,7 @@ def download_folder(
     user_agent=None,
     skip_download: bool = False,
     resume=False,
-) -> Union[List[str], List[GoogleDriveFileToDownload], None]:
+) -> list[str] | list[GoogleDriveFileToDownload] | None:
     """Downloads entire folder from URL.
 
     Parameters
