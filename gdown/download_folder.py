@@ -67,14 +67,17 @@ def _parse_google_drive_file(url, content):
     folder_contents = [] if folder_arr[0] is None else folder_arr[0]
 
     sep = " - "  # unicode dash
-    splitted = folder_soup.title.contents[0].split(sep)
+    title = folder_soup.title
+    if title is None:
+        raise RuntimeError("folder page has no <title> tag")
+    title_text = title.string
+    if title_text is None:
+        raise RuntimeError("folder page <title> tag has no text")
+    splitted = title_text.split(sep)
     if len(splitted) >= 2:
         name = sep.join(splitted[:-1])
     else:
-        raise RuntimeError(
-            "file/folder name cannot be extracted from:"
-            f" {folder_soup.title.contents[0]}"
-        )
+        raise RuntimeError(f"file/folder name cannot be extracted from: {title_text}")
 
     gdrive_file = _GoogleDriveFile(
         id=url.split("/")[-1],
