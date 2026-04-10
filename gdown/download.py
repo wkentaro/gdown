@@ -8,6 +8,7 @@ import tempfile
 import textwrap
 import time
 import urllib.parse
+from collections.abc import Callable
 from http.cookiejar import MozillaCookieJar
 
 import bs4
@@ -130,6 +131,7 @@ def download(
     format=None,
     user_agent=None,
     log_messages=None,
+    progress: Callable[[int, int | None], None] | None = None,
 ):
     """Download file from URL.
 
@@ -171,6 +173,10 @@ def download(
         Log messages to customize. Currently it supports:
         - 'start': the message to show the start of the download
         - 'output': the message to show the output filename
+    progress: callable, optional
+        Callback called after each chunk: ``progress(bytes_so_far, bytes_total)``.
+        *bytes_total* is None when Content-Length is unavailable.
+        Raise any exception from the callback to abort the download.
 
     Returns
     -------
@@ -380,6 +386,8 @@ def download(
             downloaded += len(chunk)
             if not quiet:
                 pbar.update(len(chunk))
+            if progress is not None:
+                progress(downloaded + start_size, total)
             if speed is not None:
                 elapsed_time_expected = downloaded / speed
                 elapsed_time = time.time() - t_start
