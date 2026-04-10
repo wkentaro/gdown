@@ -109,7 +109,7 @@ def test_download_folder_from_gdrive():
         raise AssertionError(f"Failed to download any of the folders: {file_ids}")
 
 
-def test_download_a_folder_with_remining_ok_false():
+def test_download_a_folder_with_remaining_ok_false():
     with tempfile.TemporaryDirectory() as d:
         cmd = [
             "gdown",

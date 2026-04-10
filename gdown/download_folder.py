@@ -73,9 +73,9 @@ def _parse_google_drive_file(url, content):
     title_text = title.string
     if title_text is None:
         raise RuntimeError("folder page <title> tag has no text")
-    splitted = title_text.split(sep)
-    if len(splitted) >= 2:
-        name = sep.join(splitted[:-1])
+    parts = title_text.split(sep)
+    if len(parts) >= 2:
+        name = sep.join(parts[:-1])
     else:
         raise RuntimeError(f"file/folder name cannot be extracted from: {title_text}")
 
