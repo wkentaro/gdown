@@ -174,7 +174,7 @@ def download(
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is not None:
-        url = "https://drive.google.com/uc?id={id}".format(id=id)
+        url = f"https://drive.google.com/uc?id={id}"
     if user_agent is None:
         # We need to use different user agent for file download c.f., folder
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA: E501
@@ -194,7 +194,7 @@ def download(
 
     if fuzzy and gdrive_file_id:
         # overwrite the url with fuzzy match of a file id
-        url = "https://drive.google.com/uc?id={id}".format(id=gdrive_file_id)
+        url = f"https://drive.google.com/uc?id={gdrive_file_id}"
         url_origin = url
         is_gdrive_download_link = True
 
@@ -206,7 +206,7 @@ def download(
 
         if url == url_origin and res.status_code == 500:
             # The file could be Google Docs or Spreadsheets.
-            url = "https://drive.google.com/open?id={id}".format(id=gdrive_file_id)
+            url = f"https://drive.google.com/open?id={gdrive_file_id}"
             continue
 
         if res.headers["Content-Type"].startswith("text/html"):
@@ -336,7 +336,7 @@ def download(
 
     if tmp_file is not None and f.tell() != 0:
         start_size = f.tell()
-        headers = {"Range": "bytes={}-".format(start_size)}
+        headers = {"Range": f"bytes={start_size}-"}
         res = sess.get(url, headers=headers, stream=True, verify=verify)
     else:
         start_size = 0

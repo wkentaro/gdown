@@ -69,37 +69,17 @@ gdown = "gdown.__main__:main"
 [tool.mypy]
 ignore_missing_imports = true
 
-[tool.ruff]
-exclude = [
-  ".conda",
-  ".git",
-  "src",
-]
-
-line-length = 88
-indent-width = 4
-
 [tool.ruff.lint]
-# Enable Pyflakes (`F`), pycodestyle (`E`), isort (`I`).
-select = ["E", "F", "I"]
-ignore = []
-
-# Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-unfixable = []
-
-[tool.ruff.format]
-# Like Black, use double quotes for strings.
-quote-style = "double"
-
-# Like Black, indent with spaces, rather than tabs.
-indent-style = "space"
-
-# Like Black, respect magic trailing commas.
-skip-magic-trailing-comma = false
-
-# Like Black, automatically detect the appropriate line ending.
-line-ending = "auto"
+select = [
+  # "ANN", # flake8-annotations
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
+  "UP",  # pyupgrade
+]
 
 [tool.ruff.lint.isort]
 force-single-line = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

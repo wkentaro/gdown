@@ -18,11 +18,7 @@ from .exceptions import FolderContentsMaximumLimitError
 
 class _ShowVersionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        print(
-            "gdown {ver} at {pos}".format(
-                ver=__version__, pos=os.path.dirname(os.path.dirname(__file__))
-            )
-        )
+        print(f"gdown {__version__} at {os.path.dirname(os.path.dirname(__file__))}")
         parser.exit()
 
 
@@ -112,13 +108,13 @@ def main():
         "--folder",
         action="store_true",
         help="download entire folder instead of a single file "
-        "(max {max} files per folder)".format(max=MAX_NUMBER_FILES),
+        f"(max {MAX_NUMBER_FILES} files per folder)",
     )
     parser.add_argument(
         "--remaining-ok",
         action="store_true",
         help="(folder only) asserts that is ok to download max "
-        "{max} files per folder.".format(max=MAX_NUMBER_FILES),
+        f"{MAX_NUMBER_FILES} files per folder.",
     )
     parser.add_argument(
         "--format",

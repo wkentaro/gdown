@@ -19,7 +19,7 @@ from .parse_url import is_google_drive_url
 MAX_NUMBER_FILES = 50
 
 
-class _GoogleDriveFile(object):
+class _GoogleDriveFile:
     TYPE_FOLDER = "application/vnd.google-apps.folder"
 
     def __init__(self, id, name, type, children=None):
@@ -74,9 +74,8 @@ def _parse_google_drive_file(url, content):
         name = sep.join(splitted[:-1])
     else:
         raise RuntimeError(
-            "file/folder name cannot be extracted from: {}".format(
-                folder_soup.title.contents[0]
-            )
+            "file/folder name cannot be extracted from:"
+            f" {folder_soup.title.contents[0]}"
         )
 
     gdrive_file = _GoogleDriveFile(
@@ -168,8 +167,8 @@ def _download_and_parse_google_drive_link(
     if not remaining_ok and has_at_least_max_files:
         message = " ".join(
             [
-                "The gdrive folder with url: {url}".format(url=url),
-                "has more than {max} files,".format(max=MAX_NUMBER_FILES),
+                f"The gdrive folder with url: {url}",
+                f"has more than {MAX_NUMBER_FILES} files,",
                 "gdrive can't download more than this limit.",
             ]
         )
@@ -263,7 +262,7 @@ def download_folder(
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is not None:
-        url = "https://drive.google.com/drive/folders/{id}".format(id=id)
+        url = f"https://drive.google.com/drive/folders/{id}"
     if user_agent is None:
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
