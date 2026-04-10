@@ -27,9 +27,6 @@ classifiers = [
 dependencies = ["filelock", "requests[socks]", "tqdm", "beautifulsoup4"]
 dynamic = ["readme", "version"]
 
-[project.optional-dependencies]
-test = ["build", "mypy", "twine", "types-requests", "types-setuptools"]
-
 [project.urls]
 Homepage = "https://github.com/wkentaro/gdown"
 
@@ -42,9 +39,6 @@ source = "vcs"
 
 [project.scripts]
 gdown = "gdown.__main__:main"
-
-[tool.mypy]
-ignore_missing_imports = true
 
 [tool.ruff.lint]
 select = [
