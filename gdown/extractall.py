@@ -18,31 +18,24 @@ def extractall(path, to=None):
         to = osp.dirname(path)
 
     if path.endswith(".zip"):
-        opener, mode = zipfile.ZipFile, "r"
-    elif path.endswith(".tar"):
-        opener, mode = tarfile.open, "r"
+        with zipfile.ZipFile(path, "r") as f:
+            f.extractall(path=to)
+            names = f.namelist()
+        return [osp.join(to, name) for name in names]
+
+    if path.endswith(".tar"):
+        tar_mode = "r"
     elif path.endswith(".tar.gz") or path.endswith(".tgz"):
-        opener, mode = tarfile.open, "r:gz"
+        tar_mode = "r:gz"
     elif path.endswith(".tar.bz2") or path.endswith(".tbz"):
-        opener, mode = tarfile.open, "r:bz2"
+        tar_mode = "r:bz2"
     else:
         raise ValueError(
             f"Could not extract '{path}' as no appropriate extractor is found"
         )
 
-    def namelist(f):
-        if isinstance(f, zipfile.ZipFile):
-            return f.namelist()
-        return [m.path for m in f.members]
-
-    def filelist(f):
-        files = []
-        for fname in namelist(f):
-            fname = osp.join(to, fname)
-            files.append(fname)
-        return files
-
-    with opener(path, mode) as f:
+    with tarfile.open(name=path, mode=tar_mode) as f:
         f.extractall(path=to)
+        names = [m.path for m in f.getmembers()]
 
-    return filelist(f)
+    return [osp.join(to, name) for name in names]
