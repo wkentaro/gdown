@@ -27,7 +27,7 @@ def extractall(path, to=None):
         opener, mode = tarfile.open, "r:bz2"
     else:
         raise ValueError(
-            "Could not extract '%s' as no appropriate extractor is found" % path
+            f"Could not extract '{path}' as no appropriate extractor is found"
         )
 
     def namelist(f):

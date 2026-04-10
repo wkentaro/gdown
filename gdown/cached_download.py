@@ -5,7 +5,6 @@ import shutil
 import sys
 import tempfile
 import warnings
-from typing import Optional
 
 import filelock
 
@@ -58,7 +57,7 @@ def cached_download(
     md5=None,
     quiet=False,
     postprocess=None,
-    hash: Optional[str] = None,
+    hash: str | None = None,
     **kwargs,
 ):
     """Cached download from URL.
