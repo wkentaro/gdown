@@ -1,129 +1,191 @@
-<div align="center">
-  <h1>gdown</h1>
-  <p><b>Google Drive Public File Downloader when Curl/Wget Fails</b></p>
-  <img src="https://github.com/wkentaro/gdown/raw/main/assets/cli.png" width="80%">
-  <img src="https://github.com/wkentaro/gdown/raw/main/assets/python.png" width="80%">
-  <br>
-  <br>
-</div>
+# gdown
 
-*Gdown* downloads a public file/folder from Google Drive.
+[![PyPI](https://img.shields.io/pypi/v/gdown.svg)](https://pypi.org/project/gdown/)
+[![Python](https://img.shields.io/pypi/pyversions/gdown.svg)](https://pypi.org/project/gdown/)
+[![Build](https://github.com/wkentaro/gdown/actions/workflows/test.yml/badge.svg)](https://github.com/wkentaro/gdown/actions/workflows/test.yml)
+[![License](https://img.shields.io/pypi/l/gdown.svg)](https://pypi.org/project/gdown/)
 
-*Gdown* provides what curl/wget doesn't for Google Drive:
+Google Drive public file/folder downloader when curl/wget fails.
 
-- **Skip the security notice** allowing you to download large files (curl/wget fails);
-- **Recursive download** of files in a folder (maximum 50 files per folder);
-- **Specify download file format** for Google Slides/Sheet/Docs like PDF/XML/CSV.
+<img src="https://github.com/wkentaro/gdown/raw/main/assets/cli.png" width="80%">
+<img src="https://github.com/wkentaro/gdown/raw/main/assets/python.png" width="80%">
 
-## Installation
+## Why?
 
-<a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/pyversions/gdown.svg"></a>
-<a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
+Downloading public files from Google Drive with curl or wget doesn't work —
+Google serves a confirmation page for large files, and the URL formats are a mess.
+
+gdown gets around that:
+
+- Skips the virus-scan confirmation page so large downloads actually finish
+- Downloads folders recursively (up to 50 files per folder)
+- Exports Google Docs/Sheets/Slides as PDF, DOCX, CSV, etc.
+- Resumes partial downloads with `--continue`
+- Also works with plain HTTP/HTTPS URLs as a curl/wget replacement
+
+## Install
 
 ```bash
 pip install gdown
+```
 
-# to upgrade
-pip install --upgrade gdown
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv tool install gdown
+```
+
+## Quick start
+
+```bash
+# Just paste a Google Drive URL
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
+
+# Or copy-paste a share link directly
+gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing'
 ```
 
 ## Usage
 
-### via Command Line
+### CLI
+
+#### Files
 
 ```bash
-$ gdown --help
-usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id] [--proxy PROXY]
-             [--speed SPEED] [--no-cookies] [--no-check-certificate]
-             [--continue] [--folder] [--remaining-ok] [--format FORMAT]
-             [--user-agent USER_AGENT]
-             url_or_id
-...
+# Download by URL
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 
-$ # a large file (~500MB)
-$ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
-$ md5sum fcn8s_from_caffe.npz
-256c2a8235c1c65e62e48d3284fbd384
+# Download by file ID
+gdown 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 
-$ # same as the above but with the file ID
-$ gdown 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
+# Extract file ID from a share link
+gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing'
 
-$ # a small file
-$ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c
-$ cat spam.txt
-spam
-
-$ # download with fuzzy extraction of a file ID
-$ gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing&resourcekey=0-WWs_XOSctfaY_0-sJBKRSQ'
-$ cat spam.txt
-spam
-
-$ # --fuzzy option also works with Microsoft Powerpoint files
-$ gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing&ouid=117512221203072002113&rtpof=true&sd=true"
-
-$ # a folder
-$ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
-
-$ # as an alternative to curl/wget
-$ gdown https://httpbin.org/ip -O ip.json
-$ cat ip.json
-{
-  "origin": "126.169.213.247"
-}
-
-$ # write stdout and pipe to extract
-$ gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - --quiet | tar zxvf -
-$ ls gdown-4.0.0/
-gdown  github2pypi  LICENSE  MANIFEST.in  pyproject.toml  README.md  setup.cfg  setup.py  tests
+# Save to a specific path
+gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O /tmp/spam.txt
 ```
 
-### via Python
+#### Folders
+
+```bash
+# Download an entire folder
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
+
+# Download up to 50 files without prompting
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --remaining-ok
+```
+
+#### Google Docs, Sheets, Slides
+
+```bash
+# Download a Google Slides file (default: pptx)
+gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing"
+
+# Export as PDF instead
+gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit" --format pdf
+```
+
+Default export formats: Docs → `docx`, Sheets → `xlsx`, Slides → `pptx`.
+
+#### Resume, speed limit, proxy
+
+```bash
+# Resume a partially downloaded file
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --continue
+
+# Limit download speed
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --speed 10MB
+
+# Download via proxy
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --proxy http://proxy:8080
+```
+
+#### Pipe to stdout
+
+```bash
+gdown https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - --quiet | tar zxvf -
+```
+
+#### Any URL
+
+gdown also works with regular URLs, not just Google Drive:
+
+```bash
+gdown https://httpbin.org/ip -O ip.json
+```
+
+### Python
 
 ```python
 import gdown
 
-# a file
+# Download a file
 url = "https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ"
-output = "fcn8s_from_caffe.npz"
-gdown.download(url, output)
+gdown.download(url=url, output="fcn8s_from_caffe.npz")
 
-# same as the above, but with the file ID
-id = "0B9P1L--7Wd2vNm9zMTJWOGxobkU"
-gdown.download(id=id, output=output)
+# Download by file ID
+gdown.download(id="0B9P1L--7Wd2vNm9zMTJWOGxobkU", output="output.npz")
 
-# same as the above, and you can copy-and-paste a URL from Google Drive with fuzzy=True
+# Fuzzy extraction from a share link
 url = "https://drive.google.com/file/d/0B9P1L--7Wd2vNm9zMTJWOGxobkU/view?usp=sharing"
-gdown.download(url=url, output=output, fuzzy=True)
+gdown.download(url=url, output="output.npz", fuzzy=True)
 
-# Cached download with identity check via MD5 (or SHA1, SHA256, etc).
-# Pass postprocess function e.g., extracting compressed file.
-md5 = "md5:fa837a88f0c40c513d975104edf3da17"
-gdown.cached_download(url, output, hash=md5, postprocess=gdown.extractall)
+# Download with hash verification and caching
+gdown.cached_download(
+    url=url,
+    output="output.npz",
+    hash="md5:fa837a88f0c40c513d975104edf3da17",
+    postprocess=gdown.extractall,
+)
 
-# a folder
+# Download a folder
 url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
-gdown.download_folder(url)
+gdown.download_folder(url=url)
 
-# same as the above, but with the folder ID
-id = "15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
-gdown.download_folder(id=id)
+# Download a folder by ID
+gdown.download_folder(id="15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl")
 ```
 
 ## FAQ
 
-### I get a 'Permission Denied' error.
+### "Permission Denied" error
 
-Have you made sure you set the file permission to 'Anyone with Link'?
+Make sure the file sharing is set to "Anyone with the link".
 
-### I set the permission 'Anyone with Link', but I still can't download.
+### Download still fails even with "Anyone with the link"
 
-Google restricts access to a file when the download is concentrated.
-If you can still access to the file from your browser, downloading cookies file might
-help. Follow this step: 1) download cookies.txt using browser extensions like
-([Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc));
-2\) mv the `cookies.txt` to `~/.cache/gdown/cookies.txt`; 3) run download again.
-If you're using `gdown>=5.0.0`, it should be able to use the cookies same as your browser.
+Google throttles downloads when too many people access the same file.
+If you can still open the file in your browser, try exporting cookies:
+
+1. Install a browser extension like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+1. Export `cookies.txt` and move it to `~/.cache/gdown/cookies.txt`
+1. Run the download again
+
+On gdown >= 5.0.0, browser cookies are used automatically.
+
+### Folder has more than 50 files
+
+Google Drive's API limits folder listing to 50 files. Pass `--remaining-ok` to
+download what's available without an error:
+
+```bash
+gdown <folder_url> --folder --remaining-ok
+```
+
+### Can I use gdown for non-Google-Drive URLs?
+
+Yes. It works with any public HTTP/HTTPS URL.
+
+## Contributing
+
+```bash
+git clone https://github.com/wkentaro/gdown.git
+cd gdown
+make setup   # install dependencies
+make test    # run tests
+make lint    # run linters
+```
 
 ## License
 
-MIT
+MIT ([LICENSE](https://github.com/wkentaro/gdown/blob/main/LICENSE))
