@@ -1,5 +1,6 @@
 import os.path as osp
 import tempfile
+from pathlib import Path
 
 from gdown.download_folder import _parse_google_drive_file
 from gdown.download_folder import download_folder
@@ -60,6 +61,20 @@ def test_valid_page() -> None:
     assert actual_children_ids == expected_children_ids
     assert actual_children_names == expected_children_names
     assert actual_children_types == expected_children_types
+
+
+def test_download_folder_google_slides_without_extension(tmp_path: Path) -> None:
+    # The folder contains a Google Slides file named "gdown" with no extension in
+    # Google Drive. Previously, download_folder() passed this extensionless name as
+    # the output path to download(), which saved the file without .pptx extension.
+    # The fix passes the directory instead, letting download() resolve the filename
+    # (including extension) from the Content-Disposition header.
+    url = "https://drive.google.com/drive/folders/12zxlvJtuHFV6awc3AINaNHnfvRttPv0i"
+    files = download_folder(url=url, output=str(tmp_path), quiet=True)
+    assert files is not None
+    assert len(files) == 1
+    assert isinstance(files[0], str)
+    assert files[0].endswith(".pptx")
 
 
 def test_download_folder_dry_run() -> None:
