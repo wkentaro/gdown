@@ -2,6 +2,12 @@ import pytest
 
 from gdown.parse_url import parse_url
 
+from .conftest import GITHUB_RELEASE_URL
+
+
+def test_parse_url_non_gdrive() -> None:
+    assert parse_url(GITHUB_RELEASE_URL) == (None, False)
+
 
 def test_parse_url() -> None:
     file_id = "0B_NiLAzvehC9R2stRmQyM3ZiVjQ"
