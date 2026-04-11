@@ -70,7 +70,7 @@ def get_url_from_gdrive_confirmation(contents: str) -> str:
 
 
 def _sanitize_filename(filename: str) -> str:
-    return filename.replace("/", "_").replace("\\", "_")
+    return filename.replace("/", "_").replace("\\", "_").strip()
 
 
 def _get_filename_from_response(response: requests.Response) -> str | None:
