@@ -18,6 +18,7 @@ import bs4
 import requests
 import tqdm
 
+from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
@@ -148,7 +149,7 @@ def download(
     user_agent: str | None = None,
     log_messages: dict[str, str] | None = None,
     progress: Callable[[int, int | None], None] | None = None,
-) -> str | BinaryIO | None:
+) -> str | BinaryIO:
     """Download file from URL.
 
     Parameters
@@ -332,19 +333,12 @@ def download(
                 existing_tmp_files.append(osp.join(osp.dirname(output), file))
         if resume and existing_tmp_files:
             if len(existing_tmp_files) != 1:
-                print(
-                    "There are multiple temporary files to resume:",
-                    file=sys.stderr,
-                )
-                print("\n")
+                lines = ["There are multiple temporary files to resume:", ""]
                 for file in existing_tmp_files:
-                    print("\t", file, file=sys.stderr)
-                print("\n")
-                print(
-                    "Please remove them except one to resume downloading.",
-                    file=sys.stderr,
-                )
-                return None
+                    lines.append(f"\t{file}")
+                lines.append("")
+                lines.append("Please remove them except one to resume downloading.")
+                raise DownloadError("\n".join(lines))
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
