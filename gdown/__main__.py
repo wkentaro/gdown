@@ -12,7 +12,7 @@ from . import __version__
 from .download import download
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
-from .exceptions import FileURLRetrievalError
+from .exceptions import DownloadError
 from .exceptions import FolderContentsMaximumLimitError
 
 
@@ -169,9 +169,6 @@ def main() -> None:
                 format=args.format,
                 user_agent=args.user_agent,
             )
-    except FileURLRetrievalError as e:
-        print(e, file=sys.stderr)
-        sys.exit(1)
     except FolderContentsMaximumLimitError as e:
         print(
             "Failed to retrieve folder contents:\n\n{}\n\n"
@@ -180,6 +177,9 @@ def main() -> None:
             ),
             file=sys.stderr,
         )
+        sys.exit(1)
+    except DownloadError as e:
+        print(e, file=sys.stderr)
         sys.exit(1)
     except requests.exceptions.ProxyError as e:
         print(

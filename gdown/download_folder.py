@@ -15,6 +15,7 @@ import requests
 from .download import _get_session
 from .download import _sanitize_filename
 from .download import download
+from .exceptions import DownloadError
 from .exceptions import FolderContentsMaximumLimitError
 from .parse_url import is_google_drive_url
 
@@ -111,10 +112,8 @@ def _download_and_parse_google_drive_link(
     quiet: bool = False,
     remaining_ok: bool = False,
     verify: bool | str = True,
-) -> tuple[bool, _GoogleDriveFile | None]:
+) -> _GoogleDriveFile:
     """Get folder structure of Google Drive folder URL."""
-
-    return_code = True
 
     for _ in range(2):
         if is_google_drive_url(url):
@@ -126,7 +125,10 @@ def _download_and_parse_google_drive_link(
 
         res = sess.get(url, verify=verify)
         if res.status_code != 200:
-            return False, None
+            raise DownloadError(
+                f"Failed to retrieve folder contents: {url} "
+                f"(status code {res.status_code})"
+            )
 
         if is_google_drive_url(url):
             break
@@ -165,15 +167,13 @@ def _download_and_parse_google_drive_link(
                 child_id,
                 child_name,
             )
-        return_code, child = _download_and_parse_google_drive_link(
+        child = _download_and_parse_google_drive_link(
             sess=sess,
             url="https://drive.google.com/drive/folders/" + child_id,
             quiet=quiet,
             remaining_ok=remaining_ok,
+            verify=verify,
         )
-        if not return_code:
-            return return_code, None
-        assert child is not None
         gdrive_file.children.append(child)
     has_at_least_max_files = len(gdrive_file.children) == MAX_NUMBER_FILES
     if not remaining_ok and has_at_least_max_files:
@@ -185,7 +185,7 @@ def _download_and_parse_google_drive_link(
             ]
         )
         raise FolderContentsMaximumLimitError(message)
-    return return_code, gdrive_file
+    return gdrive_file
 
 
 def _get_directory_structure(
@@ -223,7 +223,7 @@ def download_folder(
     user_agent: str | None = None,
     skip_download: bool = False,
     resume: bool = False,
-) -> list[str] | list[GoogleDriveFileToDownload] | None:
+) -> list[str] | list[GoogleDriveFileToDownload]:
     """Downloads entire folder from URL.
 
     Parameters
@@ -262,10 +262,19 @@ def download_folder(
     Returns
     -------
     files:
-        If skip_download is False, list of local file paths downloaded
-        or None if failed.
+        If skip_download is False, list of local file paths downloaded.
         If skip_download is True, list of GoogleDriveFileToDownload that contains
         id, path, and local_path.
+
+    Raises
+    ------
+    ValueError
+        If neither url nor id is specified, or both are specified.
+    DownloadError
+        If a file in the folder fails to download.
+    FolderContentsMaximumLimitError
+        If the folder has more than MAX_NUMBER_FILES files
+        and remaining_ok is False.
 
     Example
     -------
@@ -287,17 +296,13 @@ def download_folder(
 
     if not quiet:
         print("Retrieving folder contents", file=sys.stderr)
-    is_success, gdrive_file = _download_and_parse_google_drive_link(
+    gdrive_file = _download_and_parse_google_drive_link(
         sess,
         url,
         quiet=quiet,
         remaining_ok=remaining_ok,
         verify=verify,
     )
-    if not is_success:
-        print("Failed to retrieve folder contents", file=sys.stderr)
-        return None
-    assert gdrive_file is not None
 
     gdrive_file.name = _sanitize_filename(filename=gdrive_file.name)
 
@@ -335,12 +340,12 @@ def download_folder(
             # in the folder listing. Pass the directory so download() resolves
             # the correct filename from the Content-Disposition header.
             if osp.splitext(local_path)[1]:
-                output = local_path
+                download_output = local_path
             else:
-                output = osp.dirname(local_path) + osp.sep
+                download_output = osp.dirname(local_path) + osp.sep
             local_path = download(
                 url="https://drive.google.com/uc?id=" + id,
-                output=output,
+                output=download_output,
                 quiet=quiet,
                 proxy=proxy,
                 speed=speed,
@@ -348,10 +353,6 @@ def download_folder(
                 verify=verify,
                 resume=resume,
             )
-            if local_path is None:
-                if not quiet:
-                    print("Download ended unsuccessfully", file=sys.stderr)
-                return None
             files.append(local_path)
     if not quiet:
         print("Download completed", file=sys.stderr)
