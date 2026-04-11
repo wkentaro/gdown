@@ -18,7 +18,7 @@
 ## Installation
 
 <a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/pyversions/gdown.svg"></a>
-<a href="https://pypi.python.org/pypi/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
+<a href="https://pypi.org/project/gdown"><img src="https://img.shields.io/pypi/v/gdown.svg"></a>
 
 ```bash
 pip install gdown
@@ -35,7 +35,8 @@ pip install --upgrade gdown
 $ gdown --help
 usage: gdown [-h] [-V] [-O OUTPUT] [-q] [--fuzzy] [--id] [--proxy PROXY]
              [--speed SPEED] [--no-cookies] [--no-check-certificate]
-             [--continue] [--folder] [--remaining-ok]
+             [--continue] [--folder] [--remaining-ok] [--format FORMAT]
+             [--user-agent USER_AGENT]
              url_or_id
 ...
 
@@ -97,7 +98,7 @@ gdown.download(url=url, output=output, fuzzy=True)
 # Cached download with identity check via MD5 (or SHA1, SHA256, etc).
 # Pass postprocess function e.g., extracting compressed file.
 md5 = "md5:fa837a88f0c40c513d975104edf3da17"
-gdown.cached_download(url, output, hash=hash, postprocess=gdown.extractall)
+gdown.cached_download(url, output, hash=md5, postprocess=gdown.extractall)
 
 # a folder
 url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
