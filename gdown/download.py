@@ -69,18 +69,20 @@ def get_url_from_gdrive_confirmation(contents: str) -> str:
     return url
 
 
+def _sanitize_filename(filename: str) -> str:
+    return filename.replace("/", "_").replace("\\", "_")
+
+
 def _get_filename_from_response(response: requests.Response) -> str | None:
     content_disposition = urllib.parse.unquote(response.headers["Content-Disposition"])
 
     m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
     if m:
-        filename = m.groups()[0]
-        return filename.replace(osp.sep, "_")
+        return _sanitize_filename(filename=m.groups()[0])
 
     m = re.search('attachment; filename="(.*?)"', content_disposition)
     if m:
-        filename = m.groups()[0]
-        return filename
+        return _sanitize_filename(filename=m.groups()[0])
 
     return None
 
