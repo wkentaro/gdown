@@ -199,6 +199,16 @@ def download(
     -------
     output:
         Output filename.
+
+    Raises
+    ------
+    ValueError
+        If neither url nor id is specified, or both are specified.
+    FileURLRetrievalError
+        If the file URL cannot be retrieved from Google Drive.
+    DownloadError
+        If the download fails (e.g., multiple temporary files exist during
+        resume).
     """
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")

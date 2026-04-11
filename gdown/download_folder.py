@@ -266,6 +266,16 @@ def download_folder(
         If skip_download is True, list of GoogleDriveFileToDownload that contains
         id, path, and local_path.
 
+    Raises
+    ------
+    ValueError
+        If neither url nor id is specified, or both are specified.
+    DownloadError
+        If a file in the folder fails to download.
+    FolderContentsMaximumLimitError
+        If the folder has more than MAX_NUMBER_FILES files
+        and remaining_ok is False.
+
     Example
     -------
     gdown.download_folder(

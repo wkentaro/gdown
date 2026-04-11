@@ -70,6 +70,14 @@ def cached_download(
     -------
     path:
         Output filename.
+
+    Raises
+    ------
+    ValueError
+        If url is not specified when path is not specified,
+        or if md5 and hash are both specified.
+    DownloadError
+        If the download fails.
     """
     if path is None:
         if url is None:

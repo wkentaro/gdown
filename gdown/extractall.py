@@ -24,6 +24,12 @@ def extractall(path: str, to: str | None = None) -> list[str]:
     to:
         Directory to which the archive file will be extracted.
         If None, it will be set to the parent directory of the archive file.
+
+    Raises
+    ------
+    ValueError
+        If the archive format is unsupported, or if an archive member would
+        extract outside the target directory.
     """
     if to is None:
         to = osp.dirname(path)
