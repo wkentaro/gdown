@@ -4,6 +4,8 @@ import re
 import sys
 import textwrap
 import warnings
+from collections.abc import Sequence
+from typing import Any
 
 import requests
 
@@ -16,12 +18,18 @@ from .exceptions import FolderContentsMaximumLimitError
 
 
 class _ShowVersionAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         print(f"gdown {__version__} at {os.path.dirname(os.path.dirname(__file__))}")
         parser.exit()
 
 
-def file_size(argv):
+def file_size(argv: str | None) -> float | None:
     if argv is not None:
         m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
         if not m:
@@ -39,7 +47,7 @@ def file_size(argv):
         return size
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -149,6 +157,8 @@ def main():
 
     try:
         if args.folder:
+            if not (args.output is None or isinstance(args.output, str)):
+                raise ValueError("--folder does not support stdout output (-O -)")
             download_folder(
                 url=url,
                 id=id,

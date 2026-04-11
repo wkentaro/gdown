@@ -3,12 +3,12 @@ import urllib.parse
 import warnings
 
 
-def is_google_drive_url(url):
+def is_google_drive_url(url: str) -> bool:
     parsed = urllib.parse.urlparse(url)
     return parsed.hostname in ["drive.google.com", "docs.google.com"]
 
 
-def parse_url(url, warning=True):
+def parse_url(url: str, warning: bool = True) -> tuple[str | bool | None, bool]:
     """Parse URLs especially for Google Drive links.
 
     file_id: ID of file on Google Drive.

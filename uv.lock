@@ -215,6 +215,7 @@ dependencies = [
     { name = "filelock" },
     { name = "requests", extra = ["socks"] },
     { name = "tqdm" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
 
 [package.dev-dependencies]
@@ -235,6 +236,7 @@ requires-dist = [
     { name = "filelock" },
     { name = "requests", extras = ["socks"] },
     { name = "tqdm" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'", specifier = ">=4.0" },
 ]
 
 [package.metadata.requires-dev]

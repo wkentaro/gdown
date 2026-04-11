@@ -24,7 +24,13 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["filelock", "requests[socks]", "tqdm", "beautifulsoup4"]
+dependencies = [
+  "beautifulsoup4",
+  "filelock",
+  "requests[socks]",
+  "tqdm",
+  "typing_extensions>=4.0; python_version < '3.12'",
+]
 dynamic = ["readme", "version"]
 
 [project.scripts]
@@ -54,11 +60,11 @@ fragments = [{ path = "README.md" }]
 
 [tool.ruff.lint]
 select = [
-  # "ANN", # flake8-annotations
-  "E",  # pycodestyle
-  "F",  # pyflakes
-  "I",  # isort
-  "UP", # pyupgrade
+  "ANN", # flake8-annotations
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
+  "UP",  # pyupgrade
 ]
 
 [tool.ruff.lint.isort]

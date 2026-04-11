@@ -3,7 +3,7 @@ import tarfile
 import zipfile
 
 
-def extractall(path, to=None):
+def extractall(path: str, to: str | None = None) -> list[str]:
     """Extract archive file.
 
     Parameters
