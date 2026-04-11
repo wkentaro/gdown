@@ -8,7 +8,7 @@ def is_google_drive_url(url: str) -> bool:
     return parsed.hostname in ["drive.google.com", "docs.google.com"]
 
 
-def parse_url(url: str, warning: bool = True) -> tuple[str | bool | None, bool]:
+def parse_url(url: str, warning: bool = True) -> tuple[str | None, bool]:
     """Parse URLs especially for Google Drive links.
 
     file_id: ID of file on Google Drive.
@@ -20,7 +20,7 @@ def parse_url(url: str, warning: bool = True) -> tuple[str | bool | None, bool]:
     is_download_link = parsed.path.endswith("/uc")
 
     if not is_gdrive:
-        return is_gdrive, is_download_link
+        return None, is_download_link
 
     file_id = None
     if "id" in query:
