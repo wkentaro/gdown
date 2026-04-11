@@ -225,8 +225,7 @@ def download(
             continue
 
         if res.headers["Content-Type"].startswith("text/html"):
-            m = re.search("<title>(.+)</title>", res.text)
-            if m and m.groups()[0].endswith(" - Google Docs"):
+            if "/document/" in res.url and "/export" not in res.url:
                 url = (
                     "https://docs.google.com/document/d/{id}/export"
                     "?format={format}".format(
@@ -235,7 +234,7 @@ def download(
                     )
                 )
                 continue
-            elif m and m.groups()[0].endswith(" - Google Sheets"):
+            elif "/spreadsheets/" in res.url and "/export" not in res.url:
                 url = (
                     "https://docs.google.com/spreadsheets/d/{id}/export"
                     "?format={format}".format(
@@ -244,7 +243,7 @@ def download(
                     )
                 )
                 continue
-            elif m and m.groups()[0].endswith(" - Google Slides"):
+            elif "/presentation/" in res.url and "/export" not in res.url:
                 url = (
                     "https://docs.google.com/presentation/d/{id}/export"
                     "?format={format}".format(
