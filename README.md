@@ -179,6 +179,15 @@ download what's available without an error:
 gdown <folder_url> --folder --remaining-ok
 ```
 
+### Download stops after ~1 hour
+
+Google Drive terminates connections after approximately 1 hour for large files.
+Use `--continue` to resume, and retry until the download completes:
+
+```bash
+gdown --continue https://drive.google.com/uc?id=<file_id>
+```
+
 ### Can I use gdown for non-Google-Drive URLs?
 
 Yes. It works with any public HTTP/HTTPS URL.
