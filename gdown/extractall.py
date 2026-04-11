@@ -19,9 +19,9 @@ def extractall(path: str, to: str | None = None) -> list[str]:
 
     Parameters
     ----------
-    path: str
+    path:
         Path of archive file to be extracted.
-    to: str, optional
+    to:
         Directory to which the archive file will be extracted.
         If None, it will be set to the parent directory of the archive file.
     """

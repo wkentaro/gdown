@@ -153,50 +153,50 @@ def download(
 
     Parameters
     ----------
-    url: str
+    url:
         URL. Google Drive URL is also supported.
-    output: str
+    output:
         Output filename/directory. Default is basename of URL.
         If output is an existing directory or ends with a path separator,
         the basename will be appended automatically.
-    quiet: bool
+    quiet:
         Suppress terminal output. Default is False.
-    proxy: str
+    proxy:
         Proxy.
-    speed: float
+    speed:
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
-    use_cookies: bool
+    use_cookies:
         Flag to use cookies. Default is True.
-    verify: bool or string
+    verify:
         Either a bool, in which case it controls whether the server's TLS
         certificate is verified, or a string, in which case it must be a path
         to a CA bundle to use. Default is True.
-    id: str
+    id:
         Google Drive's file ID.
-    fuzzy: bool
+    fuzzy:
         Fuzzy extraction of Google Drive's file Id. Default is False.
-    resume: bool
+    resume:
         Resume interrupted downloads while skipping completed ones.
         Default is False.
-    format: str, optional
+    format:
         Format of Google Docs, Spreadsheets and Slides. Default is:
             - Google Docs: 'docx'
             - Google Spreadsheet: 'xlsx'
             - Google Slides: 'pptx'
-    user_agent: str, optional
+    user_agent:
         User-agent to use in the HTTP request.
-    log_messages: dict, optional
+    log_messages:
         Log messages to customize. Currently it supports:
         - 'start': the message to show the start of the download
         - 'output': the message to show the output filename
-    progress: callable, optional
+    progress:
         Callback called after each chunk: ``progress(bytes_so_far, bytes_total)``.
         *bytes_total* is None when Content-Length is unavailable.
         Raise any exception from the callback to abort the download.
 
     Returns
     -------
-    output: str
+    output:
         Output filename.
     """
     if not (id is None) ^ (url is None):

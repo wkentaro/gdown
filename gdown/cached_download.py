@@ -52,23 +52,23 @@ def cached_download(
 
     Parameters
     ----------
-    url: str
+    url:
         URL. Google Drive URL is also supported.
-    path: str, optional
+    path:
         Output filename. Default is basename of URL.
-    quiet: bool
+    quiet:
         Suppress terminal output. Default is False.
-    postprocess: callable, optional
+    postprocess:
         Function called with filename as postprocess.
-    hash: str, optional
+    hash:
         Hash value of file in the format of {algorithm}:{hash_value}
         such as sha256:abcdef.... Supported algorithms: md5, sha1, sha256, sha512.
-    kwargs: dict
+    kwargs:
         Keyword arguments to be passed to `download`.
 
     Returns
     -------
-    path: str
+    path:
         Output filename.
     """
     if path is None:
