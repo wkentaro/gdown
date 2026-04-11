@@ -197,9 +197,7 @@ def _compute_filehash(path: str, algorithm: str) -> str:
     return f"{algorithm}:{algorithm_instance.hexdigest()}"
 
 
-def _assert_filehash(
-    path: str, hash: str, quiet: bool = False, blocksize: int | None = None
-) -> bool:
+def _assert_filehash(path: str, hash: str, quiet: bool = False) -> bool:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "

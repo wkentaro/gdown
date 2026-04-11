@@ -156,8 +156,6 @@ def _download_and_parse_google_drive_link(
                     type=child_type,
                 )
             )
-            if not return_code:
-                return return_code, None
             continue
 
         if not quiet:
@@ -263,8 +261,9 @@ def download_folder(
     Returns
     -------
     files: List[str] or List[GoogleDriveFileToDownload] or None
-        If dry_run is False, list of local file paths downloaded or None if failed.
-        If dry_run is True, list of GoogleDriveFileToDownload that contains
+        If skip_download is False, list of local file paths downloaded
+        or None if failed.
+        If skip_download is True, list of GoogleDriveFileToDownload that contains
         id, path, and local_path.
 
     Example
