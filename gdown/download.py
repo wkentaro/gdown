@@ -15,7 +15,6 @@ import bs4
 import requests
 import tqdm
 
-from ._indent import indent
 from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
@@ -285,7 +284,7 @@ def download(
                 "\n\n\t{}\n\n"
                 "but Gdown can't. Please check connections and permissions."
             ).format(
-                indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
                 url_origin,
             )
             raise FileURLRetrievalError(message)
