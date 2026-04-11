@@ -107,3 +107,17 @@ def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
     )
     assert resume_result == result
     assert os.path.getmtime(result) == mtime_before
+
+
+def test_download_google_slides_without_extension(tmp_path: Path) -> None:
+    # The file "gdown" in Google Drive is a Google Slides file with no extension
+    # in its filename. When downloading directly, download() resolves the correct
+    # .pptx extension from the Content-Disposition header.
+    output = download(
+        url="https://docs.google.com/presentation/d/1DvsG277pWa4WMssXjD9qYYAdF51y7hVidZ6eklfq480/edit?usp=drive_link",
+        output=str(tmp_path) + os.sep,
+        quiet=True,
+        fuzzy=True,
+    )
+    assert isinstance(output, str)
+    assert output.endswith(".pptx")
