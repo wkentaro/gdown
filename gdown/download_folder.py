@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import collections
-import itertools
-import json
 import os
 import os.path as osp
 import re
 import sys
-import warnings
+import urllib.parse
 
 import bs4
 import requests
@@ -16,10 +14,6 @@ from .download import _get_session
 from .download import _sanitize_filename
 from .download import download
 from .exceptions import DownloadError
-from .exceptions import FolderContentsMaximumLimitError
-from .parse_url import is_google_drive_url
-
-MAX_NUMBER_FILES = 50
 
 
 class _GoogleDriveFile:
@@ -39,153 +33,6 @@ class _GoogleDriveFile:
 
     def is_folder(self) -> bool:
         return self.type == self.TYPE_FOLDER
-
-
-def _parse_google_drive_file(
-    url: str, content: str
-) -> tuple[_GoogleDriveFile, list[tuple[str, str, str]]]:
-    """Extracts information about the current page file and its children."""
-
-    folder_soup = bs4.BeautifulSoup(content, features="html.parser")
-
-    # finds the script tag with window['_DRIVE_ivd']
-    encoded_data = None
-    for script in folder_soup.select("script"):
-        inner_html = script.decode_contents()
-
-        if "_DRIVE_ivd" in inner_html:
-            # first js string is _DRIVE_ivd, the second one is the encoded arr
-            regex_iter = re.compile(r"'((?:[^'\\]|\\.)*)'").finditer(inner_html)
-            # get the second elem in the iter
-            try:
-                encoded_data = next(itertools.islice(regex_iter, 1, None)).group(1)
-            except StopIteration:
-                raise RuntimeError("Couldn't find the folder encoded JS string")
-            break
-
-    if encoded_data is None:
-        raise RuntimeError(
-            "Cannot retrieve the folder information from the link. "
-            "You may need to change the permission to "
-            "'Anyone with the link', or have had many accesses. "
-            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
-        )
-
-    # decodes the array and evaluates it as a python array
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        decoded = encoded_data.encode("utf-8").decode("unicode_escape")
-    folder_arr = json.loads(decoded)
-
-    folder_contents = [] if folder_arr[0] is None else folder_arr[0]
-
-    sep = " - "  # unicode dash
-    title = folder_soup.title
-    if title is None:
-        raise RuntimeError("folder page has no <title> tag")
-    title_text = title.string
-    if title_text is None:
-        raise RuntimeError("folder page <title> tag has no text")
-    parts = title_text.split(sep)
-    if len(parts) >= 2:
-        name = sep.join(parts[:-1])
-    else:
-        raise RuntimeError(f"file/folder name cannot be extracted from: {title_text}")
-
-    gdrive_file = _GoogleDriveFile(
-        id=url.split("/")[-1],
-        name=name,
-        type=_GoogleDriveFile.TYPE_FOLDER,
-    )
-
-    id_name_type_iter = [
-        (e[0], e[2].encode("raw_unicode_escape").decode("utf-8"), e[3])
-        for e in folder_contents
-    ]
-
-    return gdrive_file, id_name_type_iter
-
-
-def _download_and_parse_google_drive_link(
-    sess: requests.Session,
-    url: str,
-    quiet: bool = False,
-    remaining_ok: bool = False,
-    verify: bool | str = True,
-) -> _GoogleDriveFile:
-    """Get folder structure of Google Drive folder URL."""
-
-    for _ in range(2):
-        if is_google_drive_url(url):
-            # canonicalize the language into English
-            if "?" in url:
-                url += "&hl=en"
-            else:
-                url += "?hl=en"
-
-        res = sess.get(url, verify=verify)
-        if res.status_code != 200:
-            raise DownloadError(
-                f"Failed to retrieve folder contents: {url} "
-                f"(status code {res.status_code})"
-            )
-
-        if is_google_drive_url(url):
-            break
-
-        if not is_google_drive_url(res.url):
-            break
-
-        # need to try with canonicalized url if the original url redirects to gdrive
-        url = res.url
-
-    gdrive_file, id_name_type_iter = _parse_google_drive_file(
-        url=url,
-        content=res.text,
-    )
-
-    for child_id, child_name, child_type in id_name_type_iter:
-        if child_type != _GoogleDriveFile.TYPE_FOLDER:
-            if not quiet:
-                print(
-                    "Processing file",
-                    child_id,
-                    child_name,
-                )
-            gdrive_file.children.append(
-                _GoogleDriveFile(
-                    id=child_id,
-                    name=child_name,
-                    type=child_type,
-                )
-            )
-            continue
-
-        if not quiet:
-            print(
-                "Retrieving folder",
-                child_id,
-                child_name,
-            )
-        child = _download_and_parse_google_drive_link(
-            sess=sess,
-            url="https://drive.google.com/drive/folders/" + child_id,
-            quiet=quiet,
-            remaining_ok=remaining_ok,
-            verify=verify,
-        )
-        gdrive_file.children.append(child)
-    has_at_least_max_files = len(gdrive_file.children) == MAX_NUMBER_FILES
-    if not remaining_ok and has_at_least_max_files:
-        message = " ".join(
-            [
-                f"The gdrive folder with url: {url}",
-                f"has more than {MAX_NUMBER_FILES} files,",
-                "gdrive can't download more than this limit.",
-            ]
-        )
-        raise FolderContentsMaximumLimitError(message)
-    return gdrive_file
 
 
 def _get_directory_structure(
@@ -218,7 +65,6 @@ def download_folder(
     proxy: str | None = None,
     speed: float | None = None,
     use_cookies: bool = True,
-    remaining_ok: bool = False,
     verify: bool | str = True,
     user_agent: str | None = None,
     skip_download: bool = False,
@@ -272,9 +118,6 @@ def download_folder(
         If neither url nor id is specified, or both are specified.
     DownloadError
         If a file in the folder fails to download.
-    FolderContentsMaximumLimitError
-        If the folder has more than MAX_NUMBER_FILES files
-        and remaining_ok is False.
 
     Example
     -------
@@ -286,8 +129,10 @@ def download_folder(
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is not None:
-        url = f"https://drive.google.com/drive/folders/{id}"
-    assert url is not None
+        folder_id = id
+    else:
+        assert url is not None
+        folder_id = _extract_folder_id(url)
     if user_agent is None:
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
@@ -297,10 +142,9 @@ def download_folder(
     if not quiet:
         print("Retrieving folder contents", file=sys.stderr)
     gdrive_file = _download_and_parse_google_drive_link(
-        sess,
-        url,
+        sess=sess,
+        folder_id=folder_id,
         quiet=quiet,
-        remaining_ok=remaining_ok,
         verify=verify,
     )
 
@@ -357,3 +201,122 @@ def download_folder(
     if not quiet:
         print("Download completed", file=sys.stderr)
     return files
+
+
+def _extract_folder_id(url: str) -> str:
+    return urllib.parse.urlparse(url).path.rstrip("/").split("/")[-1]
+
+
+def _parse_embedded_folder_view(
+    sess: requests.Session,
+    folder_id: str,
+    verify: bool | str = True,
+) -> tuple[str, list[tuple[str, str, str]]]:
+    params = urllib.parse.urlencode({"id": folder_id})
+    url = f"https://drive.google.com/embeddedfolderview?{params}"
+    res = sess.get(url, verify=verify)
+    if res.status_code != 200:
+        raise DownloadError(
+            f"Failed to retrieve folder contents for folder ID: {folder_id} "
+            f"(status code {res.status_code}). "
+            "You may need to change the permission to "
+            "'Anyone with the link', or have had many accesses. "
+            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
+        )
+
+    soup = bs4.BeautifulSoup(res.text, features="html.parser")
+
+    if soup.title is None or soup.title.string is None:
+        raise DownloadError(
+            f"Failed to parse folder contents for folder ID: {folder_id}. "
+            "The page structure may have changed.",
+        )
+    folder_name = soup.title.string
+
+    children: list[tuple[str, str, str]] = []
+    for a_tag in soup.find_all(name="a"):
+        href = a_tag.get("href", "")
+        if not isinstance(href, str):
+            continue
+
+        file_match = re.match(
+            pattern=r"https://drive\.google\.com/file/d/([-\w]{25,})/view",
+            string=href,
+        )
+        if file_match:
+            file_id = file_match.group(1)
+            file_name = a_tag.get_text(strip=True)
+            children.append((file_id, file_name, "application/octet-stream"))
+            continue
+
+        # Google-native files (Docs, Sheets, Slides) use docs.google.com
+        docs_match = re.match(
+            pattern=r"https://docs\.google\.com/\w+/d/([-\w]{25,})/",
+            string=href,
+        )
+        if docs_match:
+            file_id = docs_match.group(1)
+            file_name = a_tag.get_text(strip=True)
+            children.append((file_id, file_name, "application/octet-stream"))
+            continue
+
+        folder_match = re.match(
+            pattern=r"https://drive\.google\.com/drive/folders/([-\w]{25,})",
+            string=href,
+        )
+        if folder_match:
+            child_folder_id = folder_match.group(1)
+            child_name = a_tag.get_text(strip=True)
+            children.append((child_folder_id, child_name, _GoogleDriveFile.TYPE_FOLDER))
+            continue
+
+    return (folder_name, children)
+
+
+def _download_and_parse_google_drive_link(
+    sess: requests.Session,
+    folder_id: str,
+    quiet: bool = False,
+    verify: bool | str = True,
+) -> _GoogleDriveFile:
+    folder_name, children = _parse_embedded_folder_view(
+        sess=sess, folder_id=folder_id, verify=verify
+    )
+
+    gdrive_file = _GoogleDriveFile(
+        id=folder_id,
+        name=folder_name,
+        type=_GoogleDriveFile.TYPE_FOLDER,
+    )
+
+    for child_id, child_name, child_type in children:
+        if child_type != _GoogleDriveFile.TYPE_FOLDER:
+            if not quiet:
+                print(
+                    "Processing file",
+                    child_id,
+                    child_name,
+                )
+            gdrive_file.children.append(
+                _GoogleDriveFile(
+                    id=child_id,
+                    name=child_name,
+                    type=child_type,
+                )
+            )
+            continue
+
+        if not quiet:
+            print(
+                "Retrieving folder",
+                child_id,
+                child_name,
+            )
+        child = _download_and_parse_google_drive_link(
+            sess=sess,
+            folder_id=child_id,
+            quiet=quiet,
+            verify=verify,
+        )
+        gdrive_file.children.append(child)
+    return gdrive_file
