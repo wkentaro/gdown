@@ -81,7 +81,7 @@ def cached_download(
     path: str | None = None,
     md5: str | None = None,
     quiet: bool = False,
-    postprocess: Callable[[str], None] | None = None,
+    postprocess: Callable[[str], object] | None = None,
     hash: str | None = None,
     **kwargs: Unpack[_DownloadKwargs],
 ) -> str:

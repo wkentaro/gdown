@@ -9,6 +9,7 @@ import tempfile
 import textwrap
 import time
 import urllib.parse
+import warnings
 from collections.abc import Callable
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
@@ -116,8 +117,14 @@ def _get_session(
     cookies_file = osp.join(home, ".cache/gdown/cookies.txt")
     if use_cookies and osp.exists(cookies_file):
         cookie_jar = MozillaCookieJar(cookies_file)
-        cookie_jar.load()
-        sess.cookies.update(cookie_jar)
+        try:
+            cookie_jar.load()
+            sess.cookies.update(cookie_jar)
+        except OSError as e:
+            warnings.warn(
+                f"Failed to load cookies from {cookies_file}: {e}",
+                stacklevel=2,
+            )
 
     return sess, cookies_file
 
