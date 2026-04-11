@@ -41,41 +41,6 @@ if not osp.exists(cache_root):
         pass
 
 
-def md5sum(filename: str, blocksize: int | None = None) -> str:
-    warnings.warn(
-        "md5sum is deprecated and will be removed in the future.", FutureWarning
-    )
-
-    if blocksize is None:
-        blocksize = 65536
-
-    hash = hashlib.md5()
-    with open(filename, "rb") as f:
-        for block in iter(lambda: f.read(blocksize), b""):
-            hash.update(block)
-    return hash.hexdigest()
-
-
-def assert_md5sum(
-    filename: str, md5: str, quiet: bool = False, blocksize: int | None = None
-) -> bool:
-    warnings.warn(
-        "assert_md5sum is deprecated and will be removed in the future.", FutureWarning
-    )
-
-    if not (isinstance(md5, str) and len(md5) == 32):
-        raise ValueError(f"MD5 must be 32 chars: {md5}")
-
-    md5_actual = md5sum(filename)
-
-    if md5_actual == md5:
-        if not quiet:
-            print(f"MD5 matches: {filename!r} == {md5!r}", file=sys.stderr)
-        return True
-
-    raise AssertionError(f"MD5 doesn't match:\nactual: {md5_actual}\nexpected: {md5}")
-
-
 def cached_download(
     url: str | None = None,
     path: str | None = None,
