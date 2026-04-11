@@ -7,6 +7,8 @@ import tempfile
 from gdown.cached_download import _assert_filehash
 from gdown.cached_download import _compute_filehash
 
+from .conftest import GITHUB_RELEASE_URL
+
 here = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -74,7 +76,7 @@ def test_download_large_file_from_gdrive() -> None:
 
 
 def test_download_and_extract() -> None:
-    cmd = "gdown --no-cookies https://github.com/wkentaro/gdown/archive/refs/tags/v4.0.0.tar.gz -O - | tar zxvf -"  # noqa: E501
+    cmd = f"gdown --no-cookies {GITHUB_RELEASE_URL} -O - | tar zxvf -"
     with tempfile.TemporaryDirectory() as d:
         subprocess.call(cmd, shell=True, cwd=d)
         assert os.path.exists(os.path.join(d, "gdown-4.0.0/gdown/__init__.py"))
