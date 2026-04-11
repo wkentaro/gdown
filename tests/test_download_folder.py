@@ -1,7 +1,10 @@
 import os.path as osp
+import sys
 import tempfile
+import unittest.mock
 from pathlib import Path
 
+from gdown.download_folder import _GoogleDriveFile
 from gdown.download_folder import _parse_google_drive_file
 from gdown.download_folder import download_folder
 
@@ -75,6 +78,42 @@ def test_download_folder_google_slides_without_extension(tmp_path: Path) -> None
     assert len(files) == 1
     assert isinstance(files[0], str)
     assert files[0].endswith(".pptx")
+
+
+def test_root_folder_name_path_traversal_is_sanitized(tmp_path: Path) -> None:
+    malicious_name = "../../evil"
+    root = _GoogleDriveFile(
+        id="root_id",
+        name=malicious_name,
+        type=_GoogleDriveFile.TYPE_FOLDER,
+        children=[
+            _GoogleDriveFile(
+                id="child_id",
+                name="safe_file.txt",
+                type="text/plain",
+            ),
+        ],
+    )
+
+    output_dir = str(tmp_path) + osp.sep
+
+    with unittest.mock.patch.object(
+        sys.modules["gdown.download_folder"],
+        "_download_and_parse_google_drive_link",
+        return_value=(True, root),
+    ):
+        files = download_folder(
+            url="https://drive.google.com/drive/folders/dummy",
+            output=output_dir,
+            skip_download=True,
+            quiet=True,
+        )
+
+    assert files is not None
+    for file in files:
+        assert not isinstance(file, str)
+        resolved = osp.realpath(file.local_path)
+        assert resolved.startswith(osp.realpath(output_dir))
 
 
 def test_download_folder_dry_run() -> None:
