@@ -43,8 +43,17 @@ def test_get_filename_from_response(content_disposition: str, expected: str) -> 
         ("Budget/2024.pdf", "Budget_2024.pdf"),
         ("path\\to\\file.pdf", "path_to_file.pdf"),
         ("a/b\\c.pdf", "a_b_c.pdf"),
+        (" report.pdf ", "report.pdf"),
+        ("  folder name  ", "folder name"),
     ],
-    ids=["no-op", "forward-slash", "backslash", "mixed"],
+    ids=[
+        "no-op",
+        "forward-slash",
+        "backslash",
+        "mixed",
+        "trailing-spaces",
+        "both-spaces",
+    ],
 )
 def test_sanitize_filename(filename: str, expected: str) -> None:
     assert _sanitize_filename(filename=filename) == expected

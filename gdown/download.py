@@ -70,7 +70,7 @@ def get_url_from_gdrive_confirmation(contents: str) -> str:
 
 
 def _sanitize_filename(filename: str) -> str:
-    return filename.replace("/", "_").replace("\\", "_")
+    return filename.replace("/", "_").replace("\\", "_").strip()
 
 
 def _get_filename_from_response(response: requests.Response) -> str | None:
@@ -146,8 +146,8 @@ def download(
         URL. Google Drive URL is also supported.
     output: str
         Output filename/directory. Default is basename of URL.
-        If output ends with separator '/' basename will be kept and the
-        parameter will be treated as parenting directory.
+        If output is an existing directory or ends with a path separator,
+        the basename will be appended automatically.
     quiet: bool
         Suppress terminal output. Default is False.
     proxy: str
@@ -304,7 +304,7 @@ def download(
     if output is None:
         output = filename_from_url
 
-    if isinstance(output, str) and output.endswith(osp.sep):
+    if isinstance(output, str) and (output.endswith(("/", "\\")) or osp.isdir(output)):
         if not osp.exists(output):
             os.makedirs(output)
         output = osp.join(output, filename_from_url)
