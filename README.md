@@ -133,10 +133,17 @@ gdown.download(url=url, output="output.npz", fuzzy=True)
 # Download with hash verification and caching
 gdown.cached_download(
     url=url,
-    output="output.npz",
+    path="output.npz",
     hash="md5:fa837a88f0c40c513d975104edf3da17",
     postprocess=gdown.extractall,
 )
+
+# Track download progress
+def on_progress(bytes_so_far: int, bytes_total: int | None) -> None:
+    if bytes_total is not None:
+        print(f"\r{bytes_so_far / bytes_total * 100:.1f}%", end="")
+
+gdown.download(url=url, output="output.npz", quiet=True, progress=on_progress)
 
 # Download a folder
 url = "https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl"
