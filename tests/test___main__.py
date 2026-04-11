@@ -143,15 +143,3 @@ def test_download_slides_from_gdrive() -> None:
     file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
     md5 = "96704c6c40e308a68d3842e83a0136b9"
     _test_cli_with_md5(url_or_id=file_id, md5=md5, options=["--format", "pdf"])
-
-
-def test_download_a_folder_with_file_content_more_than_the_limit() -> None:
-    url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
-
-    with tempfile.TemporaryDirectory() as d:
-        cmd = ["gdown", "--no-cookies", url, "-O", d, "--folder", "--remaining-ok"]
-        subprocess.check_call(cmd)
-
-        filenames = sorted(os.listdir(d))
-        for i in range(50):
-            assert filenames[i] == f"file_{i:02d}.txt"

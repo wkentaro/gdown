@@ -10,10 +10,8 @@ import requests
 
 from . import __version__
 from .download import download
-from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
 from .exceptions import DownloadError
-from .exceptions import FolderContentsMaximumLimitError
 
 
 class _ShowVersionAction(argparse.Action):
@@ -106,14 +104,7 @@ def main() -> None:
     parser.add_argument(
         "--folder",
         action="store_true",
-        help="download entire folder instead of a single file "
-        f"(max {MAX_NUMBER_FILES} files per folder)",
-    )
-    parser.add_argument(
-        "--remaining-ok",
-        action="store_true",
-        help="(folder only) asserts that is ok to download max "
-        f"{MAX_NUMBER_FILES} files per folder.",
+        help="download entire folder instead of a single file",
     )
     parser.add_argument(
         "--format",
@@ -150,7 +141,6 @@ def main() -> None:
                 speed=args.speed,
                 use_cookies=not args.no_cookies,
                 verify=not args.no_check_certificate,
-                remaining_ok=args.remaining_ok,
                 user_agent=args.user_agent,
                 resume=args.continue_,
             )
@@ -169,15 +159,6 @@ def main() -> None:
                 format=args.format,
                 user_agent=args.user_agent,
             )
-    except FolderContentsMaximumLimitError as e:
-        print(
-            "Failed to retrieve folder contents:\n\n{}\n\n"
-            "You can use `--remaining-ok` option to ignore this error.".format(
-                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
-            ),
-            file=sys.stderr,
-        )
-        sys.exit(1)
     except DownloadError as e:
         print(e, file=sys.stderr)
         sys.exit(1)

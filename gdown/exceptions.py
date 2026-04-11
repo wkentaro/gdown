@@ -4,7 +4,3 @@ class DownloadError(Exception):
 
 class FileURLRetrievalError(DownloadError):
     pass
-
-
-class FolderContentsMaximumLimitError(DownloadError):
-    pass

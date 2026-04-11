@@ -16,10 +16,8 @@ from .download import _get_session
 from .download import _sanitize_filename
 from .download import download
 from .exceptions import DownloadError
-from .exceptions import FolderContentsMaximumLimitError
 from .parse_url import is_google_drive_url
 
-MAX_NUMBER_FILES = 50
 
 
 class _GoogleDriveFile:
@@ -218,7 +216,6 @@ def download_folder(
     proxy: str | None = None,
     speed: float | None = None,
     use_cookies: bool = True,
-    remaining_ok: bool = False,
     verify: bool | str = True,
     user_agent: str | None = None,
     skip_download: bool = False,
@@ -272,9 +269,6 @@ def download_folder(
         If neither url nor id is specified, or both are specified.
     DownloadError
         If a file in the folder fails to download.
-    FolderContentsMaximumLimitError
-        If the folder has more than MAX_NUMBER_FILES files
-        and remaining_ok is False.
 
     Example
     -------
@@ -300,7 +294,6 @@ def download_folder(
         sess,
         url,
         quiet=quiet,
-        remaining_ok=remaining_ok,
         verify=verify,
     )
 

@@ -70,9 +70,6 @@ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O /tmp/spam.t
 ```bash
 # Download an entire folder
 gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
-
-# Download up to 50 files without prompting
-gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --remaining-ok
 ```
 
 #### Google Docs, Sheets, Slides
@@ -169,15 +166,6 @@ If you can still open the file in your browser, try exporting cookies:
 1. Run the download again
 
 On gdown >= 5.0.0, browser cookies are used automatically.
-
-### Folder has more than 50 files
-
-Google Drive's API limits folder listing to 50 files. Pass `--remaining-ok` to
-download what's available without an error:
-
-```bash
-gdown <folder_url> --folder --remaining-ok
-```
 
 ### Download stops after ~1 hour
 
