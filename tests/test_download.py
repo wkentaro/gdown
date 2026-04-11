@@ -1,11 +1,15 @@
 import os
-import tempfile
-from collections.abc import Iterator
+from pathlib import Path
+from typing import Final
 from typing import NamedTuple
 
 import pytest
 
 from gdown.download import download
+
+DOWNLOAD_URL: Final[str] = (
+    "https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py"
+)
 
 
 class DownloadEnv(NamedTuple):
@@ -14,12 +18,11 @@ class DownloadEnv(NamedTuple):
 
 
 @pytest.fixture()
-def download_env() -> Iterator[DownloadEnv]:
-    with tempfile.TemporaryDirectory() as d:
-        yield DownloadEnv(
-            file_path=os.path.join(d, "file"),
-            url="https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py",
-        )
+def download_env(tmp_path: Path) -> DownloadEnv:
+    return DownloadEnv(
+        file_path=str(tmp_path / "file"),
+        url=DOWNLOAD_URL,
+    )
 
 
 def test_download(download_env: DownloadEnv) -> None:
@@ -47,3 +50,29 @@ def test_download_progress(download_env: DownloadEnv) -> None:
     final_current, final_total = reported[-1]
     assert final_total is not None
     assert final_current == os.path.getsize(download_env.file_path)
+
+
+def test_download_output_dir_with_trailing_slash(tmp_path: Path) -> None:
+    output_dir = str(tmp_path / "subdir") + "/"
+    result = download(url=DOWNLOAD_URL, output=output_dir, quiet=True)
+    assert isinstance(result, str)
+    assert Path(result).parent == tmp_path / "subdir"
+    assert Path(result).is_file()
+
+
+def test_download_output_dir_with_trailing_backslash(tmp_path: Path) -> None:
+    output_dir = str(tmp_path / "subdir") + "\\"
+    result = download(url=DOWNLOAD_URL, output=output_dir, quiet=True)
+    assert isinstance(result, str)
+    # On Unix, '\' is a valid filename char, so the dir name includes it.
+    # On Windows, '\' is the path separator, so it behaves like '/'.
+    assert Path(result).is_file()
+
+
+def test_download_output_existing_dir(tmp_path: Path) -> None:
+    output_dir = tmp_path / "existing"
+    output_dir.mkdir()
+    result = download(url=DOWNLOAD_URL, output=str(output_dir), quiet=True)
+    assert isinstance(result, str)
+    assert Path(result).parent == output_dir
+    assert Path(result).is_file()
