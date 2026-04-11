@@ -6,7 +6,6 @@ import os.path as osp
 import shutil
 import sys
 import tempfile
-import warnings
 from collections.abc import Callable
 from typing import TypedDict
 
@@ -44,7 +43,6 @@ if not osp.exists(cache_root):
 def cached_download(
     url: str | None = None,
     path: str | None = None,
-    md5: str | None = None,
     quiet: bool = False,
     postprocess: Callable[[str], object] | None = None,
     hash: str | None = None,
@@ -58,8 +56,6 @@ def cached_download(
         URL. Google Drive URL is also supported.
     path: str, optional
         Output filename. Default is basename of URL.
-    md5: str, optional
-        Expected MD5 for specified file. Deprecated in favor of `hash`.
     quiet: bool
         Suppress terminal output. Default is False.
     postprocess: callable, optional
@@ -86,17 +82,6 @@ def cached_download(
         )
         path = osp.join(cache_root, path)
 
-    if md5 is not None and hash is not None:
-        raise ValueError("md5 and hash cannot be specified at the same time.")
-
-    if md5 is not None:
-        warnings.warn(
-            "md5 is deprecated in favor of hash. Please use hash='md5:xxx...' instead.",
-            FutureWarning,
-        )
-        hash = f"md5:{md5}"
-    del md5
-
     # check existence
     if osp.exists(path) and not hash:
         if not quiet:
@@ -107,7 +92,6 @@ def cached_download(
             _assert_filehash(path=path, hash=hash, quiet=quiet)
             return path
         except AssertionError as e:
-            # show warning and overwrite if md5 doesn't match
             print(e, file=sys.stderr)
 
     # download
