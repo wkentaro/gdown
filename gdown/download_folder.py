@@ -228,32 +228,32 @@ def download_folder(
 
     Parameters
     ----------
-    url: str
+    url:
         URL of the Google Drive folder.
         Must be of the format 'https://drive.google.com/drive/folders/{url}'.
-    id: str
+    id:
         Google Drive's folder ID.
-    output: str, optional
+    output:
         String containing the path of the output folder.
         Defaults to current working directory.
-    quiet: bool, optional
+    quiet:
         Suppress terminal output.
-    proxy: str, optional
+    proxy:
         Proxy.
-    speed: float, optional
+    speed:
         Download byte size per second (e.g., 256KB/s = 256 * 1024).
-    use_cookies: bool, optional
+    use_cookies:
         Flag to use cookies. Default is True.
-    verify: bool or string
+    verify:
         Either a bool, in which case it controls whether the server's TLS
         certificate is verified, or a string, in which case it must be a path
         to a CA bundle to use. Default is True.
-    user_agent: str, optional
+    user_agent:
         User-agent to use in the HTTP request.
-    skip_download: bool, optional
+    skip_download:
         If True, return the list of files to download without downloading them.
         Defaults to False.
-    resume: bool
+    resume:
         Resume interrupted transfers.
         Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
@@ -261,7 +261,7 @@ def download_folder(
 
     Returns
     -------
-    files: List[str] or List[GoogleDriveFileToDownload] or None
+    files:
         If skip_download is False, list of local file paths downloaded
         or None if failed.
         If skip_download is True, list of GoogleDriveFileToDownload that contains
