@@ -7,7 +7,7 @@ from gdown.download_folder import download_folder
 here = osp.dirname(osp.abspath(__file__))
 
 
-def test_valid_page():
+def test_valid_page() -> None:
     html_file = osp.join(here, "data/folder-page-sample.html")
     with open(html_file) as f:
         content = f.read()
@@ -62,7 +62,7 @@ def test_valid_page():
     assert actual_children_types == expected_children_types
 
 
-def test_download_folder_dry_run():
+def test_download_folder_dry_run() -> None:
     url = "https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks"
     tmp_dir = tempfile.mkdtemp()
     files = download_folder(url=url, output=tmp_dir, skip_download=True)

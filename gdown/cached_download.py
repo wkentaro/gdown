@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import os
 import os.path as osp
@@ -5,10 +7,31 @@ import shutil
 import sys
 import tempfile
 import warnings
+from collections.abc import Callable
+from typing import TypedDict
+
+if sys.version_info >= (3, 12):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
 
 import filelock
 
 from .download import download
+
+
+class _DownloadKwargs(TypedDict, total=False):
+    proxy: str | None
+    speed: float | None
+    use_cookies: bool
+    verify: bool | str
+    id: str | None
+    fuzzy: bool
+    resume: bool
+    format: str | None
+    user_agent: str | None
+    progress: Callable[[int, int | None], None] | None
+
 
 cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
 if not osp.exists(cache_root):
@@ -18,7 +41,7 @@ if not osp.exists(cache_root):
         pass
 
 
-def md5sum(filename, blocksize=None):
+def md5sum(filename: str, blocksize: int | None = None) -> str:
     warnings.warn(
         "md5sum is deprecated and will be removed in the future.", FutureWarning
     )
@@ -33,7 +56,9 @@ def md5sum(filename, blocksize=None):
     return hash.hexdigest()
 
 
-def assert_md5sum(filename, md5, quiet=False, blocksize=None):
+def assert_md5sum(
+    filename: str, md5: str, quiet: bool = False, blocksize: int | None = None
+) -> bool:
     warnings.warn(
         "assert_md5sum is deprecated and will be removed in the future.", FutureWarning
     )
@@ -52,14 +77,14 @@ def assert_md5sum(filename, md5, quiet=False, blocksize=None):
 
 
 def cached_download(
-    url=None,
-    path=None,
-    md5=None,
-    quiet=False,
-    postprocess=None,
+    url: str | None = None,
+    path: str | None = None,
+    md5: str | None = None,
+    quiet: bool = False,
+    postprocess: Callable[[str], None] | None = None,
     hash: str | None = None,
-    **kwargs,
-):
+    **kwargs: Unpack[_DownloadKwargs],
+) -> str:
     """Cached download from URL.
 
     Parameters
@@ -156,7 +181,7 @@ def cached_download(
     return path
 
 
-def _compute_filehash(path, algorithm):
+def _compute_filehash(path: str, algorithm: str) -> str:
     BLOCKSIZE = 65536
 
     if algorithm not in hashlib.algorithms_guaranteed:
@@ -172,7 +197,9 @@ def _compute_filehash(path, algorithm):
     return f"{algorithm}:{algorithm_instance.hexdigest()}"
 
 
-def _assert_filehash(path, hash, quiet=False, blocksize=None):
+def _assert_filehash(
+    path: str, hash: str, quiet: bool = False, blocksize: int | None = None
+) -> bool:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "

@@ -1,3 +1,4 @@
+import datetime
 import email.utils
 import os
 import os.path as osp
@@ -10,6 +11,9 @@ import time
 import urllib.parse
 from collections.abc import Callable
 from http.cookiejar import MozillaCookieJar
+from typing import BinaryIO
+from typing import Literal
+from typing import overload
 
 import bs4
 import requests
@@ -22,7 +26,7 @@ CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
 
 
-def get_url_from_gdrive_confirmation(contents):
+def get_url_from_gdrive_confirmation(contents: str) -> str:
     url = ""
     for line in contents.splitlines():
         m = re.search(r'href="(\/uc\?export=download[^"]+)', line)
@@ -67,7 +71,7 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
-def _get_filename_from_response(response):
+def _get_filename_from_response(response: requests.Response) -> str | None:
     content_disposition = urllib.parse.unquote(response.headers["Content-Disposition"])
 
     m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
@@ -83,7 +87,9 @@ def _get_filename_from_response(response):
     return None
 
 
-def _get_modified_time_from_response(response):
+def _get_modified_time_from_response(
+    response: requests.Response,
+) -> datetime.datetime | None:
     if "Last-Modified" not in response.headers:
         return None
 
@@ -94,7 +100,30 @@ def _get_modified_time_from_response(response):
     return email.utils.parsedate_to_datetime(raw)
 
 
-def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
+@overload
+def _get_session(
+    proxy: str | None,
+    use_cookies: bool,
+    user_agent: str,
+    return_cookies_file: Literal[False] = ...,
+) -> requests.Session: ...
+
+
+@overload
+def _get_session(
+    proxy: str | None,
+    use_cookies: bool,
+    user_agent: str,
+    return_cookies_file: Literal[True],
+) -> tuple[requests.Session, str]: ...
+
+
+def _get_session(
+    proxy: str | None,
+    use_cookies: bool,
+    user_agent: str,
+    return_cookies_file: bool = False,
+) -> requests.Session | tuple[requests.Session, str]:
     sess = requests.session()
 
     sess.headers.update({"User-Agent": user_agent})
@@ -117,21 +146,21 @@ def _get_session(proxy, use_cookies, user_agent, return_cookies_file=False):
 
 
 def download(
-    url=None,
-    output=None,
-    quiet=False,
-    proxy=None,
-    speed=None,
-    use_cookies=True,
-    verify=True,
-    id=None,
-    fuzzy=False,
-    resume=False,
-    format=None,
-    user_agent=None,
-    log_messages=None,
+    url: str | None = None,
+    output: str | BinaryIO | None = None,
+    quiet: bool = False,
+    proxy: str | None = None,
+    speed: float | None = None,
+    use_cookies: bool = True,
+    verify: bool | str = True,
+    id: str | None = None,
+    fuzzy: bool = False,
+    resume: bool = False,
+    format: str | None = None,
+    user_agent: str | None = None,
+    log_messages: dict[str, str] | None = None,
     progress: Callable[[int, int | None], None] | None = None,
-):
+) -> str | BinaryIO | None:
     """Download file from URL.
 
     Parameters
@@ -396,6 +425,7 @@ def download(
             pbar.close()
         if tmp_file:
             f.close()
+            assert isinstance(output, str)
             shutil.move(tmp_file, output)
         if isinstance(output, str) and last_modified_time:
             mtime = last_modified_time.timestamp()

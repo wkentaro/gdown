@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections
 import itertools
 import json
@@ -8,6 +10,7 @@ import sys
 import warnings
 
 import bs4
+import requests
 
 from .download import _get_session
 from .download import download
@@ -20,17 +23,25 @@ MAX_NUMBER_FILES = 50
 class _GoogleDriveFile:
     TYPE_FOLDER = "application/vnd.google-apps.folder"
 
-    def __init__(self, id, name, type, children=None):
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        type: str,
+        children: list[_GoogleDriveFile] | None = None,
+    ) -> None:
         self.id = id
         self.name = name
         self.type = type
         self.children = children if children is not None else []
 
-    def is_folder(self):
+    def is_folder(self) -> bool:
         return self.type == self.TYPE_FOLDER
 
 
-def _parse_google_drive_file(url, content):
+def _parse_google_drive_file(
+    url: str, content: str
+) -> tuple[_GoogleDriveFile, list[tuple[str, str, str]]]:
     """Extracts information about the current page file and its children."""
 
     folder_soup = bs4.BeautifulSoup(content, features="html.parser")
@@ -94,12 +105,12 @@ def _parse_google_drive_file(url, content):
 
 
 def _download_and_parse_google_drive_link(
-    sess,
-    url,
-    quiet=False,
-    remaining_ok=False,
-    verify=True,
-):
+    sess: requests.Session,
+    url: str,
+    quiet: bool = False,
+    remaining_ok: bool = False,
+    verify: bool | str = True,
+) -> tuple[bool, _GoogleDriveFile | None]:
     """Get folder structure of Google Drive folder URL."""
 
     return_code = True
@@ -163,6 +174,7 @@ def _download_and_parse_google_drive_link(
         )
         if not return_code:
             return return_code, None
+        assert child is not None
         gdrive_file.children.append(child)
     has_at_least_max_files = len(gdrive_file.children) == MAX_NUMBER_FILES
     if not remaining_ok and has_at_least_max_files:
@@ -177,7 +189,9 @@ def _download_and_parse_google_drive_link(
     return return_code, gdrive_file
 
 
-def _get_directory_structure(gdrive_file, previous_path):
+def _get_directory_structure(
+    gdrive_file: _GoogleDriveFile, previous_path: str
+) -> list[tuple[str | None, str]]:
     """Converts a Google Drive folder structure into a local directory list."""
 
     directory_structure = []
@@ -198,18 +212,18 @@ GoogleDriveFileToDownload = collections.namedtuple(
 
 
 def download_folder(
-    url=None,
-    id=None,
-    output=None,
-    quiet=False,
-    proxy=None,
-    speed=None,
-    use_cookies=True,
-    remaining_ok=False,
-    verify=True,
-    user_agent=None,
+    url: str | None = None,
+    id: str | None = None,
+    output: str | None = None,
+    quiet: bool = False,
+    proxy: str | None = None,
+    speed: float | None = None,
+    use_cookies: bool = True,
+    remaining_ok: bool = False,
+    verify: bool | str = True,
+    user_agent: str | None = None,
     skip_download: bool = False,
-    resume=False,
+    resume: bool = False,
 ) -> list[str] | list[GoogleDriveFileToDownload] | None:
     """Downloads entire folder from URL.
 
@@ -264,6 +278,7 @@ def download_folder(
         raise ValueError("Either url or id has to be specified")
     if id is not None:
         url = f"https://drive.google.com/drive/folders/{id}"
+    assert url is not None
     if user_agent is None:
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
@@ -282,6 +297,7 @@ def download_folder(
     if not is_success:
         print("Failed to retrieve folder contents", file=sys.stderr)
         return None
+    assert gdrive_file is not None
 
     if not quiet:
         print("Retrieving folder contents completed", file=sys.stderr)

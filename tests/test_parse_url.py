@@ -3,7 +3,7 @@ import pytest
 from gdown.parse_url import parse_url
 
 
-def test_parse_url():
+def test_parse_url() -> None:
     file_id = "0B_NiLAzvehC9R2stRmQyM3ZiVjQ"
 
     # list of (url, expected, check_warn)

@@ -24,7 +24,13 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["filelock", "requests[socks]", "tqdm", "beautifulsoup4"]
+dependencies = [
+  "beautifulsoup4",
+  "filelock",
+  "requests[socks]",
+  "tqdm",
+  "typing_extensions>=4.0; python_version < '3.12'",
+]
 dynamic = ["readme", "version"]
 
 [project.scripts]
