@@ -76,3 +76,34 @@ def test_download_output_existing_dir(tmp_path: Path) -> None:
     assert isinstance(result, str)
     assert Path(result).parent == output_dir
     assert Path(result).is_file()
+
+
+def test_download_resume_skips_existing_file(
+    download_env: DownloadEnv, capsys: pytest.CaptureFixture[str]
+) -> None:
+    download(url=download_env.url, output=download_env.file_path, quiet=True)
+    mtime_before = os.path.getmtime(download_env.file_path)
+
+    result = download(
+        url=download_env.url,
+        output=download_env.file_path,
+        quiet=False,
+        resume=True,
+    )
+    assert result == download_env.file_path
+    assert os.path.getmtime(download_env.file_path) == mtime_before
+    assert "Skipping already downloaded file" in capsys.readouterr().err
+
+
+def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
+    output_dir = tmp_path / "subdir"
+    output_dir.mkdir()
+    result = download(url=DOWNLOAD_URL, output=str(output_dir), quiet=True)
+    assert isinstance(result, str)
+    mtime_before = os.path.getmtime(result)
+
+    resume_result = download(
+        url=DOWNLOAD_URL, output=str(output_dir), quiet=True, resume=True
+    )
+    assert resume_result == result
+    assert os.path.getmtime(result) == mtime_before
