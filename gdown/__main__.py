@@ -3,7 +3,6 @@ import os.path
 import re
 import sys
 import textwrap
-import warnings
 from collections.abc import Sequence
 from typing import Any
 
@@ -58,9 +57,7 @@ def main() -> None:
         help="display version",
         nargs=0,
     )
-    parser.add_argument(
-        "url_or_id", help="url or file/folder id (with --id) to download from"
-    )
+    parser.add_argument("url_or_id", help="url or file/folder id to download from")
     parser.add_argument(
         "-O",
         "--output",
@@ -78,11 +75,6 @@ def main() -> None:
         "--fuzzy",
         action="store_true",
         help="(file only) extract Google Drive's file ID",
-    )
-    parser.add_argument(
-        "--id",
-        action="store_true",
-        help="[DEPRECATED] flag to specify file/folder id instead of url",
     )
     parser.add_argument(
         "--proxy",
@@ -138,22 +130,12 @@ def main() -> None:
     if args.output == "-":
         args.output = sys.stdout.buffer
 
-    if args.id:
-        warnings.warn(
-            "Option `--id` was deprecated in version 4.3.1 "
-            "and will be removed in 5.0. You don't need to "
-            "pass it anymore to use a file ID.",
-            category=FutureWarning,
-        )
+    if re.match("^https?://.*", args.url_or_id):
+        url = args.url_or_id
+        id = None
+    else:
         url = None
         id = args.url_or_id
-    else:
-        if re.match("^https?://.*", args.url_or_id):
-            url = args.url_or_id
-            id = None
-        else:
-            url = None
-            id = args.url_or_id
 
     try:
         if args.folder:
