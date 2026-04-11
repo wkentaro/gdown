@@ -330,12 +330,12 @@ def download_folder(
             # in the folder listing. Pass the directory so download() resolves
             # the correct filename from the Content-Disposition header.
             if osp.splitext(local_path)[1]:
-                output = local_path
+                download_output = local_path
             else:
-                output = osp.dirname(local_path) + osp.sep
+                download_output = osp.dirname(local_path) + osp.sep
             local_path = download(
                 url="https://drive.google.com/uc?id=" + id,
-                output=output,
+                output=download_output,
                 quiet=quiet,
                 proxy=proxy,
                 speed=speed,
