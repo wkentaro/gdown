@@ -21,6 +21,7 @@ def _test_cli_with_md5(
         if options is not None:
             cmd.extend(options)
         subprocess.call(cmd)
+        assert os.path.exists(file_path)
         _assert_filehash(path=file_path, hash=f"md5:{md5}")
 
 
