@@ -162,7 +162,7 @@ def _compute_filehash(path: str, algorithm: str) -> str:
     return f"{algorithm}:{algorithm_instance.hexdigest()}"
 
 
-def _assert_filehash(path: str, hash: str, quiet: bool = False) -> bool:
+def _assert_filehash(path: str, hash: str, quiet: bool = False) -> None:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "
@@ -172,9 +172,7 @@ def _assert_filehash(path: str, hash: str, quiet: bool = False) -> bool:
 
     hash_actual = _compute_filehash(path=path, algorithm=algorithm)
 
-    if hash_actual == hash:
-        return True
-
-    raise AssertionError(
-        f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
-    )
+    if hash_actual != hash:
+        raise AssertionError(
+            f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
+        )
