@@ -1,8 +1,8 @@
 <div align="center">
   <h1>gdown</h1>
   <p><b>Google Drive Public File Downloader when Curl/Wget Fails</b></p>
-  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/cli.png" width="80%">
-  <img src="https://github.com/wkentaro/gdown/raw/main/.readme/python.png" width="80%">
+  <img src="https://github.com/wkentaro/gdown/raw/main/assets/cli.png" width="80%">
+  <img src="https://github.com/wkentaro/gdown/raw/main/assets/python.png" width="80%">
   <br>
   <br>
 </div>
