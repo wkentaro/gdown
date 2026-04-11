@@ -8,7 +8,6 @@ import warnings
 import requests
 
 from . import __version__
-from ._indent import indent
 from .download import download
 from .download_folder import MAX_NUMBER_FILES
 from .download_folder import download_folder
@@ -185,7 +184,7 @@ def main():
         print(
             "Failed to retrieve folder contents:\n\n{}\n\n"
             "You can use `--remaining-ok` option to ignore this error.".format(
-                indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
             ),
             file=sys.stderr,
         )
@@ -193,7 +192,7 @@ def main():
     except requests.exceptions.ProxyError as e:
         print(
             "Failed to use proxy:\n\n{}\n\nPlease check your proxy settings.".format(
-                indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
             ),
             file=sys.stderr,
         )
@@ -202,7 +201,7 @@ def main():
         print(
             "Error:\n\n{}\n\nTo report issues, please visit "
             "https://github.com/wkentaro/gdown/issues.".format(
-                indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t")
             ),
             file=sys.stderr,
         )
