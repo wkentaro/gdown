@@ -45,6 +45,12 @@ def test_get_filename_from_response(content_disposition: str, expected: str) -> 
         ("a/b\\c.pdf", "a_b_c.pdf"),
         (" report.pdf ", "report.pdf"),
         ("  folder name  ", "folder name"),
+        ("..", "_"),
+        (".", "_"),
+        ("", "_"),
+        ("  ", "_"),
+        ("file\x00name.txt", "filename.txt"),
+        ("../../../etc/passwd", ".._.._.._etc_passwd"),
     ],
     ids=[
         "no-op",
@@ -53,6 +59,12 @@ def test_get_filename_from_response(content_disposition: str, expected: str) -> 
         "mixed",
         "trailing-spaces",
         "both-spaces",
+        "dot-dot",
+        "dot",
+        "empty",
+        "whitespace-only",
+        "null-byte",
+        "path-traversal",
     ],
 )
 def test_sanitize_filename(filename: str, expected: str) -> None:
