@@ -306,7 +306,7 @@ def download(
         filename_from_url = _get_filename_from_response(response=res)
         last_modified_time = _get_modified_time_from_response(response=res)
     if filename_from_url is None:
-        filename_from_url = osp.basename(url)
+        filename_from_url = _sanitize_filename(filename=osp.basename(url))
 
     if output is None:
         output = filename_from_url
