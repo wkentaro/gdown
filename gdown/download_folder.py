@@ -329,15 +329,6 @@ def download_folder(
                 GoogleDriveFileToDownload(id=id, path=path, local_path=local_path)
             )
         else:
-            if resume and os.path.isfile(local_path):
-                if not quiet:
-                    print(
-                        f"Skipping already downloaded file {local_path}",
-                        file=sys.stderr,
-                    )
-                files.append(local_path)
-                continue
-
             local_path = download(
                 url="https://drive.google.com/uc?id=" + id,
                 output=local_path,
