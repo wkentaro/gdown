@@ -332,7 +332,7 @@ def download(
                     "Please remove them except one to resume downloading.",
                     file=sys.stderr,
                 )
-                return
+                return None
             tmp_file = existing_tmp_files[0]
         else:
             resume = False
