@@ -114,17 +114,17 @@ def test_download_folder_from_gdrive() -> None:
         raise AssertionError(f"Failed to download any of the folders: {file_ids}")
 
 
-def test_download_a_folder_with_remaining_ok_false() -> None:
+def test_download_a_folder_with_more_than_50_files() -> None:
+    url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
+
     with tempfile.TemporaryDirectory() as d:
-        cmd = [
-            "gdown",
-            "--no-cookies",
-            "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn",
-            "-O",
-            d,
-            "--folder",
-        ]
-    assert subprocess.call(cmd) == 1
+        cmd = ["gdown", "--no-cookies", url, "-O", d, "--folder"]
+        subprocess.check_call(cmd)
+
+        filenames = sorted(os.listdir(d))
+        assert len(filenames) == 100
+        for i in range(100):
+            assert filenames[i] == f"file_{i:02d}.txt"
 
 
 # def test_download_docs_from_gdrive():

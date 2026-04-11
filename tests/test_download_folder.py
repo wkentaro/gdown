@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 
 from gdown.download_folder import _GoogleDriveFile
+from gdown.download_folder import _parse_embedded_folder_view
 from gdown.download_folder import download_folder
 from gdown.exceptions import DownloadError
 
 here = osp.dirname(osp.abspath(__file__))
-
 
 
 def test_download_folder_google_slides_without_extension(tmp_path: Path) -> None:
@@ -87,6 +87,67 @@ def test_download_folder_propagates_download_error(tmp_path: Path) -> None:
             output=str(tmp_path) + osp.sep,
             quiet=True,
         )
+
+
+def test_parse_embedded_folder_view() -> None:
+    html_file = osp.join(here, "data/embedded-folder-view-sample.html")
+    with open(html_file) as f:
+        content = f.read()
+
+    mock_response = unittest.mock.Mock()
+    mock_response.status_code = 200
+    mock_response.text = content
+
+    mock_sess = unittest.mock.Mock()
+    mock_sess.get.return_value = mock_response
+
+    result = _parse_embedded_folder_view(sess=mock_sess, folder_id="test_folder_id")
+
+    assert result is not None
+    folder_name, children = result
+    assert folder_name == "files_100"
+    assert len(children) == 4
+
+    ids = [r[0] for r in children]
+    names = [r[1] for r in children]
+    types = [r[2] for r in children]
+
+    assert ids == [
+        "108RHF3bQb6dgOByv_KMGzHuktJOwU_jL",
+        "1Sul7bhaimPjncS2GE73nVloSPQbtyzu-",
+        "1xYz2AbCdEfGhIjKlMnOpQrStUvWxYz3A",
+        "1aMZqPaU03E7XOQNXtjSCdguRHBaIQ82m",
+    ]
+    assert names == ["file_00.txt", "file_01.txt", "photo.jpg", "subfolder"]
+    assert types == [
+        "application/octet-stream",
+        "application/octet-stream",
+        "application/octet-stream",
+        _GoogleDriveFile.TYPE_FOLDER,
+    ]
+
+
+def test_parse_embedded_folder_view_http_error() -> None:
+    mock_response = unittest.mock.Mock()
+    mock_response.status_code = 404
+
+    mock_sess = unittest.mock.Mock()
+    mock_sess.get.return_value = mock_response
+
+    with pytest.raises(DownloadError, match="status code 404"):
+        _parse_embedded_folder_view(sess=mock_sess, folder_id="nonexistent")
+
+
+def test_parse_embedded_folder_view_malformed_html() -> None:
+    mock_response = unittest.mock.Mock()
+    mock_response.status_code = 200
+    mock_response.text = "<html><body>no title</body></html>"
+
+    mock_sess = unittest.mock.Mock()
+    mock_sess.get.return_value = mock_response
+
+    with pytest.raises(DownloadError, match="page structure may have changed"):
+        _parse_embedded_folder_view(sess=mock_sess, folder_id="test")
 
 
 def test_download_folder_dry_run() -> None:
