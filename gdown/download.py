@@ -12,8 +12,6 @@ import urllib.parse
 from collections.abc import Callable
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
-from typing import Literal
-from typing import overload
 
 import bs4
 import requests
@@ -100,30 +98,11 @@ def _get_modified_time_from_response(
     return email.utils.parsedate_to_datetime(raw)
 
 
-@overload
 def _get_session(
     proxy: str | None,
     use_cookies: bool,
     user_agent: str,
-    return_cookies_file: Literal[False] = ...,
-) -> requests.Session: ...
-
-
-@overload
-def _get_session(
-    proxy: str | None,
-    use_cookies: bool,
-    user_agent: str,
-    return_cookies_file: Literal[True],
-) -> tuple[requests.Session, str]: ...
-
-
-def _get_session(
-    proxy: str | None,
-    use_cookies: bool,
-    user_agent: str,
-    return_cookies_file: bool = False,
-) -> requests.Session | tuple[requests.Session, str]:
+) -> tuple[requests.Session, str]:
     sess = requests.session()
 
     sess.headers.update({"User-Agent": user_agent})
@@ -132,17 +111,13 @@ def _get_session(
         sess.proxies = {"http": proxy, "https": proxy}
         print("Using proxy:", proxy, file=sys.stderr)
 
-    # Load cookies if exists
     cookies_file = osp.join(home, ".cache/gdown/cookies.txt")
     if use_cookies and osp.exists(cookies_file):
         cookie_jar = MozillaCookieJar(cookies_file)
         cookie_jar.load()
         sess.cookies.update(cookie_jar)
 
-    if return_cookies_file:
-        return sess, cookies_file
-    else:
-        return sess
+    return sess, cookies_file
 
 
 def download(
@@ -228,7 +203,6 @@ def download(
         proxy=proxy,
         use_cookies=use_cookies,
         user_agent=user_agent,
-        return_cookies_file=True,
     )
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
