@@ -299,6 +299,8 @@ def download_folder(
         return None
     assert gdrive_file is not None
 
+    gdrive_file.name = _sanitize_filename(filename=gdrive_file.name)
+
     if not quiet:
         print("Retrieving folder contents completed", file=sys.stderr)
         print("Building directory structure", file=sys.stderr)
