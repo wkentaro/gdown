@@ -1,4 +1,6 @@
 import os
+import sys
+import unittest.mock
 from pathlib import Path
 from typing import Final
 from typing import NamedTuple
@@ -114,6 +116,43 @@ def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
     )
     assert resume_result == result
     assert os.path.getmtime(result) == mtime_before
+
+
+@pytest.mark.parametrize(
+    "share_url",
+    [
+        "https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing",
+        "https://drive.google.com/open?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c",
+        "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c",
+    ],
+)
+def test_download_rewrites_google_drive_share_link(
+    tmp_path: Path, share_url: str
+) -> None:
+    expected_url = "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
+
+    mock_response = unittest.mock.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="test.bin"',
+    }
+    mock_response.iter_content = lambda chunk_size: [b"data"]
+    mock_response.url = expected_url
+
+    mock_sess = unittest.mock.Mock()
+    mock_sess.get.return_value = mock_response
+    mock_sess.cookies = []
+
+    with unittest.mock.patch.object(
+        sys.modules["gdown.download"],
+        "_get_session",
+        return_value=(mock_sess, str(tmp_path / "cookies.txt")),
+    ):
+        download(url=share_url, output=str(tmp_path / "out"), quiet=True)
+
+        actual_url = mock_sess.get.call_args_list[0].args[0]
+        assert actual_url == expected_url
 
 
 @pytest.mark.network
