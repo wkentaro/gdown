@@ -18,7 +18,7 @@ Google serves a confirmation page for large files, and the URL formats are a mes
 gdown gets around that:
 
 - Skips the virus-scan confirmation page so large downloads actually finish
-- Downloads folders recursively (up to 50 files per folder)
+- Downloads folders recursively
 - Exports Google Docs/Sheets/Slides as PDF, DOCX, CSV, etc.
 - Resumes partial downloads with `--continue`
 - Also works with plain HTTP/HTTPS URLs as a curl/wget replacement
