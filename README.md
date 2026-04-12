@@ -27,6 +27,8 @@ gdown gets around that:
 
 ## Install
 
+Requires Python 3.10 or later.
+
 ```bash
 pip install gdown
 ```
@@ -167,7 +169,7 @@ If you can still open the file in your browser, try exporting cookies:
 1. Export `cookies.txt` and move it to `~/.cache/gdown/cookies.txt`
 1. Run the download again
 
-On gdown >= 5.0.0, browser cookies are used automatically.
+Once the file is in place, gdown loads it automatically (no extra flags needed).
 
 ### Download stops after ~1 hour
 
