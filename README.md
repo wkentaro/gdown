@@ -46,7 +46,7 @@ uv tool install gdown
 gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 
 # Or copy-paste a share link directly
-gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing'
+gdown 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing'
 ```
 
 ## Usage
@@ -62,8 +62,8 @@ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 # Download by file ID
 gdown 1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ
 
-# Extract file ID from a share link
-gdown --fuzzy 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing'
+# Download from a share link
+gdown 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sharing'
 
 # Save to a specific path
 gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O /tmp/spam.txt
@@ -80,10 +80,10 @@ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -
 
 ```bash
 # Download a Google Slides file (default: pptx)
-gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing"
+gdown "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit?usp=sharing"
 
 # Export as PDF instead
-gdown --fuzzy "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit" --format pdf
+gdown "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit" --format pdf
 ```
 
 Default export formats: Docs → `docx`, Sheets → `xlsx`, Slides → `pptx`.
@@ -128,6 +128,10 @@ gdown also works with regular URLs, not just Google Drive:
 gdown https://httpbin.org/ip -O ip.json
 ```
 
+> [!NOTE]
+> For Google Drive URLs, gdown automatically extracts the file ID and downloads
+> the actual file. Use curl or wget to download the raw HTML page instead.
+
 ### Python
 
 ```python
@@ -140,9 +144,9 @@ gdown.download(url=url, output="fcn8s_from_caffe.npz")
 # Download by file ID
 gdown.download(id="0B9P1L--7Wd2vNm9zMTJWOGxobkU", output="output.npz")
 
-# Fuzzy extraction from a share link
+# Download from a share link
 url = "https://drive.google.com/file/d/0B9P1L--7Wd2vNm9zMTJWOGxobkU/view?usp=sharing"
-gdown.download(url=url, output="output.npz", fuzzy=True)
+gdown.download(url=url, output="output.npz")
 
 # Download with hash verification and caching
 gdown.cached_download(

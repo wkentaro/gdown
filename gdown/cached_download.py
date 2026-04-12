@@ -25,7 +25,6 @@ class _DownloadKwargs(TypedDict, total=False):
     use_cookies: bool
     verify: bool | str
     id: str | None
-    fuzzy: bool
     resume: bool
     format: str | None
     user_agent: str | None
