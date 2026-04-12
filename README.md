@@ -101,6 +101,19 @@ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --speed 1
 gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --proxy http://proxy:8080
 ```
 
+#### Other options
+
+```bash
+# Skip TLS certificate verification
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --no-check-certificate
+
+# Don't use cookies from ~/.cache/gdown/cookies.txt
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --no-cookies
+
+# Use a custom User-Agent
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --user-agent "MyApp/1.0"
+```
+
 #### Pipe to stdout
 
 ```bash
