@@ -25,6 +25,7 @@ def download_env(tmp_path: Path) -> DownloadEnv:
     )
 
 
+@pytest.mark.network
 def test_download(download_env: DownloadEnv) -> None:
     # Usage before https://github.com/wkentaro/gdown/pull/32
     assert (
@@ -33,6 +34,7 @@ def test_download(download_env: DownloadEnv) -> None:
     )
 
 
+@pytest.mark.network
 def test_download_progress(download_env: DownloadEnv) -> None:
     reported: list[tuple[int, int | None]] = []
     download(
@@ -52,6 +54,7 @@ def test_download_progress(download_env: DownloadEnv) -> None:
     assert final_current == os.path.getsize(download_env.file_path)
 
 
+@pytest.mark.network
 def test_download_output_dir_with_trailing_slash(tmp_path: Path) -> None:
     output_dir = str(tmp_path / "subdir") + "/"
     result = download(url=DOWNLOAD_URL, output=output_dir, quiet=True)
@@ -60,6 +63,7 @@ def test_download_output_dir_with_trailing_slash(tmp_path: Path) -> None:
     assert Path(result).is_file()
 
 
+@pytest.mark.network
 def test_download_output_dir_with_trailing_backslash(tmp_path: Path) -> None:
     output_dir = str(tmp_path / "subdir") + "\\"
     result = download(url=DOWNLOAD_URL, output=output_dir, quiet=True)
@@ -69,6 +73,7 @@ def test_download_output_dir_with_trailing_backslash(tmp_path: Path) -> None:
     assert Path(result).is_file()
 
 
+@pytest.mark.network
 def test_download_output_existing_dir(tmp_path: Path) -> None:
     output_dir = tmp_path / "existing"
     output_dir.mkdir()
@@ -78,6 +83,7 @@ def test_download_output_existing_dir(tmp_path: Path) -> None:
     assert Path(result).is_file()
 
 
+@pytest.mark.network
 def test_download_resume_skips_existing_file(
     download_env: DownloadEnv, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -95,6 +101,7 @@ def test_download_resume_skips_existing_file(
     assert "Skipping already downloaded file" in capsys.readouterr().err
 
 
+@pytest.mark.network
 def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
     output_dir = tmp_path / "subdir"
     output_dir.mkdir()
@@ -109,6 +116,7 @@ def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
     assert os.path.getmtime(result) == mtime_before
 
 
+@pytest.mark.network
 def test_download_google_slides_without_extension(tmp_path: Path) -> None:
     # The file "gdown" in Google Drive is a Google Slides file with no extension
     # in its filename. When downloading directly, download() resolves the correct

@@ -58,6 +58,9 @@ source = "vcs"
 content-type = "text/markdown"
 fragments = [{ path = "README.md" }]
 
+[tool.pytest.ini_options]
+markers = ["network: tests that require network access (Google Drive, GitHub)"]
+
 [tool.ruff.lint]
 select = [
   "ANN", # flake8-annotations

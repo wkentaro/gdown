@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
 jobs:
-  test:
+  unit:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -16,4 +16,12 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - run: make test
+      - run: make test PYTEST_ARGS='--numprocesses=auto -m "not network"'
+  network:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.10'
+      - run: make test PYTEST_ARGS='--numprocesses=auto -m network'

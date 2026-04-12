@@ -14,6 +14,7 @@ from gdown.exceptions import DownloadError
 here = osp.dirname(osp.abspath(__file__))
 
 
+@pytest.mark.network
 def test_download_folder_google_slides_without_extension(tmp_path: Path) -> None:
     # The folder contains a Google Slides file named "gdown" with no extension in
     # Google Drive. Previously, download_folder() passed this extensionless name as
@@ -150,6 +151,7 @@ def test_parse_embedded_folder_view_malformed_html() -> None:
         _parse_embedded_folder_view(sess=mock_sess, folder_id="test")
 
 
+@pytest.mark.network
 def test_download_folder_dry_run() -> None:
     url = "https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks"
     tmp_dir = tempfile.mkdtemp()
