@@ -1,4 +1,5 @@
-# gdown
+<div align="center">
+<h1>gdown</h1>
 
 [![PyPI](https://img.shields.io/pypi/v/gdown.svg)](https://pypi.org/project/gdown/)
 [![Python](https://img.shields.io/pypi/pyversions/gdown.svg)](https://pypi.org/project/gdown/)
@@ -9,6 +10,7 @@ Google Drive public file/folder downloader when curl/wget fails.
 
 <img src="https://github.com/wkentaro/gdown/raw/main/assets/cli.png" width="80%">
 <img src="https://github.com/wkentaro/gdown/raw/main/assets/python.png" width="80%">
+</div>
 
 ## Why?
 
