@@ -1,6 +1,5 @@
 import re
 import urllib.parse
-import warnings
 
 
 def is_google_drive_url(url: str) -> bool:
@@ -8,7 +7,7 @@ def is_google_drive_url(url: str) -> bool:
     return parsed.hostname in ["drive.google.com", "docs.google.com"]
 
 
-def parse_url(url: str, warning: bool = True) -> tuple[str | None, bool]:
+def parse_url(url: str) -> tuple[str | None, bool]:
     """Parse URLs especially for Google Drive links.
 
     file_id: ID of file on Google Drive.
@@ -43,14 +42,5 @@ def parse_url(url: str, warning: bool = True) -> tuple[str | None, bool]:
             if match:
                 file_id = match.groups()[0]
                 break
-
-    if warning and not is_download_link:
-        warnings.warn(
-            "You specified a Google Drive link that is not the correct link "
-            "to download a file. You might want to try `--fuzzy` option "
-            "or the following url: {url}".format(
-                url=f"https://drive.google.com/uc?id={file_id}"
-            )
-        )
 
     return file_id, is_download_link

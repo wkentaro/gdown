@@ -70,11 +70,6 @@ def main() -> None:
         help="suppress logging except errors",
     )
     parser.add_argument(
-        "--fuzzy",
-        action="store_true",
-        help="(file only) extract Google Drive's file ID",
-    )
-    parser.add_argument(
         "--proxy",
         help="<protocol://host:port> download using the specified proxy",
     )
@@ -154,7 +149,6 @@ def main() -> None:
                 use_cookies=not args.no_cookies,
                 verify=not args.no_check_certificate,
                 id=id,
-                fuzzy=args.fuzzy,
                 resume=args.continue_,
                 format=args.format,
                 user_agent=args.user_agent,

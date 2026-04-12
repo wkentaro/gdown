@@ -125,7 +125,6 @@ def test_download_google_slides_without_extension(tmp_path: Path) -> None:
         url="https://docs.google.com/presentation/d/1DvsG277pWa4WMssXjD9qYYAdF51y7hVidZ6eklfq480/edit?usp=drive_link",
         output=str(tmp_path) + os.sep,
         quiet=True,
-        fuzzy=True,
     )
     assert isinstance(output, str)
     assert output.endswith(".pptx")

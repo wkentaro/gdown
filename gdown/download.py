@@ -143,7 +143,6 @@ def download(
     use_cookies: bool = True,
     verify: bool | str = True,
     id: str | None = None,
-    fuzzy: bool = False,
     resume: bool = False,
     format: str | None = None,
     user_agent: str | None = None,
@@ -174,8 +173,6 @@ def download(
         to a CA bundle to use. Default is True.
     id:
         Google Drive's file ID.
-    fuzzy:
-        Fuzzy extraction of Google Drive's file Id. Default is False.
     resume:
         Resume interrupted downloads while skipping completed ones.
         Default is False.
@@ -229,10 +226,9 @@ def download(
         user_agent=user_agent,
     )
 
-    gdrive_file_id, is_gdrive_download_link = parse_url(url, warning=not fuzzy)
+    gdrive_file_id, is_gdrive_download_link = parse_url(url=url)
 
-    if fuzzy and gdrive_file_id:
-        # overwrite the url with fuzzy match of a file id
+    if gdrive_file_id:
         url = f"https://drive.google.com/uc?id={gdrive_file_id}"
         url_origin = url
         is_gdrive_download_link = True
