@@ -12,6 +12,7 @@ from typing import Union
 import bs4
 
 from .download import _get_session
+from .download import _sanitize_filename
 from .download import download
 from .exceptions import FolderContentsMaximumLimitError
 from .parse_url import is_google_drive_url
@@ -182,7 +183,7 @@ def _get_directory_structure(gdrive_file, previous_path):
 
     directory_structure = []
     for file in gdrive_file.children:
-        file.name = file.name.replace(osp.sep, "_")
+        file.name = _sanitize_filename(file.name)
         if file.is_folder():
             directory_structure.append((None, osp.join(previous_path, file.name)))
             for i in _get_directory_structure(file, osp.join(previous_path, file.name)):
@@ -282,6 +283,8 @@ def download_folder(
     if not is_success:
         print("Failed to retrieve folder contents", file=sys.stderr)
         return None
+
+    gdrive_file.name = _sanitize_filename(gdrive_file.name)
 
     if not quiet:
         print("Retrieving folder contents completed", file=sys.stderr)

@@ -61,18 +61,24 @@ def get_url_from_gdrive_confirmation(contents):
     return url
 
 
+def _sanitize_filename(filename):
+    filename = filename.replace("\x00", "")
+    filename = filename.replace("/", "_").replace("\\", "_").strip()
+    if filename in ("", ".", ".."):
+        return "_"
+    return filename
+
+
 def _get_filename_from_response(response):
     content_disposition = urllib.parse.unquote(response.headers["Content-Disposition"])
 
     m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
     if m:
-        filename = m.groups()[0]
-        return filename.replace(osp.sep, "_")
+        return _sanitize_filename(m.groups()[0])
 
     m = re.search('attachment; filename="(.*?)"', content_disposition)
     if m:
-        filename = m.groups()[0]
-        return filename
+        return _sanitize_filename(m.groups()[0])
 
     return None
 
@@ -283,7 +289,7 @@ def download(
         filename_from_url = _get_filename_from_response(response=res)
         last_modified_time = _get_modified_time_from_response(response=res)
     if filename_from_url is None:
-        filename_from_url = osp.basename(url)
+        filename_from_url = _sanitize_filename(osp.basename(url))
 
     if output is None:
         output = filename_from_url
