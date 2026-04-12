@@ -68,19 +68,24 @@ def test_zip_absolute_path(tmp_path: Path, _tmp_extract_dir: str) -> None:
 
 
 def test_tar_absolute_path(tmp_path: Path, _tmp_extract_dir: str) -> None:
+    evil_path = str(tmp_path / "outside" / "evil.txt")
     tar_path = str(tmp_path / "evil.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         data = b"malicious content"
-        info = tarfile.TarInfo(name="/etc/passwd")
+        info = tarfile.TarInfo(name=evil_path)
         info.size = len(data)
         tf.addfile(tarinfo=info, fileobj=io.BytesIO(data))
 
-    if sys.version_info >= (3, 12):
-        with pytest.raises(tarfile.FilterError):
-            extractall(path=tar_path, to=_tmp_extract_dir)
-    else:
-        with pytest.raises(ValueError, match="would extract outside target directory"):
-            extractall(path=tar_path, to=_tmp_extract_dir)
+    # Python 3.10-3.11: manual _is_within_directory check raises ValueError.
+    # Python 3.12+ Unix: data filter strips the leading '/' and extracts safely.
+    # Python 3.12+ Windows: data filter raises AbsolutePathError (TarError)
+    #   because drive-letter paths (C:\...) remain absolute after stripping.
+    try:
+        extractall(path=tar_path, to=_tmp_extract_dir)
+    except (ValueError, tarfile.TarError):
+        pass
+
+    assert not os.path.exists(evil_path)
 
 
 def test_tar_path_traversal(tmp_path: Path, _tmp_extract_dir: str) -> None:

@@ -8,7 +8,7 @@ endif
 PYTEST_ARGS ?= --numprocesses=auto
 
 define exec
-	@uv run --no-sync python -c "print('\033[1;36m$(1)\033[0m')"
+	@uv run --no-sync python -c "import sys;print('\033[1;36m'+' '.join(sys.argv[1:])+'\033[0m')" $(1)
 	@$(1)
 endef
 

@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tempfile
 
+import pytest
+
 from gdown.cached_download import _assert_filehash
 from gdown.cached_download import _compute_filehash
 
@@ -38,12 +40,14 @@ def _test_cli_with_content(url_or_id: str, content: str) -> None:
             assert f.read() == content
 
 
+@pytest.mark.network
 def test_download_from_url_other_than_gdrive() -> None:
     url = "https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py"
     md5 = "2a51927dde6b146ce56b4d89ebbb5268"
     _test_cli_with_md5(url_or_id=url, md5=md5)
 
 
+@pytest.mark.network
 def test_download_small_file_from_gdrive() -> None:
     with open(os.path.join(here, "data/file_ids.csv")) as f:
         file_ids = [file_id.strip() for file_id in f]
@@ -59,6 +63,7 @@ def test_download_small_file_from_gdrive() -> None:
         raise AssertionError(f"Failed to download any of the files: {file_ids}")
 
 
+@pytest.mark.network
 def test_download_large_file_from_gdrive() -> None:
     with open(os.path.join(here, "data/file_ids_large.csv")) as f:
         file_id_and_md5s = [[x.strip() for x in file_id.split(",")] for file_id in f]
@@ -75,6 +80,7 @@ def test_download_large_file_from_gdrive() -> None:
         raise AssertionError(f"Failed to download any of the files: {file_ids}")
 
 
+@pytest.mark.network
 def test_download_and_extract() -> None:
     cmd = f"gdown --no-cookies {GITHUB_RELEASE_URL} -O - | tar zxvf -"
     with tempfile.TemporaryDirectory() as d:
@@ -82,6 +88,7 @@ def test_download_and_extract() -> None:
         assert os.path.exists(os.path.join(d, "gdown-4.0.0/gdown/__init__.py"))
 
 
+@pytest.mark.network
 def test_download_folder_from_gdrive() -> None:
     with open(os.path.join(here, "data/folder_ids.csv")) as f:
         folder_id_and_md5s = [
@@ -114,6 +121,7 @@ def test_download_folder_from_gdrive() -> None:
         raise AssertionError(f"Failed to download any of the folders: {file_ids}")
 
 
+@pytest.mark.network
 def test_download_a_folder_with_more_than_50_files() -> None:
     url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
 
@@ -139,6 +147,7 @@ def test_download_a_folder_with_more_than_50_files() -> None:
 #     _test_cli_with_md5(url_or_id=file_id, md5=md5, options="--format pdf")
 
 
+@pytest.mark.network
 def test_download_slides_from_gdrive() -> None:
     file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
     md5 = "96704c6c40e308a68d3842e83a0136b9"
