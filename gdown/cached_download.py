@@ -74,8 +74,7 @@ def cached_download(
     Raises
     ------
     ValueError
-        If url is not specified when path is not specified,
-        or if md5 and hash are both specified.
+        If url is not specified when path is not specified.
     DownloadError
         If the download fails.
     """
