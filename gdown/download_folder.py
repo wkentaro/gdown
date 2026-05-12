@@ -105,8 +105,10 @@ def download_folder(
         Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
         Default is False.
-    filter:
-        A filter where only downloads files that contains the string on it.
+    include:
+        List of strings used to filter files by name. If provided, only files
+        whose names contain one of the strings are downloaded. Matching is
+        case-insensitive.
 
     Returns
     -------
@@ -144,7 +146,7 @@ def download_folder(
 
     if not quiet:
         print("Retrieving folder contents", file=sys.stderr)
-    normalized_filter = _parse_filter(include)
+    normalized_filter = _parse_include(include)
     gdrive_file = _download_and_parse_google_drive_link(
         sess=sess,
         folder_id=folder_id,
@@ -278,9 +280,11 @@ def _parse_embedded_folder_view(
     return (folder_name, children)
 
 
-def _parse_filter(filter: list[str]) -> list[str]:
+def _parse_include(include: list[str] | None) -> list[str]:
 
-    return [item.lower() for item in filter]
+    if include is None:
+        return []
+    return [item.lower() for item in include]
 
 
 def _download_and_parse_google_drive_link(
@@ -288,7 +292,7 @@ def _download_and_parse_google_drive_link(
     folder_id: str,
     quiet: bool = False,
     verify: bool | str = True,
-    include: list[str] = [""],
+    include: list[str] | None = None,
 ) -> _GoogleDriveFile:
     folder_name, children = _parse_embedded_folder_view(
         sess=sess, folder_id=folder_id, verify=verify
@@ -302,7 +306,7 @@ def _download_and_parse_google_drive_link(
 
     for child_id, child_name, child_type in children:
         if child_type != _GoogleDriveFile.TYPE_FOLDER:
-            if not any(item in child_name.lower() for item in include):
+            if include and not any(item in child_name.lower() for item in include):
                 continue
 
             if not quiet:
@@ -328,10 +332,7 @@ def _download_and_parse_google_drive_link(
                 child_name,
             )
         child = _download_and_parse_google_drive_link(
-            sess=sess,
-            folder_id=child_id,
-            quiet=quiet,
-            verify=verify,
+            sess=sess, folder_id=child_id, quiet=quiet, verify=verify, include=include
         )
         gdrive_file.children.append(child)
     return gdrive_file

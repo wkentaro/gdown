@@ -101,6 +101,16 @@ def main() -> None:
         action="store_true",
         help="download entire folder instead of a single file",
     )
+
+    parser.add_argument(
+        "--include",
+        action="append",
+        help=(
+            "Download only files in a folder whose names contain this string. "
+            "Only applies when using --folder. Can be used multiple times."
+        ),
+    )
+
     parser.add_argument(
         "--format",
         help="Format of Google Docs, Spreadsheets and Slides. "
@@ -112,6 +122,9 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    if args.include and not args.folder:
+        parser.error("--include can only be used with --folder")
 
     if args.output == "-":
         args.output = sys.stdout.buffer
@@ -138,6 +151,7 @@ def main() -> None:
                 verify=not args.no_check_certificate,
                 user_agent=args.user_agent,
                 resume=args.continue_,
+                include=args.filter,
             )
         else:
             download(

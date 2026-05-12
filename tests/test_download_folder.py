@@ -128,6 +128,93 @@ def test_parse_embedded_folder_view() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    ("include", "expected_urls"),
+    [
+        (
+            ["shad"],
+            ["https://drive.google.com/uc?id=shad_id"],
+        ),
+        (
+            ["shad", "igu"],
+            [
+                "https://drive.google.com/uc?id=shad_id",
+                "https://drive.google.com/uc?id=mc_igu_id",
+            ],
+        ),
+    ],
+)
+def test_download_folder_include_filters_files_by_name_substring(
+    tmp_path: Path,
+    include: list[str],
+    expected_urls: list[str],
+) -> None:
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_parse_embedded_folder_view",
+            return_value=(
+                "music_folder",
+                [
+                    ("shad_id", "shad - track 1.mp3", "audio/mpeg"),
+                    ("mc_igu_id", "mc igu - track 2.mp3", "audio/mpeg"),
+                    ("other_id", "random song.mp3", "audio/mpeg"),
+                ],
+            ),
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "download",
+            return_value="dummy-output",
+        ) as mock_download,
+    ):
+        download_folder(
+            url="https://drive.google.com/drive/folders/dummy",
+            output=str(tmp_path) + osp.sep,
+            include=include,
+            quiet=True,
+        )
+
+    assert [
+        call.kwargs["url"] for call in mock_download.call_args_list
+    ] == expected_urls
+
+
+def test_download_folder_without_include_downloads_all_files(
+    tmp_path: Path,
+) -> None:
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_parse_embedded_folder_view",
+            return_value=(
+                "music_folder",
+                [
+                    ("shad_id", "shad - track 1.mp3", "audio/mpeg"),
+                    ("mc_igu_id", "mc igu - track 2.mp3", "audio/mpeg"),
+                    ("other_id", "random song.mp3", "audio/mpeg"),
+                ],
+            ),
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "download",
+            return_value="dummy-output",
+        ) as mock_download,
+    ):
+        download_folder(
+            url="https://drive.google.com/drive/folders/dummy",
+            output=str(tmp_path) + osp.sep,
+            quiet=True,
+        )
+
+    assert [call.kwargs["url"] for call in mock_download.call_args_list] == [
+        "https://drive.google.com/uc?id=shad_id",
+        "https://drive.google.com/uc?id=mc_igu_id",
+        "https://drive.google.com/uc?id=other_id",
+    ]
+
+
 def test_parse_embedded_folder_view_http_error() -> None:
     mock_response = unittest.mock.Mock()
     mock_response.status_code = 404

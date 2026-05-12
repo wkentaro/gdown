@@ -152,3 +152,24 @@ def test_download_slides_from_gdrive() -> None:
     file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
     md5 = "96704c6c40e308a68d3842e83a0136b9"
     _test_cli_with_md5(url_or_id=file_id, md5=md5, options=["--format", "pdf"])
+
+
+def test_cli_include_requires_folder() -> None:
+    cmd = [
+        sys.executable,
+        "-m",
+        "gdown",
+        "https://drive.google.com/file/d/dummy/view",
+        "--include",
+        "shad",
+    ]
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "--include can only be used with --folder" in result.stderr
