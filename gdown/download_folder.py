@@ -69,7 +69,7 @@ def download_folder(
     user_agent: str | None = None,
     skip_download: bool = False,
     resume: bool = False,
-    filter: list[str] = [""],
+    include: list[str] = [""],
 ) -> list[str] | list[GoogleDriveFileToDownload]:
     """Downloads entire folder from URL.
 
@@ -144,13 +144,13 @@ def download_folder(
 
     if not quiet:
         print("Retrieving folder contents", file=sys.stderr)
-    normalized_filter = _parse_filter(filter)
+    normalized_filter = _parse_filter(include)
     gdrive_file = _download_and_parse_google_drive_link(
         sess=sess,
         folder_id=folder_id,
         quiet=quiet,
         verify=verify,
-        filter=normalized_filter,
+        include=normalized_filter,
     )
 
     gdrive_file.name = _sanitize_filename(filename=gdrive_file.name)
@@ -288,7 +288,7 @@ def _download_and_parse_google_drive_link(
     folder_id: str,
     quiet: bool = False,
     verify: bool | str = True,
-    filter: list[str] = [""],
+    include: list[str] = [""],
 ) -> _GoogleDriveFile:
     folder_name, children = _parse_embedded_folder_view(
         sess=sess, folder_id=folder_id, verify=verify
@@ -302,7 +302,7 @@ def _download_and_parse_google_drive_link(
 
     for child_id, child_name, child_type in children:
         if child_type != _GoogleDriveFile.TYPE_FOLDER:
-            if not any(item in child_name.lower() for item in filter):
+            if not any(item in child_name.lower() for item in include):
                 continue
 
             if not quiet:

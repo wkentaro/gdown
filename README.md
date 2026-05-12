@@ -169,6 +169,9 @@ gdown.download_folder(url=url)
 
 # Download a folder by ID
 gdown.download_folder(id="15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl")
+
+# Download a folder with a substring filter
+gdown.download_folder(url=url, include=["something"])
 ```
 
 ## FAQ
