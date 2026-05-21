@@ -145,7 +145,7 @@ def main() -> None:
                 url=url,
                 id=id,
                 output=args.output,
-                quiet=args.quiet,
+                quiet=args.quiet or args.json,
                 proxy=args.proxy,
                 speed=args.speed,
                 use_cookies=not args.no_cookies,
