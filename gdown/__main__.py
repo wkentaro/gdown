@@ -107,8 +107,8 @@ def main() -> None:
         "--json",
         action="store_true",
         help=(
-            "list folder contents as JSON Lines on stdout instead of downloading. "
-            "Each line is an object with 'url', 'name', and 'path'. "
+            "list folder contents as a JSON array on stdout instead of "
+            "downloading. Each entry is an object with 'url' and 'path'. "
             "Requires --folder."
         ),
     )
@@ -155,18 +155,16 @@ def main() -> None:
                 skip_download=args.json,
             )
             if args.json:
+                entries = []
                 for file in files:
                     assert isinstance(file, GoogleDriveFileToDownload)
-                    print(
-                        json.dumps(
-                            {
-                                "url": f"https://drive.google.com/uc?id={file.id}",
-                                "name": os.path.basename(file.path),
-                                "path": file.path,
-                            },
-                            ensure_ascii=False,
-                        )
+                    entries.append(
+                        {
+                            "url": f"https://drive.google.com/uc?id={file.id}",
+                            "path": file.path.replace(os.sep, "/"),
+                        }
                     )
+                print(json.dumps(entries, ensure_ascii=False, indent=2))
         else:
             download(
                 url=url,

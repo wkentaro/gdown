@@ -158,7 +158,7 @@ def test_download_slides_from_gdrive() -> None:
     _test_cli_with_md5(url_or_id=file_id, md5=md5, options=["--format", "pdf"])
 
 
-def test_json_flag_outputs_one_json_line_per_file(
+def test_json_flag_outputs_json_array(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = _GoogleDriveFile(
@@ -191,13 +191,13 @@ def test_json_flag_outputs_one_json_line_per_file(
         main()
 
     captured = capsys.readouterr()
-    lines = captured.out.strip().splitlines()
-    assert len(lines) == 1
-    assert json.loads(lines[0]) == {
-        "url": "https://drive.google.com/uc?id=child_id",
-        "name": "track.mp3",
-        "path": "track.mp3",
-    }
+    entries = json.loads(captured.out)
+    assert entries == [
+        {
+            "url": "https://drive.google.com/uc?id=child_id",
+            "path": "track.mp3",
+        }
+    ]
 
 
 def test_json_flag_preserves_subfolder_path(
@@ -240,12 +240,13 @@ def test_json_flag_preserves_subfolder_path(
         main()
 
     captured = capsys.readouterr()
-    lines = captured.out.strip().splitlines()
-    assert len(lines) == 1
-    entry = json.loads(lines[0])
-    assert entry["path"] == os.path.join("album", "track.mp3")
-    assert entry["name"] == "track.mp3"
-    assert entry["url"] == "https://drive.google.com/uc?id=nested_id"
+    entries = json.loads(captured.out)
+    assert entries == [
+        {
+            "url": "https://drive.google.com/uc?id=nested_id",
+            "path": "album/track.mp3",
+        }
+    ]
 
 
 def test_json_flag_does_not_download(
