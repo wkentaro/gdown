@@ -74,6 +74,14 @@ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O /tmp/spam.t
 ```bash
 # Download an entire folder
 gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
+
+# List folder contents as a JSON array (each entry has url and path)
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --json
+
+# Filter by path and download matches
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --json \
+  | jq -r '.[] | select(.path | test("shad")) | .url' \
+  | xargs -n1 gdown
 ```
 
 #### Google Docs, Sheets, Slides
