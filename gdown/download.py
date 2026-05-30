@@ -1,3 +1,4 @@
+import collections
 import datetime
 import email.utils
 import os
@@ -24,6 +25,10 @@ from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
+
+GoogleDriveFileToDownload = collections.namedtuple(
+    "GoogleDriveFileToDownload", ("id", "path", "local_path")
+)
 
 
 def get_url_from_gdrive_confirmation(contents: str) -> str:

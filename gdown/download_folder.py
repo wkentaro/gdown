@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import os
 import os.path as osp
 import re
@@ -10,6 +9,7 @@ import urllib.parse
 import bs4
 import requests
 
+from .download import GoogleDriveFileToDownload
 from .download import _get_session
 from .download import _sanitize_filename
 from .download import download
@@ -50,11 +50,6 @@ def _get_directory_structure(
         elif not file.children:
             directory_structure.append((file.id, osp.join(previous_path, file.name)))
     return directory_structure
-
-
-GoogleDriveFileToDownload = collections.namedtuple(
-    "GoogleDriveFileToDownload", ("id", "path", "local_path")
-)
 
 
 def download_folder(
