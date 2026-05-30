@@ -78,8 +78,8 @@ original extension:
 
 ```bash
 url="https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
-ext=$(gdown "$url" --json | jq -r '.[0].path | sub(".*\\."; "")')
-gdown "$url" -O "my_name.$ext"
+filename=$(gdown "$url" --json | jq -r '.[0].path')
+gdown "$url" -O "my_name.${filename##*.}"
 ```
 
 #### Folders
