@@ -72,9 +72,10 @@ gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O /tmp/spam.t
 gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c --json
 ```
 
-The `--json` output is an array of `{url, path}` entries, where `path` is the
-filename Google Drive reports. This lets you choose a name while keeping the
-original extension:
+`--json` is in beta and its output format may change in a future release; pass
+`--quiet` to silence the beta warning in scripts. The output is an array of
+`{url, path}` entries, where `path` is the filename Google Drive reports. This
+lets you choose a name while keeping the original extension:
 
 ```bash
 url="https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
