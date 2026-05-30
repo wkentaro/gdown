@@ -1,3 +1,4 @@
+import collections
 import datetime
 import email.utils
 import os
@@ -24,6 +25,10 @@ from .parse_url import parse_url
 
 CHUNK_SIZE = 512 * 1024  # 512KB
 home = osp.expanduser("~")
+
+GoogleDriveFileToDownload = collections.namedtuple(
+    "GoogleDriveFileToDownload", ("id", "path", "local_path")
+)
 
 
 def get_url_from_gdrive_confirmation(contents: str) -> str:
@@ -148,7 +153,8 @@ def download(
     user_agent: str | None = None,
     log_messages: dict[str, str] | None = None,
     progress: Callable[[int, int | None], None] | None = None,
-) -> str | BinaryIO:
+    skip_download: bool = False,
+) -> str | BinaryIO | GoogleDriveFileToDownload:
     """Download file from URL.
 
     Parameters
@@ -191,18 +197,24 @@ def download(
         Callback called after each chunk: ``progress(bytes_so_far, bytes_total)``.
         *bytes_total* is None when Content-Length is unavailable.
         Raise any exception from the callback to abort the download.
+    skip_download:
+        Resolve the Google Drive filename without downloading the file body.
+        Default is False.
 
     Returns
     -------
     output:
-        Output filename.
+        Output filename when downloading. When skip_download is True, a
+        GoogleDriveFileToDownload whose path is the resolved Google Drive
+        filename.
 
     Raises
     ------
     ValueError
         If neither url nor id is specified, or both are specified.
     FileURLRetrievalError
-        If the file URL cannot be retrieved from Google Drive.
+        If the file URL cannot be retrieved from Google Drive, or if
+        skip_download is True and no Google Drive filename can be resolved.
     DownloadError
         If the download fails (e.g., multiple temporary files exist during
         resume).
@@ -316,6 +328,17 @@ def download(
     if gdrive_file_id and is_gdrive_download_link:
         filename_from_url = _get_filename_from_response(response=res)
         last_modified_time = _get_modified_time_from_response(response=res)
+
+    if skip_download:
+        if filename_from_url is None:
+            raise FileURLRetrievalError(
+                "Could not determine the Google Drive filename; --json requires "
+                f"a resolvable Google Drive file (got: {url_origin})"
+            )
+        return GoogleDriveFileToDownload(
+            id=gdrive_file_id, path=filename_from_url, local_path=filename_from_url
+        )
+
     if filename_from_url is None:
         filename_from_url = _sanitize_filename(filename=osp.basename(url))
 

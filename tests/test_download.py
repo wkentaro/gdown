@@ -7,6 +7,7 @@ from typing import NamedTuple
 
 import pytest
 
+from gdown.download import GoogleDriveFileToDownload
 from gdown.download import download
 
 DOWNLOAD_URL: Final[str] = (
@@ -153,6 +154,38 @@ def test_download_rewrites_google_drive_share_link(
 
         actual_url = mock_sess.get.call_args_list[0].args[0]
         assert actual_url == expected_url
+
+
+def test_download_skip_download_returns_file_object(tmp_path: Path) -> None:
+    file_id = "0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
+
+    mock_response = unittest.mock.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="spam.txt"',
+    }
+    mock_response.url = f"https://drive.google.com/uc?id={file_id}"
+
+    mock_sess = unittest.mock.Mock()
+    mock_sess.get.return_value = mock_response
+    mock_sess.cookies = []
+
+    with unittest.mock.patch.object(
+        sys.modules["gdown.download"],
+        "_get_session",
+        return_value=(mock_sess, str(tmp_path / "cookies.txt")),
+    ):
+        result = download(
+            url=f"https://drive.google.com/uc?id={file_id}",
+            quiet=True,
+            skip_download=True,
+        )
+
+    assert result == GoogleDriveFileToDownload(
+        id=file_id, path="spam.txt", local_path="spam.txt"
+    )
+    mock_response.iter_content.assert_not_called()
 
 
 @pytest.mark.network

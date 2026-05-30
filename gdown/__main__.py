@@ -10,8 +10,8 @@ from typing import Any
 import requests
 
 from . import __version__
+from .download import GoogleDriveFileToDownload
 from .download import download
-from .download_folder import GoogleDriveFileToDownload
 from .download_folder import download_folder
 from .exceptions import DownloadError
 
@@ -107,9 +107,9 @@ def main() -> None:
         "--json",
         action="store_true",
         help=(
-            "list folder contents as a JSON array on stdout instead of "
+            "list file or folder contents as a JSON array on stdout instead of "
             "downloading. Each entry is an object with 'url' and 'path'. "
-            "Requires --folder."
+            "Cannot be combined with -O/--output."
         ),
     )
     parser.add_argument(
@@ -124,8 +124,8 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.json and not args.folder:
-        parser.error("--json can only be used with --folder")
+    if args.json and args.output is not None:
+        parser.error("--json cannot be combined with -O/--output")
 
     if args.output == "-":
         args.output = sys.stdout.buffer
@@ -141,7 +141,7 @@ def main() -> None:
         if args.folder:
             if not (args.output is None or isinstance(args.output, str)):
                 raise ValueError("--folder does not support stdout output (-O -)")
-            files = download_folder(
+            result = download_folder(
                 url=url,
                 id=id,
                 output=args.output,
@@ -154,22 +154,11 @@ def main() -> None:
                 resume=args.continue_,
                 skip_download=args.json,
             )
-            if args.json:
-                entries = []
-                for file in files:
-                    assert isinstance(file, GoogleDriveFileToDownload)
-                    entries.append(
-                        {
-                            "url": f"https://drive.google.com/uc?id={file.id}",
-                            "path": file.path.replace(os.sep, "/"),
-                        }
-                    )
-                print(json.dumps(entries, ensure_ascii=False, indent=2))
         else:
-            download(
+            result = download(
                 url=url,
                 output=args.output,
-                quiet=args.quiet,
+                quiet=args.quiet or args.json,
                 proxy=args.proxy,
                 speed=args.speed,
                 use_cookies=not args.no_cookies,
@@ -178,7 +167,21 @@ def main() -> None:
                 resume=args.continue_,
                 format=args.format,
                 user_agent=args.user_agent,
+                skip_download=args.json,
             )
+
+        if args.json:
+            files = result if args.folder else [result]
+            entries = []
+            for file in files:
+                assert isinstance(file, GoogleDriveFileToDownload)
+                entries.append(
+                    {
+                        "url": f"https://drive.google.com/uc?id={file.id}",
+                        "path": file.path.replace(os.sep, "/"),
+                    }
+                )
+            print(json.dumps(entries, ensure_ascii=False, indent=2))
     except DownloadError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
