@@ -67,6 +67,19 @@ gdown 'https://drive.google.com/file/d/0B9P1L--7Wd2vU3VUVlFnbTgtS2c/view?usp=sha
 
 # Save to a specific path
 gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c -O /tmp/spam.txt
+
+# Resolve the filename (with its real extension) without downloading
+gdown https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c --json
+```
+
+The `--json` output is an array of `{url, path}` entries, where `path` is the
+filename Google Drive reports. This lets you choose a name while keeping the
+original extension:
+
+```bash
+url="https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
+ext=$(gdown "$url" --json | jq -r '.[0].path | sub(".*\\."; "")')
+gdown "$url" -O "my_name.$ext"
 ```
 
 #### Folders
