@@ -107,8 +107,9 @@ def main() -> None:
         "--json",
         action="store_true",
         help=(
-            "list file or folder contents as a JSON array on stdout instead of "
-            "downloading. Each entry is an object with 'url' and 'path'. "
+            "(beta) list file or folder contents as a JSON array on stdout "
+            "instead of downloading. Each entry is an object with 'url' and "
+            "'path'. The output format may change in a future release. "
             "Cannot be combined with -O/--output."
         ),
     )
@@ -126,6 +127,13 @@ def main() -> None:
 
     if args.json and args.output is not None:
         parser.error("--json cannot be combined with -O/--output")
+
+    if args.json and not args.quiet:
+        print(
+            "warning: `--json` is in beta and its output format may change in a "
+            "future release",
+            file=sys.stderr,
+        )
 
     if args.output == "-":
         args.output = sys.stdout.buffer
