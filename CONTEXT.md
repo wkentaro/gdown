@@ -16,7 +16,7 @@ _Avoid_: manifest, index, dump
 The location a file would be written to, relative to the download root. For a folder, includes the directory structure. For a single file, it is the bare Drive filename. Always a real Drive filename; never a URL-basename fallback.
 
 **GoogleDriveFileToDownload**:
-The probe result returned by both downloaders under `skip_download=True`: `(id, path, local_path)`. Reused for single files so the probe mode is type-distinct from the normal `str | None` download return, making the mode self-announcing to Python callers and type-checkers.
+The probe result returned by both downloaders under `skip_download=True`: `(id, path, local_path)`. Reused for single files so the probe mode is type-distinct from the normal `str | BinaryIO` download return, making the mode self-announcing to Python callers and type-checkers.
 
 ## Example dialogue
 

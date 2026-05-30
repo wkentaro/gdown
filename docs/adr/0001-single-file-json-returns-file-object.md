@@ -15,8 +15,8 @@ backed by `download_folder(skip_download=True)`, which returns
 
 Extending `--json` to single files (GitHub #461) requires a `skip_download`
 mode on `download()`. The open question was what that mode returns. `download()`
-normally returns `str | None` (the output path). Two options for the probe
-result:
+normally returns `str | BinaryIO` (the output path, or the stream for `-O -`).
+Two options for the probe result:
 
 - A bare `str` (the resolved Drive filename).
 - The existing `GoogleDriveFileToDownload` namedtuple `(id, path, local_path)`.
@@ -43,8 +43,8 @@ never derived from a download destination.
 
 ## Consequences
 
-- Probe mode is type-distinct from the normal `str | None` download return, so
-  the mode is self-announcing to readers, callers, and type checkers.
+- Probe mode is type-distinct from the normal `str | BinaryIO` download return,
+  so the mode is self-announcing to readers, callers, and type checkers.
 - The CLI serializes single-file and folder results through one shared block;
   the single-file scalar is wrapped as a one-element list, so `--json` always
   emits a JSON array.
@@ -54,7 +54,6 @@ never derived from a download destination.
 - `local_path` carries no folder-root meaning for a single file; it duplicates
   `path`. Callers inspecting `local_path` to learn a destination get only the
   filename, which is acceptable because `--json` writes nothing.
-- `download()`'s return type widens to
-  `str | BinaryIO | GoogleDriveFileToDownload | None`. As with
-  `download_folder`, the flag-dependent return type is not expressed via
-  `@overload`.
+- `download()`'s return type widens from `str | BinaryIO` to
+  `str | BinaryIO | GoogleDriveFileToDownload`. As with `download_folder`, the
+  flag-dependent return type is not expressed via `@overload`.
