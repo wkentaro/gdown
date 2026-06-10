@@ -8,6 +8,7 @@ import unittest.mock
 
 import pytest
 
+from gdown.__main__ import file_size
 from gdown.__main__ import main
 from gdown.cached_download import _assert_filehash
 from gdown.cached_download import _compute_filehash
@@ -371,3 +372,25 @@ def test_json_flag_single_file_without_drive_filename_raises(
         pytest.raises(SystemExit),
     ):
         main()
+
+
+@pytest.mark.parametrize(
+    "argv, expected",
+    [
+        ("100B", 100.0),
+        ("2KB", 2.0 * 1024),
+        ("3MB", 3.0 * 1024**2),
+        ("4GB", 4.0 * 1024**3),
+    ],
+)
+def test_file_size_parses_units(argv: str, expected: float) -> None:
+    assert file_size(argv) == expected
+
+
+def test_file_size_none_returns_none() -> None:
+    assert file_size(None) is None
+
+
+def test_file_size_without_unit_raises_type_error() -> None:
+    with pytest.raises(TypeError):
+        file_size("100")
