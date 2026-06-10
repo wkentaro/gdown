@@ -95,7 +95,7 @@ def cached_download(
         return path
     elif osp.exists(path) and hash:
         try:
-            _assert_filehash(path=path, hash=hash, quiet=quiet)
+            _assert_filehash(path=path, hash=hash)
             return path
         except AssertionError as e:
             print(e, file=sys.stderr)
@@ -122,7 +122,7 @@ def cached_download(
             **kwargs,
         )
         if hash:
-            _assert_filehash(path=temp_path, hash=hash, quiet=quiet)
+            _assert_filehash(path=temp_path, hash=hash)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
     except Exception:
@@ -152,7 +152,7 @@ def _compute_filehash(path: str, algorithm: str) -> str:
     return f"{algorithm}:{algorithm_instance.hexdigest()}"
 
 
-def _assert_filehash(path: str, hash: str, quiet: bool = False) -> None:
+def _assert_filehash(path: str, hash: str) -> None:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "
