@@ -29,6 +29,34 @@ def test_parse_url() -> None:
             ),
             (file_id, True),
         ),
+        (
+            f"https://drive.google.com/file/u/0/d/{file_id}/view?usp=sharing",
+            (file_id, False),
+        ),
+        (
+            f"https://docs.google.com/document/d/{file_id}/edit",
+            (file_id, False),
+        ),
+        (
+            f"https://docs.google.com/document/u/0/d/{file_id}/edit",
+            (file_id, False),
+        ),
+        (
+            f"https://docs.google.com/spreadsheets/d/{file_id}/edit",
+            (file_id, False),
+        ),
+        (
+            f"https://docs.google.com/spreadsheets/u/0/d/{file_id}/edit",
+            (file_id, False),
+        ),
+        (
+            f"https://docs.google.com/presentation/d/{file_id}/edit",
+            (file_id, False),
+        ),
+        (
+            f"https://docs.google.com/presentation/u/0/d/{file_id}/htmlview",
+            (file_id, False),
+        ),
     ]
 
     for url, expected in urls:
