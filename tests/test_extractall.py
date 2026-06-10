@@ -4,6 +4,7 @@ import sys
 import tarfile
 import zipfile
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -152,3 +153,47 @@ def test_tar_special_file_rejected(tmp_path: Path, _tmp_extract_dir: str) -> Non
     else:
         with pytest.raises(ValueError, match="is a special file"):
             extractall(path=tar_path, to=_tmp_extract_dir)
+
+
+@pytest.mark.parametrize(
+    "suffix, write_mode",
+    [
+        (".tar.gz", "w:gz"),
+        (".tgz", "w:gz"),
+        (".tar.bz2", "w:bz2"),
+        (".tbz", "w:bz2"),
+    ],
+)
+def test_tar_compressed_normal(
+    suffix: str,
+    write_mode: Literal["w:gz", "w:bz2"],
+    tmp_path: Path,
+    _tmp_extract_dir: str,
+) -> None:
+    tar_path = str(tmp_path / f"normal{suffix}")
+    with tarfile.open(name=tar_path, mode=write_mode) as tf:
+        data = b"hello world"
+        info = tarfile.TarInfo(name="hello.txt")
+        info.size = len(data)
+        tf.addfile(tarinfo=info, fileobj=io.BytesIO(data))
+
+    result = extractall(path=tar_path, to=_tmp_extract_dir)
+
+    assert os.path.exists(os.path.join(_tmp_extract_dir, "hello.txt"))
+    assert len(result) == 1
+
+
+def test_unsupported_format(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="no appropriate extractor"):
+        extractall(path=str(tmp_path / "archive.rar"))
+
+
+def test_to_none_defaults_to_archive_parent(tmp_path: Path) -> None:
+    zip_path = str(tmp_path / "a.zip")
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("hello.txt", "hello world")
+
+    result = extractall(path=zip_path)
+
+    assert os.path.exists(os.path.join(str(tmp_path), "hello.txt"))
+    assert result == [os.path.join(str(tmp_path), "hello.txt")]
