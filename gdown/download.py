@@ -410,6 +410,7 @@ def download(
             end="",
         )
 
+    pbar = None
     try:
         total = res.headers.get("Content-Length")
         if total is not None:
@@ -440,6 +441,10 @@ def download(
             mtime = last_modified_time.timestamp()
             os.utime(output, (mtime, mtime))
     finally:
+        if pbar is not None:
+            pbar.close()
+        if tmp_file is not None and not f.closed:
+            f.close()
         sess.close()
 
     return output
