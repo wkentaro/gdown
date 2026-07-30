@@ -182,7 +182,6 @@ def test_download_attempts_all_cleanup_when_closers_raise(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     file = unittest.mock.mock_open()
-    file().closed = False
     file().tell.return_value = 0
     file().close.side_effect = OSError("file close failed")
     pbar = unittest.mock.Mock()

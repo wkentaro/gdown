@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import datetime
 import email.utils
 import os
@@ -403,8 +404,11 @@ def download(
             end="",
         )
 
-    pbar = None
-    try:
+    with contextlib.ExitStack() as stack:
+        stack.callback(sess.close)
+        if tmp_file is not None:
+            stack.callback(f.close)
+
         start_size = f.tell() if tmp_file is not None else 0
         if start_size != 0:
             headers = {"Range": f"bytes={start_size}-"}
@@ -415,12 +419,13 @@ def download(
             total = int(total) + start_size
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+            stack.callback(pbar.close)
         t_start = time.time()
         downloaded = 0
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
             downloaded += len(chunk)
-            if pbar is not None:
+            if not quiet:
                 pbar.update(len(chunk))
             if progress is not None:
                 progress(downloaded + start_size, total)
@@ -429,16 +434,6 @@ def download(
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)
-    finally:
-        try:
-            if pbar is not None:
-                pbar.close()
-        finally:
-            try:
-                if tmp_file is not None and not f.closed:
-                    f.close()
-            finally:
-                sess.close()
 
     if tmp_file is not None:
         assert isinstance(output, str)
