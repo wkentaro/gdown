@@ -385,35 +385,30 @@ def download(
         tmp_file = None
         f = output
 
+    if not quiet:
+        print(log_messages.get("start", "Downloading...\n"), file=sys.stderr, end="")
+        if resume:
+            print("Resume:", tmp_file, file=sys.stderr)
+        if url_origin != url:
+            print("From (original):", url_origin, file=sys.stderr)
+            print("From (redirected):", url, file=sys.stderr)
+        else:
+            print("From:", url, file=sys.stderr)
+        print(
+            log_messages.get(
+                "output",
+                f"To: {osp.abspath(output) if isinstance(output, str) else output}\n",
+            ),
+            file=sys.stderr,
+            end="",
+        )
+
     pbar = None
     try:
         start_size = f.tell() if tmp_file is not None else 0
         if start_size != 0:
             headers = {"Range": f"bytes={start_size}-"}
             res = sess.get(url, headers=headers, stream=True, verify=verify)
-
-        if not quiet:
-            print(
-                log_messages.get("start", "Downloading...\n"),
-                file=sys.stderr,
-                end="",
-            )
-            if resume:
-                print("Resume:", tmp_file, file=sys.stderr)
-            if url_origin != url:
-                print("From (original):", url_origin, file=sys.stderr)
-                print("From (redirected):", url, file=sys.stderr)
-            else:
-                print("From:", url, file=sys.stderr)
-            output_path = osp.abspath(output) if isinstance(output, str) else output
-            print(
-                log_messages.get(
-                    "output",
-                    f"To: {output_path}\n",
-                ),
-                file=sys.stderr,
-                end="",
-            )
 
         total = res.headers.get("Content-Length")
         if total is not None:
