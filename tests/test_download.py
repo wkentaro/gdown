@@ -47,7 +47,6 @@ def download_session(
 
     session = unittest.mock.Mock()
     session.get.return_value = response
-    session.cookies = []
     monkeypatch.setattr(
         sys.modules["gdown.download"],
         "_get_session",
@@ -205,7 +204,7 @@ def test_download_attempts_all_cleanup_when_closers_raise(
     download_session.close.assert_called_once_with()
 
 
-def test_download_keeps_part_when_pbar_close_raises(
+def test_download_propagates_pbar_close_error_and_keeps_part(
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     opened_files: list[BinaryIO],
