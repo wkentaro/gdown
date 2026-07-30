@@ -385,33 +385,36 @@ def download(
         tmp_file = None
         f = output
 
-    if tmp_file is not None and f.tell() != 0:
-        start_size = f.tell()
-        headers = {"Range": f"bytes={start_size}-"}
-        res = sess.get(url, headers=headers, stream=True, verify=verify)
-    else:
-        start_size = 0
-
-    if not quiet:
-        print(log_messages.get("start", "Downloading...\n"), file=sys.stderr, end="")
-        if resume:
-            print("Resume:", tmp_file, file=sys.stderr)
-        if url_origin != url:
-            print("From (original):", url_origin, file=sys.stderr)
-            print("From (redirected):", url, file=sys.stderr)
-        else:
-            print("From:", url, file=sys.stderr)
-        print(
-            log_messages.get(
-                "output",
-                f"To: {osp.abspath(output) if isinstance(output, str) else output}\n",
-            ),
-            file=sys.stderr,
-            end="",
-        )
-
     pbar = None
     try:
+        start_size = f.tell() if tmp_file is not None else 0
+        if start_size != 0:
+            headers = {"Range": f"bytes={start_size}-"}
+            res = sess.get(url, headers=headers, stream=True, verify=verify)
+
+        if not quiet:
+            print(
+                log_messages.get("start", "Downloading...\n"),
+                file=sys.stderr,
+                end="",
+            )
+            if resume:
+                print("Resume:", tmp_file, file=sys.stderr)
+            if url_origin != url:
+                print("From (original):", url_origin, file=sys.stderr)
+                print("From (redirected):", url, file=sys.stderr)
+            else:
+                print("From:", url, file=sys.stderr)
+            output_path = osp.abspath(output) if isinstance(output, str) else output
+            print(
+                log_messages.get(
+                    "output",
+                    f"To: {output_path}\n",
+                ),
+                file=sys.stderr,
+                end="",
+            )
+
         total = res.headers.get("Content-Length")
         if total is not None:
             total = int(total) + start_size
@@ -422,7 +425,7 @@ def download(
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
             f.write(chunk)
             downloaded += len(chunk)
-            if not quiet:
+            if pbar is not None:
                 pbar.update(len(chunk))
             if progress is not None:
                 progress(downloaded + start_size, total)
@@ -431,20 +434,22 @@ def download(
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)
-        if not quiet:
-            pbar.close()
-        if tmp_file:
-            f.close()
-            assert isinstance(output, str)
-            shutil.move(tmp_file, output)
-        if isinstance(output, str) and last_modified_time:
-            mtime = last_modified_time.timestamp()
-            os.utime(output, (mtime, mtime))
     finally:
-        if pbar is not None:
-            pbar.close()
-        if tmp_file is not None and not f.closed:
-            f.close()
-        sess.close()
+        try:
+            if pbar is not None:
+                pbar.close()
+        finally:
+            try:
+                if tmp_file is not None and not f.closed:
+                    f.close()
+            finally:
+                sess.close()
+
+    if tmp_file is not None:
+        assert isinstance(output, str)
+        shutil.move(tmp_file, output)
+    if isinstance(output, str) and last_modified_time:
+        mtime = last_modified_time.timestamp()
+        os.utime(output, (mtime, mtime))
 
     return output
