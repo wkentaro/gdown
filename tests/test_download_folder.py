@@ -90,6 +90,27 @@ def test_download_folder_propagates_download_error(tmp_path: Path) -> None:
         )
 
 
+def test_download_folder_closes_session_when_parsing_raises() -> None:
+    session = unittest.mock.Mock()
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_get_session",
+            return_value=(session, "cookies.txt"),
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            side_effect=DownloadError("parse failed"),
+        ),
+        pytest.raises(DownloadError, match="parse failed"),
+    ):
+        download_folder(id="folder_id", quiet=True)
+
+    session.close.assert_called_once_with()
+
+
 def test_parse_embedded_folder_view() -> None:
     html_file = osp.join(here, "data/embedded-folder-view-sample.html")
     with open(html_file) as f:

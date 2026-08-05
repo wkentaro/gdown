@@ -1,11 +1,15 @@
+import io
 import os
 import sys
 import unittest.mock
 from pathlib import Path
+from typing import BinaryIO
 from typing import Final
+from typing import Literal
 from typing import NamedTuple
 
 import pytest
+import requests
 
 from gdown.download import GoogleDriveFileToDownload
 from gdown.download import download
@@ -26,6 +30,47 @@ def download_env(tmp_path: Path) -> DownloadEnv:
         file_path=str(tmp_path / "file"),
         url=DOWNLOAD_URL,
     )
+
+
+@pytest.fixture()
+def download_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> unittest.mock.Mock:
+    response = unittest.mock.Mock()
+    response.status_code = 200
+    response.headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": "4",
+    }
+    response.iter_content.return_value = [b"data"]
+    response.url = "https://example.com/file"
+
+    session = unittest.mock.Mock()
+    session.get.return_value = response
+    monkeypatch.setattr(
+        sys.modules["gdown.download"],
+        "_get_session",
+        lambda **kwargs: (session, "cookies.txt"),
+    )
+    return session
+
+
+@pytest.fixture()
+def opened_files(monkeypatch: pytest.MonkeyPatch) -> list[BinaryIO]:
+    files: list[BinaryIO] = []
+
+    def open_file(path: str, mode: Literal["ab"]) -> BinaryIO:
+        file = open(path, mode)
+        files.append(file)
+        return file
+
+    monkeypatch.setattr(
+        sys.modules["gdown.download"],
+        "open",
+        open_file,
+        raising=False,
+    )
+    return files
 
 
 @pytest.mark.network
@@ -55,6 +100,137 @@ def test_download_progress(download_env: DownloadEnv) -> None:
     final_current, final_total = reported[-1]
     assert final_total is not None
     assert final_current == os.path.getsize(download_env.file_path)
+
+
+def test_download_closes_resources_when_progress_raises(
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    opened_files: list[BinaryIO],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pbar = unittest.mock.Mock()
+    monkeypatch.setattr(
+        sys.modules["gdown.download"].tqdm, "tqdm", lambda **kwargs: pbar
+    )
+
+    with pytest.raises(RuntimeError, match="stop"):
+        download(
+            url="https://example.com/file",
+            output=str(tmp_path / "output"),
+            quiet=False,
+            use_cookies=False,
+            progress=unittest.mock.Mock(side_effect=RuntimeError("stop")),
+        )
+
+    pbar.close.assert_called_once_with()
+    assert opened_files[0].closed
+    download_session.close.assert_called_once_with()
+    part_files = list(tmp_path.glob("output*.part"))
+    assert len(part_files) == 1
+    assert part_files[0].read_bytes() == b"data"
+
+
+def test_download_closes_resources_when_resume_request_raises(
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    opened_files: list[BinaryIO],
+) -> None:
+    download_session.get.side_effect = [
+        download_session.get.return_value,
+        requests.ConnectionError("range request failed"),
+    ]
+    part = tmp_path / "output.partial.part"
+    part.write_bytes(b"partial")
+
+    with pytest.raises(requests.ConnectionError, match="range request failed"):
+        download(
+            url="https://example.com/file",
+            output=str(tmp_path / "output"),
+            quiet=True,
+            use_cookies=False,
+            resume=True,
+        )
+
+    assert opened_files[0].closed
+    download_session.close.assert_called_once_with()
+    assert part.read_bytes() == b"partial"
+
+
+def test_download_keeps_caller_output_open_when_progress_raises(
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = io.BytesIO()
+
+    with pytest.raises(RuntimeError, match="stop"):
+        download(
+            url="https://example.com/file",
+            output=output,
+            quiet=True,
+            use_cookies=False,
+            progress=unittest.mock.Mock(side_effect=RuntimeError("stop")),
+        )
+
+    assert not output.closed
+    assert output.getvalue() == b"data"
+    download_session.close.assert_called_once_with()
+
+
+def test_download_attempts_all_cleanup_when_closers_raise(
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    file = unittest.mock.mock_open()
+    file().tell.return_value = 0
+    file().close.side_effect = OSError("file close failed")
+    pbar = unittest.mock.Mock()
+    pbar.close.side_effect = OSError("pbar close failed")
+    monkeypatch.setattr(sys.modules["gdown.download"], "open", file, raising=False)
+    monkeypatch.setattr(
+        sys.modules["gdown.download"].tqdm, "tqdm", lambda **kwargs: pbar
+    )
+
+    with pytest.raises(OSError, match="file close failed"):
+        download(
+            url="https://example.com/file",
+            output=str(tmp_path / "output"),
+            quiet=False,
+            use_cookies=False,
+            progress=unittest.mock.Mock(side_effect=RuntimeError("stop")),
+        )
+
+    pbar.close.assert_called_once_with()
+    file().close.assert_called_once_with()
+    download_session.close.assert_called_once_with()
+
+
+def test_download_propagates_pbar_close_error_and_keeps_part(
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    opened_files: list[BinaryIO],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "output"
+    pbar = unittest.mock.Mock()
+    pbar.close.side_effect = OSError("pbar close failed")
+    monkeypatch.setattr(
+        sys.modules["gdown.download"].tqdm, "tqdm", lambda **kwargs: pbar
+    )
+
+    with pytest.raises(OSError, match="pbar close failed"):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=False,
+            use_cookies=False,
+        )
+
+    assert opened_files[0].closed
+    download_session.close.assert_called_once_with()
+    assert not output.exists()
+    part_files = list(tmp_path.glob("output*.part"))
+    assert len(part_files) == 1
+    assert part_files[0].read_bytes() == b"data"
 
 
 @pytest.mark.network

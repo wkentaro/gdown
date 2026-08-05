@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import datetime
 import email.utils
 import os
@@ -385,13 +386,6 @@ def download(
         tmp_file = None
         f = output
 
-    if tmp_file is not None and f.tell() != 0:
-        start_size = f.tell()
-        headers = {"Range": f"bytes={start_size}-"}
-        res = sess.get(url, headers=headers, stream=True, verify=verify)
-    else:
-        start_size = 0
-
     if not quiet:
         print(log_messages.get("start", "Downloading...\n"), file=sys.stderr, end="")
         if resume:
@@ -410,12 +404,22 @@ def download(
             end="",
         )
 
-    try:
+    with contextlib.ExitStack() as stack:
+        stack.callback(sess.close)
+        if tmp_file is not None:
+            stack.callback(f.close)
+
+        start_size = f.tell() if tmp_file is not None else 0
+        if start_size != 0:
+            headers = {"Range": f"bytes={start_size}-"}
+            res = sess.get(url, headers=headers, stream=True, verify=verify)
+
         total = res.headers.get("Content-Length")
         if total is not None:
             total = int(total) + start_size
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+            stack.callback(pbar.close)
         t_start = time.time()
         downloaded = 0
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
@@ -430,16 +434,12 @@ def download(
                 elapsed_time = time.time() - t_start
                 if elapsed_time < elapsed_time_expected:
                     time.sleep(elapsed_time_expected - elapsed_time)
-        if not quiet:
-            pbar.close()
-        if tmp_file:
-            f.close()
-            assert isinstance(output, str)
-            shutil.move(tmp_file, output)
-        if isinstance(output, str) and last_modified_time:
-            mtime = last_modified_time.timestamp()
-            os.utime(output, (mtime, mtime))
-    finally:
-        sess.close()
+
+    if tmp_file is not None:
+        assert isinstance(output, str)
+        shutil.move(tmp_file, output)
+    if isinstance(output, str) and last_modified_time:
+        mtime = last_modified_time.timestamp()
+        os.utime(output, (mtime, mtime))
 
     return output
