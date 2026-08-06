@@ -96,7 +96,14 @@ gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -
 gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --json \
   | jq -r '.[] | select(.path | test("shad")) | .url' \
   | xargs -n1 gdown
+
+# Autodetect file vs. folder instead of passing --folder yourself
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --auto
 ```
+
+`--auto` treats a `/drive/folders/` URL as a folder; anything else (a bare ID,
+a file URL) is tried as a file first and retried as a folder only if Drive
+reports it isn't a downloadable file.
 
 #### Google Docs, Sheets, Slides
 

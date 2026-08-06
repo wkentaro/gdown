@@ -13,6 +13,7 @@ from gdown.__main__ import main
 from gdown.cached_download import _assert_filehash
 from gdown.cached_download import _compute_filehash
 from gdown.download_folder import _GoogleDriveFile
+from gdown.exceptions import FileURLRetrievalError
 
 from .conftest import GITHUB_RELEASE_URL
 
@@ -304,6 +305,145 @@ def test_json_flag_rejects_output(output: str) -> None:
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     assert result.returncode != 0
     assert "--json cannot be combined with -O/--output" in result.stderr
+
+
+def test_auto_flag_rejects_folder() -> None:
+    cmd = [
+        sys.executable,
+        "-m",
+        "gdown",
+        "https://drive.google.com/drive/folders/dummy",
+        "--auto",
+        "--folder",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    assert result.returncode != 0
+    assert "--auto cannot be combined with --folder" in result.stderr
+
+
+def test_auto_flag_treats_folder_url_as_folder(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _GoogleDriveFile(
+        id="root_id",
+        name="myfolder",
+        type=_GoogleDriveFile.TYPE_FOLDER,
+        children=[
+            _GoogleDriveFile(
+                id="child_id",
+                name="track.mp3",
+                type="application/octet-stream",
+            ),
+        ],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "gdown",
+            "https://drive.google.com/drive/folders/dummy",
+            "--auto",
+            "--json",
+        ],
+    )
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.__main__"], "download"
+        ) as mock_download,
+    ):
+        main()
+
+    mock_download.assert_not_called()
+    captured = capsys.readouterr()
+    entries = json.loads(captured.out)
+    assert entries == [
+        {
+            "url": "https://drive.google.com/uc?id=child_id",
+            "path": "track.mp3",
+        }
+    ]
+
+
+def test_auto_flag_falls_back_to_folder_when_file_retrieval_fails(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _GoogleDriveFile(
+        id="root_id",
+        name="myfolder",
+        type=_GoogleDriveFile.TYPE_FOLDER,
+        children=[
+            _GoogleDriveFile(
+                id="child_id",
+                name="track.mp3",
+                type="application/octet-stream",
+            ),
+        ],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "gdown",
+            "https://drive.google.com/file/d/dummy/view",
+            "--auto",
+            "--json",
+        ],
+    )
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.__main__"],
+            "download",
+            side_effect=FileURLRetrievalError("not a downloadable file"),
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+    ):
+        main()
+
+    captured = capsys.readouterr()
+    entries = json.loads(captured.out)
+    assert entries == [
+        {
+            "url": "https://drive.google.com/uc?id=child_id",
+            "path": "track.mp3",
+        }
+    ]
+
+
+def test_without_auto_flag_file_retrieval_error_is_not_retried_as_folder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "gdown",
+            "https://drive.google.com/file/d/dummy/view",
+            "--json",
+        ],
+    )
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.__main__"],
+            "download",
+            side_effect=FileURLRetrievalError("not a downloadable file"),
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"], "download_folder"
+        ) as mock_download_folder,
+        pytest.raises(SystemExit),
+    ):
+        main()
+
+    mock_download_folder.assert_not_called()
 
 
 def _fake_session_returning(headers: dict[str, str]) -> unittest.mock.Mock:
