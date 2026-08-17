@@ -223,6 +223,61 @@ gdown --continue https://drive.google.com/uc?id=<file_id>
 
 Yes. It works with any public HTTP/HTTPS URL.
 
+## Docker
+
+Run gdown without a local Python installation.
+
+### Pull
+
+Multi-arch images (`linux/amd64`, `linux/arm64`) are published to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/wkentaro/gdown:latest
+```
+
+### Build
+
+A `Dockerfile` is included if you prefer to build the image yourself:
+
+```bash
+docker build -t gdown .
+```
+
+### Usage
+
+Downloaded files land in `/downloads` inside the container.
+Mount a host directory there so files are saved to your machine:
+
+```bash
+docker run --rm -v $(pwd)/output:/downloads ghcr.io/wkentaro/gdown <url>
+```
+
+#### Download a folder
+
+```bash
+docker run --rm -v $(pwd)/output:/downloads ghcr.io/wkentaro/gdown <url> --folder
+```
+
+#### Use cookies for restricted files
+
+gdown always reads cookies from `~/.cache/gdown/cookies.txt`.
+Mount your `cookies.txt` at that path inside the container:
+
+```bash
+docker run --rm \
+  -v $(pwd)/output:/downloads \
+  -v $(pwd)/cookies.txt:/home/appuser/.cache/gdown/cookies.txt \
+  ghcr.io/wkentaro/gdown <url>
+```
+
+> [!NOTE]
+> gdown rewrites the cookies file after a download, so it must be writable by
+> UID 1000 (the container's `appuser`).
+
+> [!NOTE]
+> Without a `-v` mount, files are saved inside the ephemeral container and
+> lost when it exits.
+
 ## Contributing
 
 ```bash
