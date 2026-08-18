@@ -14,6 +14,8 @@ import requests
 from gdown.download import GoogleDriveFileToDownload
 from gdown.download import download
 
+from .conftest import build_response
+
 DOWNLOAD_URL: Final[str] = (
     "https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py"
 )
@@ -37,14 +39,7 @@ def download_session(
     *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> unittest.mock.Mock:
-    response = unittest.mock.Mock()
-    response.status_code = 200
-    response.headers = {
-        "Content-Type": "application/octet-stream",
-        "Content-Length": "4",
-    }
-    response.iter_content.return_value = [b"data"]
-    response.url = "https://example.com/file"
+    response = build_response(headers={"Content-Length": "4"}, chunks=[b"data"])
 
     session = unittest.mock.Mock()
     session.get.return_value = response
