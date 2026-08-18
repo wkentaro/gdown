@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import hashlib
 import os
 import os.path as osp
 import shutil
 import sys
 import tempfile
 from collections.abc import Callable
-from typing import Final
 from typing import TypedDict
 
 if sys.version_info >= (3, 12):
@@ -17,6 +15,7 @@ else:
 
 import filelock
 
+from ._filehash import assert_filehash
 from .download import download
 
 
@@ -97,7 +96,7 @@ def cached_download(
         return path
     elif osp.exists(path) and hash:
         try:
-            _assert_filehash(path=path, hash=hash)
+            assert_filehash(path=path, hash=hash)
             return path
         except AssertionError as e:
             print(e, file=sys.stderr)
@@ -124,7 +123,7 @@ def cached_download(
             **kwargs,
         )
         if hash:
-            _assert_filehash(path=temp_path, hash=hash)
+            assert_filehash(path=temp_path, hash=hash)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
     except Exception:
@@ -136,35 +135,3 @@ def cached_download(
         postprocess(path)
 
     return path
-
-
-def _compute_filehash(*, path: str, algorithm: str) -> str:
-    BLOCKSIZE: Final = 65536
-
-    if algorithm not in hashlib.algorithms_guaranteed:
-        raise ValueError(
-            f"Unsupported hash algorithm: {algorithm}. "
-            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
-        )
-
-    algorithm_instance = getattr(hashlib, algorithm)()
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(BLOCKSIZE), b""):
-            algorithm_instance.update(block)
-    return f"{algorithm}:{algorithm_instance.hexdigest()}"
-
-
-def _assert_filehash(*, path: str, hash: str) -> None:
-    if ":" not in hash:
-        raise ValueError(
-            f"Invalid hash: {hash}. "
-            "Hash must be in the format of {algorithm}:{hash_value}."
-        )
-    algorithm = hash.split(":")[0]
-
-    hash_actual = _compute_filehash(path=path, algorithm=algorithm)
-
-    if hash_actual != hash:
-        raise AssertionError(
-            f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
-        )

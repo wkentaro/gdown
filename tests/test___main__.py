@@ -15,9 +15,9 @@ import pytest
 from gdown.__main__ import BROWSERS
 from gdown.__main__ import file_size
 from gdown.__main__ import main
+from gdown._filehash import assert_filehash
+from gdown._filehash import compute_filehash
 from gdown._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
-from gdown.cached_download import _assert_filehash
-from gdown.cached_download import _compute_filehash
 from gdown.download_folder import _GoogleDriveFile
 
 from .conftest import GITHUB_RELEASE_URL
@@ -36,7 +36,7 @@ def _test_cli_with_md5(*, url_or_id: str, md5: str, options: list[str] | None) -
             cmd.extend(options)
         subprocess.call(cmd)
         assert os.path.exists(file_path)
-        _assert_filehash(path=file_path, hash=f"md5:{md5}")
+        assert_filehash(path=file_path, hash=f"md5:{md5}")
 
 
 def _test_cli_with_content(*, url_or_id: str, content: str) -> None:
@@ -113,7 +113,7 @@ def test_download_folder_from_gdrive() -> None:
             md5s_actual = []
             for dirpath, dirnames, filenames in os.walk(d):
                 for filename in filenames:
-                    md5_actual = _compute_filehash(
+                    md5_actual = compute_filehash(
                         path=os.path.join(dirpath, filename), algorithm="md5"
                     )[len("md5:") :]
                     md5s_actual.append(md5_actual)
