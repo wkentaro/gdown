@@ -52,18 +52,19 @@ def _get_directory_structure(
     return directory_structure
 
 
+# Boolean parameters remain positional for backward compatibility.
 def download_folder(
     url: str | None = None,
     id: str | None = None,
     output: str | None = None,
-    quiet: bool = False,
+    quiet: bool = False,  # noqa: FBT001, FBT002
     proxy: str | None = None,
     speed: float | None = None,
-    use_cookies: bool = True,
-    verify: bool | str = True,
+    use_cookies: bool = True,  # noqa: FBT001, FBT002
+    verify: bool | str = True,  # noqa: FBT001, FBT002
     user_agent: str | None = None,
-    skip_download: bool = False,
-    resume: bool = False,
+    skip_download: bool = False,  # noqa: FBT001, FBT002
+    resume: bool = False,  # noqa: FBT001, FBT002
 ) -> list[str] | list[GoogleDriveFileToDownload]:
     """Downloads entire folder from URL.
 
@@ -207,6 +208,7 @@ def _extract_folder_id(url: str) -> str:
 def _parse_embedded_folder_view(
     sess: requests.Session,
     folder_id: str,
+    *,
     verify: bool | str = True,
 ) -> tuple[str, list[tuple[str, str, str]]]:
     params = urllib.parse.urlencode({"id": folder_id})
@@ -273,6 +275,7 @@ def _parse_embedded_folder_view(
 def _download_and_parse_google_drive_link(
     sess: requests.Session,
     folder_id: str,
+    *,
     quiet: bool = False,
     verify: bool | str = True,
 ) -> _GoogleDriveFile:

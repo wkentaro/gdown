@@ -114,6 +114,7 @@ def _get_modified_time_from_response(
 
 def _get_session(
     proxy: str | None,
+    *,
     use_cookies: bool,
     user_agent: str,
 ) -> tuple[requests.Session, str]:
@@ -140,21 +141,22 @@ def _get_session(
     return sess, cookies_file
 
 
+# Boolean parameters remain positional for backward compatibility.
 def download(
     url: str | None = None,
     output: str | BinaryIO | None = None,
-    quiet: bool = False,
+    quiet: bool = False,  # noqa: FBT001, FBT002
     proxy: str | None = None,
     speed: float | None = None,
-    use_cookies: bool = True,
-    verify: bool | str = True,
+    use_cookies: bool = True,  # noqa: FBT001, FBT002
+    verify: bool | str = True,  # noqa: FBT001, FBT002
     id: str | None = None,
-    resume: bool = False,
+    resume: bool = False,  # noqa: FBT001, FBT002
     format: str | None = None,
     user_agent: str | None = None,
     log_messages: dict[str, str] | None = None,
     progress: Callable[[int, int | None], None] | None = None,
-    skip_download: bool = False,
+    skip_download: bool = False,  # noqa: FBT001, FBT002
 ) -> str | BinaryIO | GoogleDriveFileToDownload:
     """Download file from URL.
 
