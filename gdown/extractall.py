@@ -53,7 +53,7 @@ def extractall(path: str, to: str | None = None) -> list[str]:
 
 def _extractall_zip(path: str, to: str) -> list[str]:
     with zipfile.ZipFile(path, "r") as f:
-        names = f.namelist()
+        names = [osp.normpath(name) for name in f.namelist()]
         for member in names:
             member_path = osp.join(to, member)
             if not _is_within_directory(directory=to, target=member_path):
@@ -88,6 +88,6 @@ def _extractall_tar(path: str, to: str, tar_mode: _TarReadMode) -> list[str]:
                         f"target directory: {to}"
                     )
             f.extractall(path=to)
-        names = [m.path for m in f.getmembers()]
+        names = [osp.normpath(m.path) for m in f.getmembers()]
 
     return [osp.join(to, name) for name in names]
