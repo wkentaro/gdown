@@ -28,21 +28,24 @@ def test_zip_normal(tmp_path: Path, _tmp_extract_dir: str) -> None:
 
     assert os.path.exists(os.path.join(_tmp_extract_dir, "hello.txt"))
     assert os.path.exists(os.path.join(_tmp_extract_dir, "subdir", "nested.txt"))
-    assert len(result) == 2
+    assert result == [
+        os.path.join(_tmp_extract_dir, "hello.txt"),
+        os.path.join(_tmp_extract_dir, "subdir", "nested.txt"),
+    ]
 
 
 def test_tar_normal(tmp_path: Path, _tmp_extract_dir: str) -> None:
     tar_path = str(tmp_path / "normal.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         data = b"hello world"
-        info = tarfile.TarInfo(name="hello.txt")
+        info = tarfile.TarInfo(name="subdir/nested.txt")
         info.size = len(data)
         tf.addfile(tarinfo=info, fileobj=io.BytesIO(data))
 
     result = extractall(path=tar_path, to=_tmp_extract_dir)
 
-    assert os.path.exists(os.path.join(_tmp_extract_dir, "hello.txt"))
-    assert len(result) == 1
+    assert os.path.exists(os.path.join(_tmp_extract_dir, "subdir", "nested.txt"))
+    assert result == [os.path.join(_tmp_extract_dir, "subdir", "nested.txt")]
 
 
 def test_zip_path_traversal(tmp_path: Path, _tmp_extract_dir: str) -> None:
