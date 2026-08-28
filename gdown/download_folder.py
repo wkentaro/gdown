@@ -5,6 +5,7 @@ import os.path as osp
 import re
 import sys
 import urllib.parse
+from http import HTTPStatus
 
 import bs4
 import requests
@@ -214,7 +215,7 @@ def _parse_embedded_folder_view(
     params = urllib.parse.urlencode({"id": folder_id})
     url = f"https://drive.google.com/embeddedfolderview?{params}"
     res = sess.get(url, verify=verify)
-    if res.status_code != 200:
+    if res.status_code != HTTPStatus.OK:
         raise DownloadError(
             f"Failed to retrieve folder contents for folder ID: {folder_id} "
             f"(status code {res.status_code}). "

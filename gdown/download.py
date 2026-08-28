@@ -13,6 +13,7 @@ import time
 import urllib.parse
 import warnings
 from collections.abc import Callable
+from http import HTTPStatus
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
 
@@ -254,7 +255,7 @@ def download(
         if not (gdrive_file_id and is_gdrive_download_link):
             break
 
-        if url == url_origin and res.status_code == 500:
+        if url == url_origin and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
             # The file could be Google Docs or Spreadsheets.
             url = f"https://drive.google.com/open?id={gdrive_file_id}"
             continue

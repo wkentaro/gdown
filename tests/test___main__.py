@@ -135,9 +135,7 @@ def test_download_a_folder_with_more_than_50_files() -> None:
         subprocess.check_call(cmd)
 
         filenames = sorted(os.listdir(d))
-        assert len(filenames) == 100
-        for i in range(100):
-            assert filenames[i] == f"file_{i:02d}.txt"
+        assert filenames == [f"file_{i:02d}.txt" for i in range(100)]
 
 
 # def test_download_docs_from_gdrive():

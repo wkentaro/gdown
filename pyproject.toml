@@ -69,6 +69,7 @@ extend-select = [
   "B008",
   "FBT",
   "PLC0415",
+  "PLR2004",
 ]
 select = [
   "ANN", # flake8-annotations
