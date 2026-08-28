@@ -66,6 +66,7 @@ markers = ["network: tests that require network access (Google Drive, GitHub)"]
 extend-select = [
   "ARG",
   "B006",
+  "B008",
 ]
 select = [
   "ANN", # flake8-annotations
