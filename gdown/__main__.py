@@ -17,12 +17,13 @@ from .exceptions import DownloadError
 
 
 class _ShowVersionAction(argparse.Action):
+    # The callback protocol requires the full signature even when values are unused.
     def __call__(
         self,
         parser: argparse.ArgumentParser,
-        namespace: argparse.Namespace,
-        values: str | Sequence[Any] | None,
-        option_string: str | None = None,
+        namespace: argparse.Namespace,  # noqa: ARG002
+        values: str | Sequence[Any] | None,  # noqa: ARG002
+        option_string: str | None = None,  # noqa: ARG002
     ) -> None:
         print(f"gdown {__version__} at {os.path.dirname(os.path.dirname(__file__))}")
         parser.exit()

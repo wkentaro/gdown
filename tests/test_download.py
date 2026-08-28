@@ -50,7 +50,7 @@ def download_session(
     monkeypatch.setattr(
         sys.modules["gdown.download"],
         "_get_session",
-        lambda **kwargs: (session, "cookies.txt"),
+        lambda **_kwargs: (session, "cookies.txt"),
     )
     return session
 
@@ -110,7 +110,7 @@ def test_download_closes_resources_when_progress_raises(
 ) -> None:
     pbar = unittest.mock.Mock()
     monkeypatch.setattr(
-        sys.modules["gdown.download"].tqdm, "tqdm", lambda **kwargs: pbar
+        sys.modules["gdown.download"].tqdm, "tqdm", lambda **_kwargs: pbar
     )
 
     with pytest.raises(RuntimeError, match="stop"):
@@ -187,7 +187,7 @@ def test_download_attempts_all_cleanup_when_closers_raise(
     pbar.close.side_effect = OSError("pbar close failed")
     monkeypatch.setattr(sys.modules["gdown.download"], "open", file, raising=False)
     monkeypatch.setattr(
-        sys.modules["gdown.download"].tqdm, "tqdm", lambda **kwargs: pbar
+        sys.modules["gdown.download"].tqdm, "tqdm", lambda **_kwargs: pbar
     )
 
     with pytest.raises(OSError, match="file close failed"):
@@ -214,7 +214,7 @@ def test_download_propagates_pbar_close_error_and_keeps_part(
     pbar = unittest.mock.Mock()
     pbar.close.side_effect = OSError("pbar close failed")
     monkeypatch.setattr(
-        sys.modules["gdown.download"].tqdm, "tqdm", lambda **kwargs: pbar
+        sys.modules["gdown.download"].tqdm, "tqdm", lambda **_kwargs: pbar
     )
 
     with pytest.raises(OSError, match="pbar close failed"):
@@ -314,7 +314,7 @@ def test_download_rewrites_google_drive_share_link(
         "Content-Type": "application/octet-stream",
         "Content-Disposition": 'attachment; filename="test.bin"',
     }
-    mock_response.iter_content = lambda chunk_size: [b"data"]
+    mock_response.iter_content = lambda **_kwargs: [b"data"]
     mock_response.url = expected_url
 
     mock_sess = unittest.mock.Mock()

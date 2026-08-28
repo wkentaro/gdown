@@ -251,7 +251,7 @@ def test_json_flag_preserves_subfolder_path(
 
 
 def test_json_flag_does_not_download(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = _GoogleDriveFile(
         id="root_id",
