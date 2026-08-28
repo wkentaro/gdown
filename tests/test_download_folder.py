@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest.mock
 from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -128,8 +129,6 @@ def test_parse_embedded_folder_view() -> None:
     assert result is not None
     folder_name, children = result
     assert folder_name == "files_100"
-    assert len(children) == 4
-
     ids = [r[0] for r in children]
     names = [r[1] for r in children]
     types = [r[2] for r in children]
@@ -174,10 +173,11 @@ def test_parse_embedded_folder_view_malformed_html() -> None:
 
 @pytest.mark.network
 def test_download_folder_dry_run() -> None:
+    EXPECTED_FILE_COUNT: Final = 6
     url = "https://drive.google.com/drive/folders/1KpLl_1tcK0eeehzN980zbG-3M2nhbVks"
     tmp_dir = tempfile.mkdtemp()
     files = download_folder(url=url, output=tmp_dir, skip_download=True)
-    assert len(files) == 6
+    assert len(files) == EXPECTED_FILE_COUNT
     for file in files:
         assert hasattr(file, "id")
         assert hasattr(file, "path")

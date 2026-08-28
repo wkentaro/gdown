@@ -39,10 +39,11 @@ if not osp.exists(cache_root):
         pass
 
 
+# Boolean parameters remain positional for backward compatibility.
 def cached_download(
     url: str | None = None,
     path: str | None = None,
-    quiet: bool = False,
+    quiet: bool = False,  # noqa: FBT001, FBT002
     postprocess: Callable[[str], object] | None = None,
     hash: str | None = None,
     **kwargs: Unpack[_DownloadKwargs],
