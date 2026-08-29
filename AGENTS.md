@@ -4,9 +4,9 @@
 
 Issues are tracked in GitHub Issues (github.com/wkentaro/gdown) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
-### Triage labels
+### Issue and pull request labels
 
-Five canonical triage roles, each mapped to its own label string. See `docs/agents/triage-labels.md`.
+Canonical issue types, triage roles, and pull-request verdicts are documented in `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
