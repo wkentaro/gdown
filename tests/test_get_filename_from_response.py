@@ -6,7 +6,7 @@ from gdown.download import _get_filename_from_response
 from gdown.download import _sanitize_filename
 
 
-def _make_response(content_disposition: str) -> MagicMock:
+def _make_response(*, content_disposition: str) -> MagicMock:
     response = MagicMock()
     response.headers = {"Content-Disposition": content_disposition}
     return response
@@ -31,7 +31,7 @@ def _make_response(content_disposition: str) -> MagicMock:
         "attachment-backslash",
     ],
 )
-def test_get_filename_from_response(content_disposition: str, expected: str) -> None:
+def test_get_filename_from_response(*, content_disposition: str, expected: str) -> None:
     response = _make_response(content_disposition=content_disposition)
     assert _get_filename_from_response(response=response) == expected
 
@@ -67,5 +67,5 @@ def test_get_filename_from_response(content_disposition: str, expected: str) -> 
         "path-traversal",
     ],
 )
-def test_sanitize_filename(filename: str, expected: str) -> None:
+def test_sanitize_filename(*, filename: str, expected: str) -> None:
     assert _sanitize_filename(filename=filename) == expected

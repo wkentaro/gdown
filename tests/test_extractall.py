@@ -12,13 +12,13 @@ from gdown.extractall import extractall
 
 
 @pytest.fixture
-def _tmp_extract_dir(tmp_path: Path) -> str:
+def _tmp_extract_dir(*, tmp_path: Path) -> str:
     d = tmp_path / "extract"
     d.mkdir()
     return str(d)
 
 
-def test_zip_normal(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_zip_normal(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     zip_path = str(tmp_path / "normal.zip")
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("hello.txt", "hello world")
@@ -34,7 +34,7 @@ def test_zip_normal(tmp_path: Path, _tmp_extract_dir: str) -> None:
     ]
 
 
-def test_tar_normal(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_tar_normal(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     tar_path = str(tmp_path / "normal.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         data = b"hello world"
@@ -48,7 +48,7 @@ def test_tar_normal(tmp_path: Path, _tmp_extract_dir: str) -> None:
     assert result == [os.path.join(_tmp_extract_dir, "subdir", "nested.txt")]
 
 
-def test_zip_path_traversal(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_zip_path_traversal(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     zip_path = str(tmp_path / "evil.zip")
     with zipfile.ZipFile(zip_path, "w") as zf:
         info = zipfile.ZipInfo(filename="../evil.txt")
@@ -61,7 +61,7 @@ def test_zip_path_traversal(tmp_path: Path, _tmp_extract_dir: str) -> None:
     assert not os.path.exists(evil_path)
 
 
-def test_zip_absolute_path(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_zip_absolute_path(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     zip_path = str(tmp_path / "evil.zip")
     with zipfile.ZipFile(zip_path, "w") as zf:
         info = zipfile.ZipInfo(filename="/tmp/evil.txt")
@@ -71,7 +71,7 @@ def test_zip_absolute_path(tmp_path: Path, _tmp_extract_dir: str) -> None:
         extractall(path=zip_path, to=_tmp_extract_dir)
 
 
-def test_tar_absolute_path(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_tar_absolute_path(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     evil_path = str(tmp_path / "outside" / "evil.txt")
     tar_path = str(tmp_path / "evil.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
@@ -92,7 +92,7 @@ def test_tar_absolute_path(tmp_path: Path, _tmp_extract_dir: str) -> None:
     assert not os.path.exists(evil_path)
 
 
-def test_tar_path_traversal(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_tar_path_traversal(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     tar_path = str(tmp_path / "evil.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         data = b"malicious content"
@@ -111,7 +111,7 @@ def test_tar_path_traversal(tmp_path: Path, _tmp_extract_dir: str) -> None:
     assert not os.path.exists(evil_path)
 
 
-def test_tar_symlink_rejected(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_tar_symlink_rejected(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     tar_path = str(tmp_path / "symlink.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         info = tarfile.TarInfo(name="evil_link")
@@ -127,7 +127,7 @@ def test_tar_symlink_rejected(tmp_path: Path, _tmp_extract_dir: str) -> None:
             extractall(path=tar_path, to=_tmp_extract_dir)
 
 
-def test_tar_hardlink_rejected(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_tar_hardlink_rejected(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     tar_path = str(tmp_path / "hardlink.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         info = tarfile.TarInfo(name="evil_link")
@@ -143,7 +143,7 @@ def test_tar_hardlink_rejected(tmp_path: Path, _tmp_extract_dir: str) -> None:
             extractall(path=tar_path, to=_tmp_extract_dir)
 
 
-def test_tar_special_file_rejected(tmp_path: Path, _tmp_extract_dir: str) -> None:
+def test_tar_special_file_rejected(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     tar_path = str(tmp_path / "fifo.tar")
     with tarfile.open(name=tar_path, mode="w") as tf:
         info = tarfile.TarInfo(name="evil_fifo")
@@ -168,6 +168,7 @@ def test_tar_special_file_rejected(tmp_path: Path, _tmp_extract_dir: str) -> Non
     ],
 )
 def test_tar_compressed_normal(
+    *,
     suffix: str,
     write_mode: Literal["w:gz", "w:bz2"],
     tmp_path: Path,
@@ -186,12 +187,12 @@ def test_tar_compressed_normal(
     assert len(result) == 1
 
 
-def test_unsupported_format(tmp_path: Path) -> None:
+def test_unsupported_format(*, tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="no appropriate extractor"):
         extractall(path=str(tmp_path / "archive.rar"))
 
 
-def test_to_none_defaults_to_archive_parent(tmp_path: Path) -> None:
+def test_to_none_defaults_to_archive_parent(*, tmp_path: Path) -> None:
     zip_path = str(tmp_path / "a.zip")
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("hello.txt", "hello world")

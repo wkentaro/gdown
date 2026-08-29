@@ -24,12 +24,12 @@ class _ShowVersionAction(argparse.Action):
         namespace: argparse.Namespace,  # noqa: ARG002
         values: str | Sequence[Any] | None,  # noqa: ARG002
         option_string: str | None = None,  # noqa: ARG002
-    ) -> None:
+    ) -> None:  # noqa: GR005 -- inherited protocol accepts both call styles
         print(f"gdown {__version__} at {os.path.dirname(os.path.dirname(__file__))}")
         parser.exit()
 
 
-def file_size(argv: str | None) -> float | None:
+def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API accepts both call styles
     if argv is not None:
         m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
         if not m:

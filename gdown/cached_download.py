@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 from collections.abc import Callable
+from typing import Final
 from typing import TypedDict
 
 if sys.version_info >= (3, 12):
@@ -39,7 +40,7 @@ if not osp.exists(cache_root):
         pass
 
 
-# Boolean parameters remain positional for backward compatibility.
+# Parameters remain positional-or-keyword for backward compatibility.
 def cached_download(
     url: str | None = None,
     path: str | None = None,
@@ -47,7 +48,7 @@ def cached_download(
     postprocess: Callable[[str], object] | None = None,
     hash: str | None = None,
     **kwargs: Unpack[_DownloadKwargs],
-) -> str:
+) -> str:  # noqa: GR005 -- public API accepts both call styles
     """Cached download from URL.
 
     Parameters
@@ -137,8 +138,8 @@ def cached_download(
     return path
 
 
-def _compute_filehash(path: str, algorithm: str) -> str:
-    BLOCKSIZE = 65536
+def _compute_filehash(*, path: str, algorithm: str) -> str:
+    BLOCKSIZE: Final = 65536
 
     if algorithm not in hashlib.algorithms_guaranteed:
         raise ValueError(
@@ -153,7 +154,7 @@ def _compute_filehash(path: str, algorithm: str) -> str:
     return f"{algorithm}:{algorithm_instance.hexdigest()}"
 
 
-def _assert_filehash(path: str, hash: str) -> None:
+def _assert_filehash(*, path: str, hash: str) -> None:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "

@@ -8,13 +8,13 @@ from typing import Literal
 _TarReadMode = Literal["r", "r:gz", "r:bz2"]
 
 
-def _is_within_directory(directory: str, target: str) -> bool:
+def _is_within_directory(*, directory: str, target: str) -> bool:
     abs_directory = osp.realpath(directory)
     abs_target = osp.realpath(target)
     return abs_target.startswith(abs_directory + os.sep) or abs_target == abs_directory
 
 
-def extractall(path: str, to: str | None = None) -> list[str]:
+def extractall(path: str, to: str | None = None) -> list[str]:  # noqa: GR005 -- public API accepts both call styles
     """Extract archive file.
 
     Parameters
@@ -51,7 +51,7 @@ def extractall(path: str, to: str | None = None) -> list[str]:
     return _extractall_tar(path=path, to=to, tar_mode=tar_mode)
 
 
-def _extractall_zip(path: str, to: str) -> list[str]:
+def _extractall_zip(*, path: str, to: str) -> list[str]:
     with zipfile.ZipFile(path, "r") as f:
         names = [osp.normpath(name) for name in f.namelist()]
         for member in names:
@@ -65,7 +65,7 @@ def _extractall_zip(path: str, to: str) -> list[str]:
     return [osp.join(to, name) for name in names]
 
 
-def _extractall_tar(path: str, to: str, tar_mode: _TarReadMode) -> list[str]:
+def _extractall_tar(*, path: str, to: str, tar_mode: _TarReadMode) -> list[str]:
     with tarfile.open(name=path, mode=tar_mode) as f:
         if sys.version_info >= (3, 12):
             f.extractall(path=to, filter="data")
