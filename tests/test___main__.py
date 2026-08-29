@@ -19,9 +19,7 @@ from .conftest import GITHUB_RELEASE_URL
 here = os.path.dirname(os.path.abspath(__file__))
 
 
-def _test_cli_with_md5(
-    url_or_id: str, md5: str, options: list[str] | None = None
-) -> None:
+def _test_cli_with_md5(*, url_or_id: str, md5: str, options: list[str] | None) -> None:
     # We can't use NamedTemporaryFile because Windows doesn't allow the subprocess
     # to write the file created by the parent process.
     with tempfile.TemporaryDirectory() as d:
@@ -34,7 +32,7 @@ def _test_cli_with_md5(
         _assert_filehash(path=file_path, hash=f"md5:{md5}")
 
 
-def _test_cli_with_content(url_or_id: str, content: str) -> None:
+def _test_cli_with_content(*, url_or_id: str, content: str) -> None:
     # We can't use NamedTemporaryFile because Windows doesn't allow the subprocess
     # to write the file created by the parent process.
     with tempfile.TemporaryDirectory() as d:
@@ -49,7 +47,7 @@ def _test_cli_with_content(url_or_id: str, content: str) -> None:
 def test_download_from_url_other_than_gdrive() -> None:
     url = "https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py"
     md5 = "2a51927dde6b146ce56b4d89ebbb5268"
-    _test_cli_with_md5(url_or_id=url, md5=md5)
+    _test_cli_with_md5(url_or_id=url, md5=md5, options=None)
 
 
 @pytest.mark.network
@@ -75,7 +73,7 @@ def test_download_large_file_from_gdrive() -> None:
 
     for file_id, md5 in file_id_and_md5s:
         try:
-            _test_cli_with_md5(url_or_id=file_id, md5=md5)
+            _test_cli_with_md5(url_or_id=file_id, md5=md5, options=None)
             break
         except AssertionError as e:
             print(e, file=sys.stderr)
@@ -158,7 +156,7 @@ def test_download_slides_from_gdrive() -> None:
 
 
 def test_json_flag_outputs_json_array(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    *, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = _GoogleDriveFile(
         id="root_id",
@@ -200,7 +198,7 @@ def test_json_flag_outputs_json_array(
 
 
 def test_json_flag_preserves_subfolder_path(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    *, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = _GoogleDriveFile(
         id="root_id",
@@ -249,6 +247,7 @@ def test_json_flag_preserves_subfolder_path(
 
 
 def test_json_flag_does_not_download(
+    *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = _GoogleDriveFile(
@@ -289,7 +288,7 @@ def test_json_flag_does_not_download(
 
 
 @pytest.mark.parametrize("output", ["out.bin", "-"])
-def test_json_flag_rejects_output(output: str) -> None:
+def test_json_flag_rejects_output(*, output: str) -> None:
     cmd = [
         sys.executable,
         "-m",
@@ -304,7 +303,7 @@ def test_json_flag_rejects_output(output: str) -> None:
     assert "--json cannot be combined with -O/--output" in result.stderr
 
 
-def _fake_session_returning(headers: dict[str, str]) -> unittest.mock.Mock:
+def _fake_session_returning(*, headers: dict[str, str]) -> unittest.mock.Mock:
     response = unittest.mock.Mock()
     response.status_code = 200
     response.url = "https://drive.google.com/uc?id=child_id"
@@ -316,7 +315,7 @@ def _fake_session_returning(headers: dict[str, str]) -> unittest.mock.Mock:
 
 
 def test_json_flag_single_file_outputs_array(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    *, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(
         sys,
@@ -329,7 +328,7 @@ def test_json_flag_single_file_outputs_array(
         ],
     )
     sess = _fake_session_returning(
-        {
+        headers={
             "Content-Type": "application/octet-stream",
             "Content-Disposition": 'attachment; filename="video.webm"',
         }
@@ -350,6 +349,7 @@ def test_json_flag_single_file_outputs_array(
 
 
 def test_json_flag_single_file_without_drive_filename_raises(
+    *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -362,7 +362,7 @@ def test_json_flag_single_file_without_drive_filename_raises(
             "--json",
         ],
     )
-    sess = _fake_session_returning({"Content-Type": "application/octet-stream"})
+    sess = _fake_session_returning(headers={"Content-Type": "application/octet-stream"})
     with (
         unittest.mock.patch.object(
             sys.modules["gdown.download"], "_get_session", return_value=(sess, "")
@@ -381,7 +381,7 @@ def test_json_flag_single_file_without_drive_filename_raises(
         ("4GB", 4.0 * 1024**3),
     ],
 )
-def test_file_size_parses_units(argv: str, expected: float) -> None:
+def test_file_size_parses_units(*, argv: str, expected: float) -> None:
     assert file_size(argv) == expected
 
 

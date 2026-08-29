@@ -16,6 +16,7 @@ from collections.abc import Callable
 from http import HTTPStatus
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
+from typing import Final
 
 import bs4
 import requests
@@ -25,7 +26,7 @@ from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
-CHUNK_SIZE = 512 * 1024  # 512KB
+CHUNK_SIZE: Final = 512 * 1024  # 512KB
 home = osp.expanduser("~")
 
 GoogleDriveFileToDownload = collections.namedtuple(
@@ -33,7 +34,7 @@ GoogleDriveFileToDownload = collections.namedtuple(
 )
 
 
-def get_url_from_gdrive_confirmation(contents: str) -> str:
+def get_url_from_gdrive_confirmation(contents: str) -> str:  # noqa: GR005 -- public API accepts both call styles
     url = ""
     for line in contents.splitlines():
         m = re.search(r'href="(\/uc\?export=download[^"]+)', line)
@@ -78,7 +79,7 @@ def get_url_from_gdrive_confirmation(contents: str) -> str:
     return url
 
 
-def _sanitize_filename(filename: str) -> str:
+def _sanitize_filename(*, filename: str) -> str:
     filename = filename.replace("\x00", "")
     filename = filename.replace("/", "_").replace("\\", "_").strip()
     if filename in ("", ".", ".."):
@@ -86,7 +87,7 @@ def _sanitize_filename(filename: str) -> str:
     return filename
 
 
-def _get_filename_from_response(response: requests.Response) -> str | None:
+def _get_filename_from_response(*, response: requests.Response) -> str | None:
     content_disposition = urllib.parse.unquote(response.headers["Content-Disposition"])
 
     m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
@@ -101,6 +102,7 @@ def _get_filename_from_response(response: requests.Response) -> str | None:
 
 
 def _get_modified_time_from_response(
+    *,
     response: requests.Response,
 ) -> datetime.datetime | None:
     if "Last-Modified" not in response.headers:
@@ -114,8 +116,8 @@ def _get_modified_time_from_response(
 
 
 def _get_session(
-    proxy: str | None,
     *,
+    proxy: str | None,
     use_cookies: bool,
     user_agent: str,
 ) -> tuple[requests.Session, str]:
@@ -142,7 +144,7 @@ def _get_session(
     return sess, cookies_file
 
 
-# Boolean parameters remain positional for backward compatibility.
+# Parameters remain positional-or-keyword for backward compatibility.
 def download(
     url: str | None = None,
     output: str | BinaryIO | None = None,
@@ -158,7 +160,7 @@ def download(
     log_messages: dict[str, str] | None = None,
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
-) -> str | BinaryIO | GoogleDriveFileToDownload:
+) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
     Parameters

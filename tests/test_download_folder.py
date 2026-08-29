@@ -16,7 +16,7 @@ here = osp.dirname(osp.abspath(__file__))
 
 
 @pytest.mark.network
-def test_download_folder_google_slides_without_extension(tmp_path: Path) -> None:
+def test_download_folder_google_slides_without_extension(*, tmp_path: Path) -> None:
     # The folder contains a Google Slides file named "gdown" with no extension in
     # Google Drive. Previously, download_folder() passed this extensionless name as
     # the output path to download(), which saved the file without .pptx extension.
@@ -29,9 +29,7 @@ def test_download_folder_google_slides_without_extension(tmp_path: Path) -> None
     assert files[0].endswith(".pptx")
 
 
-def _make_folder_root(
-    name: str = "folder", child_name: str = "file.txt"
-) -> _GoogleDriveFile:
+def _make_folder_root(*, name: str, child_name: str) -> _GoogleDriveFile:
     return _GoogleDriveFile(
         id="root_id",
         name=name,
@@ -46,7 +44,7 @@ def _make_folder_root(
     )
 
 
-def test_root_folder_name_path_traversal_is_sanitized(tmp_path: Path) -> None:
+def test_root_folder_name_path_traversal_is_sanitized(*, tmp_path: Path) -> None:
     root = _make_folder_root(name="../../evil", child_name="safe_file.txt")
     output_dir = str(tmp_path) + osp.sep
 
@@ -68,8 +66,8 @@ def test_root_folder_name_path_traversal_is_sanitized(tmp_path: Path) -> None:
         assert resolved.startswith(osp.realpath(output_dir))
 
 
-def test_download_folder_propagates_download_error(tmp_path: Path) -> None:
-    root = _make_folder_root()
+def test_download_folder_propagates_download_error(*, tmp_path: Path) -> None:
+    root = _make_folder_root(name="folder", child_name="file.txt")
 
     with (
         unittest.mock.patch.object(
@@ -124,7 +122,9 @@ def test_parse_embedded_folder_view() -> None:
     mock_sess = unittest.mock.Mock()
     mock_sess.get.return_value = mock_response
 
-    result = _parse_embedded_folder_view(sess=mock_sess, folder_id="test_folder_id")
+    result = _parse_embedded_folder_view(
+        sess=mock_sess, folder_id="test_folder_id", verify=True
+    )
 
     assert result is not None
     folder_name, children = result
@@ -156,7 +156,9 @@ def test_parse_embedded_folder_view_http_error() -> None:
     mock_sess.get.return_value = mock_response
 
     with pytest.raises(DownloadError, match="status code 404"):
-        _parse_embedded_folder_view(sess=mock_sess, folder_id="nonexistent")
+        _parse_embedded_folder_view(
+            sess=mock_sess, folder_id="nonexistent", verify=True
+        )
 
 
 def test_parse_embedded_folder_view_malformed_html() -> None:
@@ -168,7 +170,7 @@ def test_parse_embedded_folder_view_malformed_html() -> None:
     mock_sess.get.return_value = mock_response
 
     with pytest.raises(DownloadError, match="page structure may have changed"):
-        _parse_embedded_folder_view(sess=mock_sess, folder_id="test")
+        _parse_embedded_folder_view(sess=mock_sess, folder_id="test", verify=True)
 
 
 @pytest.mark.network

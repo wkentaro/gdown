@@ -6,7 +6,7 @@ import pytest
 import gdown
 
 
-def _cached_download(hash: str) -> None:
+def _cached_download(*, hash: str) -> None:
     url = "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
     fd, path = tempfile.mkstemp()
     os.close(fd)

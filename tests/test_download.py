@@ -25,7 +25,7 @@ class DownloadEnv(NamedTuple):
 
 
 @pytest.fixture()
-def download_env(tmp_path: Path) -> DownloadEnv:
+def download_env(*, tmp_path: Path) -> DownloadEnv:
     return DownloadEnv(
         file_path=str(tmp_path / "file"),
         url=DOWNLOAD_URL,
@@ -34,6 +34,7 @@ def download_env(tmp_path: Path) -> DownloadEnv:
 
 @pytest.fixture()
 def download_session(
+    *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> unittest.mock.Mock:
     response = unittest.mock.Mock()
@@ -56,7 +57,7 @@ def download_session(
 
 
 @pytest.fixture()
-def opened_files(monkeypatch: pytest.MonkeyPatch) -> list[BinaryIO]:
+def opened_files(*, monkeypatch: pytest.MonkeyPatch) -> list[BinaryIO]:
     files: list[BinaryIO] = []
 
     def open_file(path: str, mode: Literal["ab"]) -> BinaryIO:
@@ -74,7 +75,7 @@ def opened_files(monkeypatch: pytest.MonkeyPatch) -> list[BinaryIO]:
 
 
 @pytest.mark.network
-def test_download(download_env: DownloadEnv) -> None:
+def test_download(*, download_env: DownloadEnv) -> None:
     # Usage before https://github.com/wkentaro/gdown/pull/32
     assert (
         download(url=download_env.url, output=download_env.file_path, quiet=False)
@@ -83,7 +84,7 @@ def test_download(download_env: DownloadEnv) -> None:
 
 
 @pytest.mark.network
-def test_download_progress(download_env: DownloadEnv) -> None:
+def test_download_progress(*, download_env: DownloadEnv) -> None:
     reported: list[tuple[int, int | None]] = []
     download(
         url=download_env.url,
@@ -103,6 +104,7 @@ def test_download_progress(download_env: DownloadEnv) -> None:
 
 
 def test_download_closes_resources_when_progress_raises(
+    *,
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     opened_files: list[BinaryIO],
@@ -131,6 +133,7 @@ def test_download_closes_resources_when_progress_raises(
 
 
 def test_download_closes_resources_when_resume_request_raises(
+    *,
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     opened_files: list[BinaryIO],
@@ -157,6 +160,7 @@ def test_download_closes_resources_when_resume_request_raises(
 
 
 def test_download_keeps_caller_output_open_when_progress_raises(
+    *,
     download_session: unittest.mock.Mock,
 ) -> None:
     output = io.BytesIO()
@@ -176,6 +180,7 @@ def test_download_keeps_caller_output_open_when_progress_raises(
 
 
 def test_download_attempts_all_cleanup_when_closers_raise(
+    *,
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     monkeypatch: pytest.MonkeyPatch,
@@ -205,6 +210,7 @@ def test_download_attempts_all_cleanup_when_closers_raise(
 
 
 def test_download_propagates_pbar_close_error_and_keeps_part(
+    *,
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     opened_files: list[BinaryIO],
@@ -234,7 +240,7 @@ def test_download_propagates_pbar_close_error_and_keeps_part(
 
 
 @pytest.mark.network
-def test_download_output_dir_with_trailing_slash(tmp_path: Path) -> None:
+def test_download_output_dir_with_trailing_slash(*, tmp_path: Path) -> None:
     output_dir = str(tmp_path / "subdir") + "/"
     result = download(url=DOWNLOAD_URL, output=output_dir, quiet=True)
     assert isinstance(result, str)
@@ -243,7 +249,7 @@ def test_download_output_dir_with_trailing_slash(tmp_path: Path) -> None:
 
 
 @pytest.mark.network
-def test_download_output_dir_with_trailing_backslash(tmp_path: Path) -> None:
+def test_download_output_dir_with_trailing_backslash(*, tmp_path: Path) -> None:
     output_dir = str(tmp_path / "subdir") + "\\"
     result = download(url=DOWNLOAD_URL, output=output_dir, quiet=True)
     assert isinstance(result, str)
@@ -253,7 +259,7 @@ def test_download_output_dir_with_trailing_backslash(tmp_path: Path) -> None:
 
 
 @pytest.mark.network
-def test_download_output_existing_dir(tmp_path: Path) -> None:
+def test_download_output_existing_dir(*, tmp_path: Path) -> None:
     output_dir = tmp_path / "existing"
     output_dir.mkdir()
     result = download(url=DOWNLOAD_URL, output=str(output_dir), quiet=True)
@@ -264,7 +270,7 @@ def test_download_output_existing_dir(tmp_path: Path) -> None:
 
 @pytest.mark.network
 def test_download_resume_skips_existing_file(
-    download_env: DownloadEnv, capsys: pytest.CaptureFixture[str]
+    *, download_env: DownloadEnv, capsys: pytest.CaptureFixture[str]
 ) -> None:
     download(url=download_env.url, output=download_env.file_path, quiet=True)
     mtime_before = os.path.getmtime(download_env.file_path)
@@ -281,7 +287,7 @@ def test_download_resume_skips_existing_file(
 
 
 @pytest.mark.network
-def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
+def test_download_resume_skips_existing_file_in_dir(*, tmp_path: Path) -> None:
     output_dir = tmp_path / "subdir"
     output_dir.mkdir()
     result = download(url=DOWNLOAD_URL, output=str(output_dir), quiet=True)
@@ -304,7 +310,7 @@ def test_download_resume_skips_existing_file_in_dir(tmp_path: Path) -> None:
     ],
 )
 def test_download_rewrites_google_drive_share_link(
-    tmp_path: Path, share_url: str
+    *, tmp_path: Path, share_url: str
 ) -> None:
     expected_url = "https://drive.google.com/uc?id=0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
 
@@ -332,7 +338,7 @@ def test_download_rewrites_google_drive_share_link(
         assert actual_url == expected_url
 
 
-def test_download_skip_download_returns_file_object(tmp_path: Path) -> None:
+def test_download_skip_download_returns_file_object(*, tmp_path: Path) -> None:
     file_id = "0B9P1L--7Wd2vU3VUVlFnbTgtS2c"
 
     mock_response = unittest.mock.Mock()
@@ -365,7 +371,7 @@ def test_download_skip_download_returns_file_object(tmp_path: Path) -> None:
 
 
 @pytest.mark.network
-def test_download_google_slides_without_extension(tmp_path: Path) -> None:
+def test_download_google_slides_without_extension(*, tmp_path: Path) -> None:
     # The file "gdown" in Google Drive is a Google Slides file with no extension
     # in its filename. When downloading directly, download() resolves the correct
     # .pptx extension from the Content-Disposition header.
