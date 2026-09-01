@@ -434,11 +434,12 @@ def download(
                 pbar.update(len(chunk))
             if progress is not None:
                 progress(downloaded + start_size, total)
-            if speed is not None:
-                elapsed_time_expected = downloaded / speed
-                elapsed_time = time.time() - t_start
-                if elapsed_time < elapsed_time_expected:
-                    time.sleep(elapsed_time_expected - elapsed_time)
+            if speed is None:
+                continue
+            elapsed_time_expected = downloaded / speed
+            elapsed_time = time.time() - t_start
+            if elapsed_time < elapsed_time_expected:
+                time.sleep(elapsed_time_expected - elapsed_time)
 
     if tmp_file is not None:
         assert isinstance(output, str)

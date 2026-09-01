@@ -30,21 +30,22 @@ class _ShowVersionAction(argparse.Action):
 
 
 def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API accepts both call styles
-    if argv is not None:
-        m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
-        if not m:
-            raise TypeError
-        size, unit = m.groups()
-        size = float(size)
-        if unit == "KB":
-            size *= 1024
-        elif unit == "MB":
-            size *= 1024**2
-        elif unit == "GB":
-            size *= 1024**3
-        elif unit == "B":
-            pass
-        return size
+    if argv is None:
+        return None
+    m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
+    if not m:
+        raise TypeError
+    size, unit = m.groups()
+    size = float(size)
+    if unit == "KB":
+        size *= 1024
+    elif unit == "MB":
+        size *= 1024**2
+    elif unit == "GB":
+        size *= 1024**3
+    elif unit == "B":
+        pass
+    return size
 
 
 def main() -> None:
