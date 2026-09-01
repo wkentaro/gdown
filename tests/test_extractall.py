@@ -84,10 +84,11 @@ def test_tar_absolute_path(*, tmp_path: Path, _tmp_extract_dir: str) -> None:
     # Python 3.12+ Unix: data filter strips the leading '/' and extracts safely.
     # Python 3.12+ Windows: data filter raises AbsolutePathError (TarError)
     #   because drive-letter paths (C:\...) remain absolute after stripping.
-    try:
+    if sys.version_info >= (3, 12) and os.name != "nt":
         extractall(path=tar_path, to=_tmp_extract_dir)
-    except (ValueError, tarfile.TarError):
-        pass
+    else:
+        with pytest.raises((ValueError, tarfile.TarError)):
+            extractall(path=tar_path, to=_tmp_extract_dir)
 
     assert not os.path.exists(evil_path)
 

@@ -41,7 +41,7 @@ Homepage = "https://github.com/wkentaro/gdown"
 
 [dependency-groups]
 dev = [
-  "gruff>=0.0.4",
+  "gruff>=0.0.5",
   "mdformat>=0.7.17",
   "pytest>=8.3.5",
   "pytest-xdist>=3.6.1",
@@ -63,7 +63,7 @@ fragments = [{ path = "README.md" }]
 markers = ["network: tests that require network access (Google Drive, GitHub)"]
 
 [tool.gruff.lint]
-select = ["GR001", "GR002", "GR003", "GR004", "GR005", "GR006"]
+select = ["GR"]
 
 [tool.ruff.lint]
 extend-select = [
