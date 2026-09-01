@@ -128,11 +128,11 @@ def download_folder(
     """
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
-    if id is not None:
-        folder_id = id
-    else:
+    if id is None:
         assert url is not None
         folder_id = _extract_folder_id(url=url)
+    else:
+        folder_id = id
     if user_agent is None:
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501

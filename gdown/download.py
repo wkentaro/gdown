@@ -395,11 +395,11 @@ def download(
         print(log_messages.get("start", "Downloading...\n"), file=sys.stderr, end="")
         if resume:
             print("Resume:", tmp_file, file=sys.stderr)
-        if url_origin != url:
+        if url_origin == url:
+            print("From:", url, file=sys.stderr)
+        else:
             print("From (original):", url_origin, file=sys.stderr)
             print("From (redirected):", url, file=sys.stderr)
-        else:
-            print("From:", url, file=sys.stderr)
         print(
             log_messages.get(
                 "output",
