@@ -41,7 +41,7 @@ Homepage = "https://github.com/wkentaro/gdown"
 
 [dependency-groups]
 dev = [
-  "gruff>=0.0.5",
+  "gruff>=0.0.6",
   "mdformat>=0.7.17",
   "pytest>=8.3.5",
   "pytest-xdist>=3.6.1",
