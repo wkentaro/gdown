@@ -417,6 +417,7 @@ def test_download_discards_file_when_hash_mismatches(
     download_session: unittest.mock.Mock,  # noqa: ARG001
 ) -> None:
     output = tmp_path / "output"
+    output.write_bytes(b"stale")
 
     with pytest.raises(AssertionError, match="File hash doesn't match"):
         download(
@@ -459,6 +460,7 @@ def test_download_rejects_unsupported_hash_algorithm(
         )
 
     assert not output.exists()
+    assert list(tmp_path.glob("output*.part")) == []
 
 
 def test_download_rejects_hash_with_file_object_output(
@@ -491,6 +493,10 @@ def test_download_verifies_file_skipped_by_resume(
             resume=True,
             hash=DATA_MD5,
         )
+
+    assert not output.exists()
+    download_session.get.return_value.close.assert_called_once_with()
+    download_session.close.assert_called_once_with()
 
 
 def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(

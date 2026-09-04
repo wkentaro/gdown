@@ -518,11 +518,19 @@ def download(
 
     if isinstance(output, str):
         if resume and os.path.isfile(output):
-            if hash:
-                _assert_filehash(path=output, hash=hash)
-            if not quiet:
-                print(f"Skipping already downloaded file {output}", file=sys.stderr)
-            return output
+            try:
+                if hash:
+                    try:
+                        _assert_filehash(path=output, hash=hash)
+                    except AssertionError:
+                        os.remove(output)
+                        raise
+                if not quiet:
+                    print(f"Skipping already downloaded file {output}", file=sys.stderr)
+                return output
+            finally:
+                res.close()
+                sess.close()
 
         existing_tmp_files = []
         for file in os.listdir(osp.dirname(output) or "."):
@@ -630,6 +638,14 @@ def download(
             try:
                 _assert_filehash(path=tmp_file, hash=hash)
             except AssertionError:
+                os.remove(tmp_file)
+                if os.path.isfile(output):
+                    try:
+                        _assert_filehash(path=output, hash=hash)
+                    except AssertionError:
+                        os.remove(output)
+                raise
+            except ValueError:
                 os.remove(tmp_file)
                 raise
         shutil.move(tmp_file, output)
