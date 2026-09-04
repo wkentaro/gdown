@@ -1,20 +1,27 @@
 import hashlib
+import http.cookiejar
 import json
 import os
+import pathlib
 import subprocess
 import sys
 import tempfile
 import unittest.mock
+from collections.abc import Callable
+from typing import Final
 
 import pytest
 
+from gdown.__main__ import BROWSERS
 from gdown.__main__ import file_size
 from gdown.__main__ import main
+from gdown._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
 from gdown.cached_download import _assert_filehash
 from gdown.cached_download import _compute_filehash
 from gdown.download_folder import _GoogleDriveFile
 
 from .conftest import GITHUB_RELEASE_URL
+from .conftest import build_google_cookie
 
 here = os.path.dirname(os.path.abspath(__file__))
 
@@ -392,3 +399,137 @@ def test_file_size_none_returns_none() -> None:
 def test_file_size_without_unit_raises_type_error() -> None:
     with pytest.raises(TypeError):
         file_size("100")
+
+
+EXTRACTOR: Final = "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser"
+
+
+def _fake_extractor(*, names: list[str]) -> Callable[..., list[http.cookiejar.Cookie]]:
+    def fake_extractor(
+        browser_name: str, *_args: object, **_kwargs: object
+    ) -> list[http.cookiejar.Cookie]:
+        assert browser_name in BROWSERS
+        # Non-Google cookies must be filtered out before saving.
+        return [build_google_cookie(name=name) for name in names] + [
+            build_google_cookie(name="OTHER", domain="example.com")
+        ]
+
+    return fake_extractor
+
+
+def test_cookies_from_browser_imports_into_cookies_file(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cookies_file = tmp_path / "cookies.txt"
+    monkeypatch.setattr(EXTRACTOR, _fake_extractor(names=["SID"]))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "gdown",
+            "https://drive.google.com/uc?id=dummy",
+            "--cookies-from-browser",
+            "brave",
+            "--cookies",
+            str(cookies_file),
+        ],
+    )
+    with unittest.mock.patch.object(
+        sys.modules["gdown.__main__"], "download"
+    ) as download:
+        main()
+
+    assert download.call_args.kwargs["cookies_file"] == str(cookies_file)
+    assert "\tSID\tsecret" in cookies_file.read_text()
+    assert "OTHER" not in cookies_file.read_text()
+    assert (
+        f"Saved 1 Google cookie from brave to {cookies_file}" in capsys.readouterr().err
+    )
+
+
+def test_cookies_from_browser_fails_when_signed_out(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(EXTRACTOR, _fake_extractor(names=[]))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "gdown",
+            "dummy",
+            "--cookies-from-browser",
+            "firefox",
+            "--cookies",
+            str(tmp_path / "cookies.txt"),
+        ],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+    assert excinfo.value.code == 1
+    assert "No Google cookies found in firefox" in capsys.readouterr().err
+    assert not (tmp_path / "cookies.txt").exists()
+
+
+def test_cookies_from_browser_reports_import_failure(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def broken_extractor(*_args: object, **_kwargs: object) -> None:
+        raise OSError("keyring locked")
+
+    monkeypatch.setattr(EXTRACTOR, broken_extractor)
+    cookies_file = tmp_path / "cookies.txt"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "gdown",
+            "dummy",
+            "--cookies-from-browser",
+            "chrome",
+            "--cookies",
+            str(cookies_file),
+        ],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert f"Failed to import cookies from chrome into {cookies_file}" in err
+    assert "keyring locked" in err
+
+
+@pytest.mark.parametrize(
+    "conflicting", [["--cookies", "cookies.txt"], ["--cookies-from-browser", "firefox"]]
+)
+def test_no_cookies_rejects_cookie_sources(
+    *,
+    conflicting: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["gdown", "dummy", "--no-cookies", *conflicting])
+    with pytest.raises(SystemExit):
+        main()
+    assert "--no-cookies cannot be combined" in capsys.readouterr().err
+
+
+def test_empty_cookies_path_is_rejected(
+    *, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["gdown", "dummy", "--cookies", ""])
+    with pytest.raises(SystemExit):
+        main()
+    assert "--cookies needs a file path" in capsys.readouterr().err
+
+
+def test_browser_choices_match_vendored_extractor() -> None:
+    assert set(BROWSERS) == set(SUPPORTED_BROWSERS)

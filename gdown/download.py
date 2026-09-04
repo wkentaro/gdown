@@ -13,7 +13,9 @@ import time
 import urllib.parse
 import warnings
 from collections.abc import Callable
+from collections.abc import Iterable
 from http import HTTPStatus
+from http.cookiejar import Cookie
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
 from typing import Final
@@ -22,12 +24,14 @@ import bs4
 import requests
 import tqdm
 
+from ._vendor._ytdlp_shim import _YDLLogger
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
 
 CHUNK_SIZE: Final = 512 * 1024  # 512KB
 home = osp.expanduser("~")
+DEFAULT_COOKIES_FILE: Final = osp.join(home, ".cache/gdown/cookies.txt")
 
 GoogleDriveFileToDownload = collections.namedtuple(
     "GoogleDriveFileToDownload", ("id", "path", "local_path")
@@ -140,11 +144,80 @@ def _get_modified_time_from_response(
     return email.utils.parsedate_to_datetime(raw)
 
 
+def _load_cookies(*, cookies_file: str) -> MozillaCookieJar:
+    cookies_file = osp.expanduser(cookies_file)
+    cookie_jar = MozillaCookieJar(cookies_file)
+    if not osp.exists(cookies_file):
+        return cookie_jar
+    try:
+        # Google's sign-in state partly lives in session cookies, which the
+        # Netscape format drops unless told to keep them.
+        cookie_jar.load(ignore_discard=True, ignore_expires=True)
+    except (OSError, UnicodeDecodeError) as e:
+        warnings.warn(
+            f"Replacing unreadable cookies file {cookies_file}: {e}", stacklevel=2
+        )
+        return MozillaCookieJar(cookies_file)
+    for cookie in cookie_jar:
+        # Browser extensions export session cookies with expiry 0, which the
+        # standard library would otherwise treat as already expired.
+        if cookie.expires == 0:
+            cookie.expires = None
+            cookie.discard = True
+    cookie_jar.clear_expired_cookies()
+    return cookie_jar
+
+
+def _save_cookies(*, cookies: Iterable[Cookie], cookies_file: str) -> None:
+    cookies_file = osp.expanduser(cookies_file)
+    cookie_jar = MozillaCookieJar(cookies_file)
+    for cookie in cookies:
+        cookie_jar.set_cookie(cookie)
+    os.makedirs(osp.dirname(cookies_file) or ".", exist_ok=True)
+    # The file can hold a signed-in Google session, so make it owner-only
+    # before any byte is written. The directory is left alone: for a bare
+    # filename it is the working directory.
+    os.close(os.open(cookies_file, flags=os.O_WRONLY | os.O_CREAT, mode=0o600))
+    os.chmod(cookies_file, 0o600)
+    cookie_jar.save(ignore_discard=True)
+
+
+class _CookieExtractionLogger(_YDLLogger):
+    # The vendored extractor reports keyring and decryption trouble here.
+    def warning(self, message: str, /, *, once: bool = False) -> None:  # noqa: ARG002
+        print(f"warning: {message}", file=sys.stderr)
+
+    def error(self, message: str, /, *, is_error: bool = True) -> None:  # noqa: ARG002
+        print(f"error: {message}", file=sys.stderr)
+
+
+def _import_cookies_from_browser(*, browser: str, cookies_file: str) -> int:
+    # Imported here so the extractor's probing code loads only when asked for.
+    from ._vendor._ytdlp_cookies import extract_cookies_from_browser  # noqa: PLC0415
+
+    browser_cookies = [
+        cookie
+        for cookie in extract_cookies_from_browser(
+            browser, logger=_CookieExtractionLogger()
+        )
+        if cookie.domain == "google.com" or cookie.domain.endswith(".google.com")
+    ]
+    if not browser_cookies:
+        # Nothing to add, so leave the file system untouched.
+        return 0
+    cookie_jar = _load_cookies(cookies_file=cookies_file)
+    for cookie in browser_cookies:
+        cookie_jar.set_cookie(cookie)
+    _save_cookies(cookies=cookie_jar, cookies_file=cookies_file)
+    return len(browser_cookies)
+
+
 def _get_session(
     *,
     proxy: str | None,
     use_cookies: bool,
     user_agent: str,
+    cookies_file: str | None,
 ) -> tuple[requests.Session, str]:
     sess = requests.session()
 
@@ -154,17 +227,9 @@ def _get_session(
         sess.proxies = {"http": proxy, "https": proxy}
         print("Using proxy:", proxy, file=sys.stderr)
 
-    cookies_file = osp.join(home, ".cache/gdown/cookies.txt")
-    if use_cookies and osp.exists(cookies_file):
-        cookie_jar = MozillaCookieJar(cookies_file)
-        try:
-            cookie_jar.load()
-            sess.cookies.update(cookie_jar)
-        except OSError as e:
-            warnings.warn(
-                f"Failed to load cookies from {cookies_file}: {e}",
-                stacklevel=2,
-            )
+    cookies_file = osp.expanduser(cookies_file or DEFAULT_COOKIES_FILE)
+    if use_cookies:
+        sess.cookies.update(_load_cookies(cookies_file=cookies_file))
 
     return sess, cookies_file
 
@@ -185,6 +250,7 @@ def download(
     log_messages: dict[str, str] | None = None,
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
+    cookies_file: str | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -231,6 +297,10 @@ def download(
     skip_download:
         Resolve the Google Drive filename without downloading the file body.
         Default is False.
+    cookies_file:
+        Netscape cookies file to load before the request and save after
+        every Google Drive response. Default is ~/.cache/gdown/cookies.txt.
+        Ignored when use_cookies is False.
 
     Returns
     -------
@@ -268,6 +338,7 @@ def download(
         proxy=proxy,
         use_cookies=use_cookies,
         user_agent=user_agent,
+        cookies_file=cookies_file,
     )
 
     gdrive_file_id, is_gdrive_download_link = parse_url(url=url)
@@ -331,10 +402,13 @@ def download(
             continue
 
         if use_cookies:
-            cookie_jar = MozillaCookieJar(cookies_file)
-            for cookie in sess.cookies:
-                cookie_jar.set_cookie(cookie)
-            cookie_jar.save()
+            try:
+                _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
+            except OSError as e:
+                # Persisting cookies must never cost a download that succeeded.
+                warnings.warn(
+                    f"Failed to save cookies to {cookies_file}: {e}", stacklevel=2
+                )
 
         if "Content-Disposition" in res.headers:
             # This is the file

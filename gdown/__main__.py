@@ -6,14 +6,20 @@ import sys
 import textwrap
 from collections.abc import Sequence
 from typing import Any
+from typing import Final
 
 import requests
 
 from . import __version__
+from ._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
+from .download import DEFAULT_COOKIES_FILE
 from .download import GoogleDriveFileToDownload
+from .download import _import_cookies_from_browser
 from .download import download
 from .download_folder import download_folder
 from .exceptions import DownloadError
+
+BROWSERS: Final = tuple(sorted(SUPPORTED_BROWSERS))
 
 
 class _ShowVersionAction(argparse.Action):
@@ -83,9 +89,31 @@ def main() -> None:
         help="download speed limit in second (e.g., '10MB' -> 10MB/s)",
     )
     parser.add_argument(
+        "--cookies",
+        metavar="FILE",
+        # Absent from the namespace unless given, which is how the conflict
+        # check below tells "not passed" from "passed"; it also keeps the
+        # formatter from printing "(default: None)" after the real default.
+        default=argparse.SUPPRESS,
+        help=(
+            "Netscape cookies file to read cookies from and save them to "
+            "(default: ~/.cache/gdown/cookies.txt)"
+        ),
+    )
+    parser.add_argument(
+        "--cookies-from-browser",
+        metavar="BROWSER",
+        choices=BROWSERS,
+        help=(
+            "copy your Google cookies from this browser into the cookies file, "
+            "so this and later runs download as your signed-in account. "
+            f"One of: {', '.join(BROWSERS)}"
+        ),
+    )
+    parser.add_argument(
         "--no-cookies",
         action="store_true",
-        help="don't use cookies in ~/.cache/gdown/cookies.txt",
+        help="don't read or save cookies",
     )
     parser.add_argument(
         "--no-check-certificate",
@@ -130,6 +158,48 @@ def main() -> None:
     if args.json and args.output is not None:
         parser.error("--json cannot be combined with -O/--output")
 
+    if args.no_cookies and ("cookies" in args or args.cookies_from_browser):
+        parser.error(
+            "--no-cookies cannot be combined with --cookies or --cookies-from-browser"
+        )
+    if "cookies" in args and not args.cookies:
+        parser.error("--cookies needs a file path")
+    cookies_file = os.path.expanduser(getattr(args, "cookies", DEFAULT_COOKIES_FILE))
+
+    browser = args.cookies_from_browser
+    if browser:
+        try:
+            n_cookies = _import_cookies_from_browser(
+                browser=browser, cookies_file=cookies_file
+            )
+        except Exception as e:
+            hint = ""
+            if sys.platform == "win32" and browser != "firefox":
+                hint = (
+                    "\n\nChrome 127+ on Windows blocks other programs from "
+                    "reading its cookies. Try --cookies-from-browser firefox."
+                )
+            reason = textwrap.indent(str(e), prefix="\t")
+            print(
+                f"Failed to import cookies from {browser} into {cookies_file}:"
+                f"\n\n{reason}{hint}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if n_cookies == 0:
+            print(
+                f"No Google cookies found in {browser}. Sign in to Google in that "
+                "browser, or pick another one with --cookies-from-browser.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if not args.quiet:
+            noun = "cookie" if n_cookies == 1 else "cookies"
+            print(
+                f"Saved {n_cookies} Google {noun} from {browser} to {cookies_file}",
+                file=sys.stderr,
+            )
+
     if args.json and not args.quiet:
         print(
             "warning: `--json` is in beta and its output format may change in a "
@@ -163,6 +233,7 @@ def main() -> None:
                 user_agent=args.user_agent,
                 resume=args.continue_,
                 skip_download=args.json,
+                cookies_file=cookies_file,
             )
         else:
             result = download(
@@ -178,6 +249,7 @@ def main() -> None:
                 format=args.format,
                 user_agent=args.user_agent,
                 skip_download=args.json,
+                cookies_file=cookies_file,
             )
 
         if args.json:
