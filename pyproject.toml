@@ -47,9 +47,25 @@ dev = [
   "pytest-xdist>=3.6.1",
   "ruff>=0.15.10",
   "taplo>=0.9.3",
+  "towncrier>=24.8",
   "ty>=0.0.29",
   "typos>=1.45.0",
   "yamlfix>=1.16.1",
+]
+
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+title_format = "## {version} - {project_date}"
+issue_format = "[#{issue}](https://github.com/wkentaro/gdown/pull/{issue})"
+ignore = ["README.md"]
+type = [
+  { directory = "added", name = "Added", showcontent = true },
+  { directory = "changed", name = "Changed", showcontent = true },
+  { directory = "deprecated", name = "Deprecated", showcontent = true },
+  { directory = "removed", name = "Removed", showcontent = true },
+  { directory = "fixed", name = "Fixed", showcontent = true },
+  { directory = "security", name = "Security", showcontent = true },
 ]
 
 [tool.hatch.version]

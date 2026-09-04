@@ -1,16 +1,29 @@
 ---
-name: Publish to PyPI
+name: Release
 on:
   push:
     tags: [v*]
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |-
+          version=${GITHUB_REF_NAME#v}
+          awk -v heading="## $version " 'index($0, heading) == 1 {found = 1; next}
+            found && /^## / {exit} found' CHANGELOG.md > notes.md
+          test -s notes.md
+          case $version in *[a-z]*) prerelease=--prerelease ;; esac
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md $prerelease
