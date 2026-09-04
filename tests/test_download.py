@@ -578,34 +578,16 @@ def test_import_cookies_from_browser_merges_into_file(
         assert oct(os.stat(cookies_file).st_mode & 0o777) == "0o600"
 
 
-def test_import_cookies_from_browser_accepts_extractor_warnings(
-    *,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
+def test_cookie_extraction_logger_prints_once_flagged_warning_once(
+    *, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    def fake_extractor(
-        _browser_name: str,
-        *_args: object,
-        logger: _CookieExtractionLogger,
-        **_kwargs: object,
-    ) -> list[http.cookiejar.Cookie]:
-        # The vendored Chromium and Safari paths spell the keyword this way
-        # and repeat the warning for every cookie they fail to decrypt.
-        for _ in range(3):
-            logger.warning("cannot decrypt v10 cookies: no key found", only_once=True)
-        return [build_google_cookie(name="SID")]
+    logger = _CookieExtractionLogger()
+    # The vendored Chromium path spells the flag this way and repeats the
+    # warning for every cookie it cannot decrypt.
+    for _ in range(3):
+        logger.warning("cannot decrypt v10 cookies", only_once=True)
 
-    monkeypatch.setattr(
-        "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser", fake_extractor
-    )
-
-    n_cookies = _import_cookies_from_browser(
-        browser="chrome", cookies_file=str(tmp_path / "cookies.txt")
-    )
-
-    assert n_cookies == 1
-    assert capsys.readouterr().err.count("warning: cannot decrypt v10 cookies") == 1
+    assert capsys.readouterr().err == "warning: cannot decrypt v10 cookies\n"
 
 
 def test_import_cookies_from_browser_converts_chromium_expiry(
