@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## 6.1.1 - 2026-09-04
+
+### Fixed
+
+- Fixed downloads leaking HTTP sessions, progress bars, or output files when an exception interrupted a file or folder download. ([#478](https://github.com/wkentaro/gdown/pull/478))
+- Reject incomplete response bodies instead of saving them as completed downloads. ([#481](https://github.com/wkentaro/gdown/pull/481))
+- Normalized archive member paths returned by `extractall`, so ZIP and tar results use native path separators consistently. ([#487](https://github.com/wkentaro/gdown/pull/487))
+
 ## 6.1.0 - 2026-05-30
 
 ### Added
