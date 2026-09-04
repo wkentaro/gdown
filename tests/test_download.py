@@ -1,6 +1,8 @@
+import http.server
 import io
 import os
 import sys
+import threading
 import unittest.mock
 from pathlib import Path
 from typing import BinaryIO
@@ -11,8 +13,12 @@ from typing import NamedTuple
 import pytest
 import requests
 
+from gdown.download import CHUNK_SIZE
 from gdown.download import GoogleDriveFileToDownload
 from gdown.download import download
+from gdown.exceptions import DownloadError
+
+from .conftest import build_response
 
 DOWNLOAD_URL: Final[str] = (
     "https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py"
@@ -37,14 +43,7 @@ def download_session(
     *,
     monkeypatch: pytest.MonkeyPatch,
 ) -> unittest.mock.Mock:
-    response = unittest.mock.Mock()
-    response.status_code = 200
-    response.headers = {
-        "Content-Type": "application/octet-stream",
-        "Content-Length": "4",
-    }
-    response.iter_content.return_value = [b"data"]
-    response.url = "https://example.com/file"
+    response = build_response(headers={"Content-Length": "4"}, chunks=[b"data"])
 
     session = unittest.mock.Mock()
     session.get.return_value = response
@@ -382,3 +381,149 @@ def test_download_google_slides_without_extension(*, tmp_path: Path) -> None:
     )
     assert isinstance(output, str)
     assert output.endswith(".pptx")
+
+
+def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = tmp_path / "output"
+    download_session.get.return_value = build_response(
+        headers={"Content-Length": "10"}, chunks=[b"data"]
+    )
+
+    with pytest.raises(DownloadError, match="received 4 bytes.*announced 10 bytes"):
+        download(url="https://example.com/file", output=str(output), quiet=True)
+
+    assert not output.exists()
+    (part,) = tmp_path.glob("output*.part")
+    assert part.read_bytes() == b"data"
+
+    download_session.get.side_effect = [
+        download_session.get.return_value,
+        build_response(headers={"Content-Length": "6"}, chunks=[b"123456"]),
+    ]
+    download(
+        url="https://example.com/file", output=str(output), quiet=True, resume=True
+    )
+
+    assert output.read_bytes() == b"data123456"
+    assert not part.exists()
+
+
+def test_download_counts_resumed_bytes_toward_announced_size(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = tmp_path / "output"
+    part = tmp_path / "output.partial.part"
+    part.write_bytes(b"partial")
+    download_session.get.side_effect = [
+        build_response(headers={"Content-Length": "11"}, chunks=[b"partial"]),
+        build_response(headers={"Content-Length": "4"}, chunks=[b"da"]),
+    ]
+
+    with pytest.raises(DownloadError, match="received 9 bytes.*announced 11 bytes"):
+        download(
+            url="https://example.com/file", output=str(output), quiet=True, resume=True
+        )
+
+    assert part.read_bytes() == b"partialda"
+
+
+def test_download_fails_when_body_ends_early_for_a_caller_stream(
+    *,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = io.BytesIO()
+    download_session.get.return_value = build_response(
+        headers={"Content-Length": "10"}, chunks=[b"data"]
+    )
+
+    with pytest.raises(DownloadError, match="received 4 bytes"):
+        download(url="https://example.com/file", output=output, quiet=True)
+
+    assert not output.closed
+    assert output.getvalue() == b"data"
+
+
+def test_download_fails_when_the_transport_reports_a_broken_body(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = tmp_path / "output"
+    download_session.get.return_value.iter_content.side_effect = (
+        requests.exceptions.ChunkedEncodingError("connection broken")
+    )
+
+    with pytest.raises(DownloadError, match="received 0 bytes"):
+        download(url="https://example.com/file", output=str(output), quiet=True)
+
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    ("headers", "total"),
+    [
+        ({}, None),
+        ({"Content-Length": "not-a-number"}, None),
+        ({"Content-Length": "-1"}, None),
+        # Content-Length counts the compressed wire bytes, not the decoded ones.
+        ({"Content-Length": "10", "Content-Encoding": "gzip"}, 10),
+        # A transfer encoding makes the client ignore Content-Length.
+        ({"Content-Length": "100", "Transfer-Encoding": "chunked"}, 100),
+    ],
+)
+def test_download_accepts_body_when_announced_size_is_not_comparable(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    headers: dict[str, str],
+    total: int | None,
+) -> None:
+    output = tmp_path / "output"
+    download_session.get.return_value = build_response(
+        headers=headers, chunks=[b"data"]
+    )
+    reported: list[tuple[int, int | None]] = []
+
+    download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        progress=lambda current, total: reported.append((current, total)),
+    )
+
+    assert output.read_bytes() == b"data"
+    assert reported == [(4, total)]
+
+
+def test_download_keeps_part_when_the_connection_closes_early(
+    *, tmp_path: Path
+) -> None:
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", str(2 * CHUNK_SIZE))
+            self.end_headers()
+            self.wfile.write(b"x" * (CHUNK_SIZE + 1000))
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+    output = tmp_path / "output"
+
+    with pytest.raises(DownloadError, match=f"announced {2 * CHUNK_SIZE} bytes"):
+        download(
+            url=f"http://127.0.0.1:{server.server_port}/",
+            output=str(output),
+            quiet=True,
+        )
+
+    server.server_close()
+    assert not output.exists()
+    (part,) = tmp_path.glob("output*.part")
+    # How much of the unfinished chunk survives depends on the HTTP client.
+    assert len(part.read_bytes()) >= CHUNK_SIZE

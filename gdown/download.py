@@ -101,6 +101,31 @@ def _get_filename_from_response(*, response: requests.Response) -> str | None:
     return None
 
 
+def _get_content_length_from_response(*, response: requests.Response) -> int | None:
+    content_length = response.headers.get("Content-Length")
+    if content_length is None:
+        return None
+    try:
+        size = int(content_length)
+    except ValueError:
+        return None
+    return size if size >= 0 else None
+
+
+def _has_only_identity_encoding(*, response: requests.Response, header: str) -> bool:
+    encodings = response.headers.get(header, "").split(",")
+    return all(encoding.strip().lower() in ("", "identity") for encoding in encodings)
+
+
+def _is_content_length_comparable(*, response: requests.Response) -> bool:
+    # A content encoding the client decodes transparently makes Content-Length
+    # count the encoded bytes on the wire instead of the ones iteration yields,
+    # and a transfer encoding makes the client ignore Content-Length entirely.
+    return _has_only_identity_encoding(
+        response=response, header="Content-Encoding"
+    ) and _has_only_identity_encoding(response=response, header="Transfer-Encoding")
+
+
 def _get_modified_time_from_response(
     *,
     response: requests.Response,
@@ -222,7 +247,8 @@ def download(
         If the file URL cannot be retrieved from Google Drive, or if
         skip_download is True and no Google Drive filename can be resolved.
     DownloadError
-        If the download fails (e.g., multiple temporary files exist during
+        If the download fails (e.g., the response body ends before the
+        announced number of bytes, or multiple temporary files exist during
         resume).
     """
     if not (id is None) ^ (url is None):
@@ -419,27 +445,48 @@ def download(
             headers = {"Range": f"bytes={start_size}-"}
             res = sess.get(url, headers=headers, stream=True, verify=verify)
 
-        total = res.headers.get("Content-Length")
-        if total is not None:
-            total = int(total) + start_size
+        content_length = _get_content_length_from_response(response=res)
+        total = None if content_length is None else content_length + start_size
+        expected_size = (
+            content_length if _is_content_length_comparable(response=res) else None
+        )
         if not quiet:
             pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
             stack.callback(pbar.close)
         t_start = time.time()
         downloaded = 0
-        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-            f.write(chunk)
-            downloaded += len(chunk)
-            if not quiet:
-                pbar.update(len(chunk))
-            if progress is not None:
-                progress(downloaded + start_size, total)
-            if speed is None:
-                continue
-            elapsed_time_expected = downloaded / speed
-            elapsed_time = time.time() - t_start
-            if elapsed_time < elapsed_time_expected:
-                time.sleep(elapsed_time_expected - elapsed_time)
+        truncation_error: requests.exceptions.ChunkedEncodingError | None = None
+        try:
+            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+                f.write(chunk)
+                downloaded += len(chunk)
+                if not quiet:
+                    pbar.update(len(chunk))
+                if progress is not None:
+                    progress(downloaded + start_size, total)
+                if speed is None:
+                    continue
+                elapsed_time_expected = downloaded / speed
+                elapsed_time = time.time() - t_start
+                if elapsed_time < elapsed_time_expected:
+                    time.sleep(elapsed_time_expected - elapsed_time)
+        except requests.exceptions.ChunkedEncodingError as e:
+            # Some HTTP client versions enforce Content-Length themselves, so a
+            # body that ends early surfaces here rather than as a short read.
+            truncation_error = e
+
+    if truncation_error is not None or (
+        expected_size is not None and downloaded < expected_size
+    ):
+        message = f"Download is incomplete: received {downloaded + start_size} bytes"
+        if expected_size is not None:
+            message += f" but the server announced {total} bytes"
+        if tmp_file is not None:
+            message += (
+                f".\nThe received bytes are kept in {tmp_file}, which resume "
+                "(--continue on the command line) picks up"
+            )
+        raise DownloadError(message + ".") from truncation_error
 
     if tmp_file is not None:
         assert isinstance(output, str)

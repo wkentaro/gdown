@@ -12,6 +12,8 @@ from gdown.download_folder import _parse_embedded_folder_view
 from gdown.download_folder import download_folder
 from gdown.exceptions import DownloadError
 
+from .conftest import build_response
+
 here = osp.dirname(osp.abspath(__file__))
 
 
@@ -184,3 +186,44 @@ def test_download_folder_dry_run() -> None:
         assert hasattr(file, "id")
         assert hasattr(file, "path")
         assert hasattr(file, "local_path")
+
+
+def test_download_folder_fails_when_a_file_ends_before_announced_size(
+    *, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _make_folder_root(name="folder", child_name="file.txt")
+    response = build_response(
+        headers={
+            "Content-Disposition": 'attachment; filename="file.txt"',
+            "Content-Length": "10",
+        },
+        chunks=[b"data"],
+    )
+    session = unittest.mock.Mock()
+    session.get.return_value = response
+    session.cookies = []
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download"],
+            "_get_session",
+            return_value=(session, str(tmp_path / "cookies.txt")),
+        ),
+        pytest.raises(DownloadError, match="received 4 bytes"),
+    ):
+        download_folder(
+            url="https://drive.google.com/drive/folders/dummy",
+            output=str(tmp_path) + osp.sep,
+            quiet=False,
+        )
+
+    assert "Download completed" not in capsys.readouterr().err
+    assert not (tmp_path / "folder" / "file.txt").exists()
+    part_files = list((tmp_path / "folder").glob("file.txt*.part"))
+    assert len(part_files) == 1
+    assert part_files[0].read_bytes() == b"data"
