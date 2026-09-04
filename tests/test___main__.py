@@ -450,6 +450,27 @@ def test_cookies_from_browser_imports_into_cookies_file(
     )
 
 
+def test_cli_names_the_cookies_file_it_loads(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cookies_file = tmp_path / "cookies.txt"
+    cookies_file.write_text("# Netscape HTTP Cookie File\n")
+    monkeypatch.setattr(
+        sys, "argv", ["gdown", "dummy", "--cookies", str(cookies_file), "--quiet"]
+    )
+    with unittest.mock.patch.object(sys.modules["gdown.__main__"], "download"):
+        main()
+    assert "Using cookies" not in capsys.readouterr().err
+
+    monkeypatch.setattr(sys, "argv", ["gdown", "dummy", "--cookies", str(cookies_file)])
+    with unittest.mock.patch.object(sys.modules["gdown.__main__"], "download"):
+        main()
+    assert f"Using cookies from {cookies_file}" in capsys.readouterr().err
+
+
 def test_cookies_from_browser_fails_when_signed_out(
     *,
     monkeypatch: pytest.MonkeyPatch,

@@ -199,6 +199,8 @@ def main() -> None:
                 f"Saved {n_cookies} Google {noun} from {browser} to {cookies_file}",
                 file=sys.stderr,
             )
+    elif not args.quiet and not args.no_cookies and os.path.exists(cookies_file):
+        print(f"Using cookies from {cookies_file}", file=sys.stderr)
 
     if args.json and not args.quiet:
         print(
