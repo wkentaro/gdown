@@ -18,6 +18,7 @@ import requests
 from gdown._vendor._ytdlp_cookies import extract_cookies_from_browser
 from gdown.download import CHUNK_SIZE
 from gdown.download import GoogleDriveFileToDownload
+from gdown.download import _CookieExtractionLogger
 from gdown.download import _get_session
 from gdown.download import _import_cookies_from_browser
 from gdown.download import _load_cookies
@@ -575,6 +576,61 @@ def test_import_cookies_from_browser_merges_into_file(
     }
     if os.name != "nt":
         assert oct(os.stat(cookies_file).st_mode & 0o777) == "0o600"
+
+
+def test_import_cookies_from_browser_accepts_extractor_warnings(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_extractor(
+        _browser_name: str,
+        *_args: object,
+        logger: _CookieExtractionLogger,
+        **_kwargs: object,
+    ) -> list[http.cookiejar.Cookie]:
+        # The vendored Chromium and Safari paths spell the keyword this way.
+        logger.warning("cannot decrypt v10 cookies: no key found", only_once=True)
+        return [build_google_cookie(name="SID")]
+
+    monkeypatch.setattr(
+        "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser", fake_extractor
+    )
+
+    n_cookies = _import_cookies_from_browser(
+        browser="chrome", cookies_file=str(tmp_path / "cookies.txt")
+    )
+
+    assert n_cookies == 1
+    assert "warning: cannot decrypt v10 cookies" in capsys.readouterr().err
+
+
+def test_import_cookies_from_browser_converts_chromium_expiry(
+    *, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cookies_file = str(tmp_path / "cookies.txt")
+    # Chromium counts microseconds since 1601; these are 2100-01-01 and
+    # 2000-01-01, so the second is expired.
+    future = 15746918400000000
+    past = 12591158400000000
+
+    def fake_extractor(
+        _browser_name: str, *_args: object, **_kwargs: object
+    ) -> list[http.cookiejar.Cookie]:
+        return [
+            build_google_cookie(name="NID", expires=future),
+            build_google_cookie(name="OLD", expires=past),
+        ]
+
+    monkeypatch.setattr(
+        "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser", fake_extractor
+    )
+
+    _import_cookies_from_browser(browser="chrome", cookies_file=cookies_file)
+
+    saved = {c.name: c.expires for c in _load_cookies(cookies_file=cookies_file)}
+    assert saved == {"NID": 4102444800}
 
 
 def test_load_cookies_keeps_extension_exported_session_cookies(

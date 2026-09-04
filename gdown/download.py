@@ -183,8 +183,16 @@ def _save_cookies(*, cookies: Iterable[Cookie], cookies_file: str) -> None:
 
 
 class _CookieExtractionLogger(_YDLLogger):
-    # The vendored extractor reports keyring and decryption trouble here.
-    def warning(self, message: str, /, *, once: bool = False) -> None:  # noqa: ARG002
+    # The vendored extractor reports keyring and decryption trouble here. Its
+    # Chromium and Safari paths still use the older only_once spelling.
+    def warning(
+        self,
+        message: str,
+        /,
+        *,
+        once: bool = False,  # noqa: ARG002
+        only_once: bool = False,  # noqa: ARG002
+    ) -> None:
         print(f"warning: {message}", file=sys.stderr)
 
     def error(self, message: str, /, *, is_error: bool = True) -> None:  # noqa: ARG002
@@ -193,6 +201,7 @@ class _CookieExtractionLogger(_YDLLogger):
 
 def _import_cookies_from_browser(*, browser: str, cookies_file: str) -> int:
     # Imported here so the extractor's probing code loads only when asked for.
+    from ._vendor._ytdlp_cookies import CHROMIUM_BASED_BROWSERS  # noqa: PLC0415
     from ._vendor._ytdlp_cookies import extract_cookies_from_browser  # noqa: PLC0415
 
     browser_cookies = [
@@ -202,6 +211,13 @@ def _import_cookies_from_browser(*, browser: str, cookies_file: str) -> int:
         )
         if cookie.domain == "google.com" or cookie.domain.endswith(".google.com")
     ]
+    if browser in CHROMIUM_BASED_BROWSERS:
+        for cookie in browser_cookies:
+            # Chromium stores expiry as microseconds since 1601 and the
+            # extractor copies that verbatim, so expired cookies would
+            # otherwise be saved as far-future ones.
+            if cookie.expires:
+                cookie.expires = cookie.expires // 1_000_000 - 11_644_473_600
     if not browser_cookies:
         # Nothing to add, so leave the file system untouched.
         return 0
