@@ -129,7 +129,13 @@ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --proxy h
 # Skip TLS certificate verification
 gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --no-check-certificate
 
-# Don't use cookies from ~/.cache/gdown/cookies.txt
+# Download as your signed-in Google account, reusing your browser's cookies
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --cookies-from-browser firefox
+
+# Read and save cookies in a file other than ~/.cache/gdown/cookies.txt
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --cookies ./cookies.txt
+
+# Don't read or save cookies
 gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --no-cookies
 
 # Use a custom User-Agent
@@ -201,14 +207,33 @@ Make sure the file sharing is set to "Anyone with the link".
 
 ### Download still fails even with "Anyone with the link"
 
-Google throttles downloads when too many people access the same file.
-If you can still open the file in your browser, try exporting cookies:
+Google throttles downloads when too many people access the same file, but
+lets a signed-in account through. If you can still open the file in your
+browser, reuse that browser's cookies:
 
-1. Install a browser extension like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
-2. Export `cookies.txt` and move it to `~/.cache/gdown/cookies.txt`
-3. Run the download again
+```bash
+gdown --cookies-from-browser firefox https://drive.google.com/uc?id=FILE_ID
+```
 
-Once the file is in place, gdown loads it automatically (no extra flags needed).
+Supported browsers: brave, chrome, chromium, edge, firefox, opera, safari,
+vivaldi, whale. gdown saves the cookies to
+`~/.cache/gdown/cookies.txt`, so later runs need no flag. That file then
+holds your whole google.com session, Gmail and Account included, so treat
+it like a password. To revoke it, delete the file and sign out of Google in
+that browser.
+
+Platform notes:
+
+- macOS asks for your login password once to unlock the Chromium-family
+  keychain entry; Firefox needs nothing.
+- Windows Chrome 127+ encrypts cookies so other programs cannot read them.
+  Use Firefox there.
+- Safari requires Full Disk Access for your terminal.
+
+If none of that works, export a Netscape `cookies.txt` with a browser
+extension such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+and pass it with `--cookies cookies.txt`. gdown rewrites that file while
+resolving each Google Drive file, whether or not it downloads it.
 
 ### Download stops after ~1 hour
 
