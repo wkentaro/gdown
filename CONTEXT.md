@@ -15,6 +15,10 @@ _Avoid_: manifest, index, dump
 **path** (in a Listing entry):
 The location a file would be written to, relative to the download root. For a folder, includes the directory structure. For a single file, it is the bare Drive filename. Always a real Drive filename; never a URL-basename fallback.
 
+**Cookies file**:
+The one Netscape-format file gdown reads when it opens a session and rewrites while resolving each Google Drive file, even under `--json`, `~/.cache/gdown/cookies.txt` unless `--cookies` names another. `--cookies-from-browser` copies a browser's Google cookies into it, after which it holds a signed-in session and is written owner-only.
+_Avoid_: cookie jar (the in-memory object), cookie cache
+
 **GoogleDriveFileToDownload**:
 The probe result returned by both downloaders under `skip_download=True`: `(id, path, local_path)`. Reused for single files so the probe mode is type-distinct from the normal `str | BinaryIO` download return, making the mode self-announcing to Python callers and type-checkers.
 

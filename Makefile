@@ -2,7 +2,7 @@ ifneq ($(OS),Windows_NT)
 	SHELL := bash
 endif
 
-.PHONY: help setup format lint test release
+.PHONY: help setup format lint test vendor release
 .DEFAULT_GOAL := help
 
 PYTEST_ARGS ?= --numprocesses=auto
@@ -28,12 +28,15 @@ format:  # Format code
 lint:  # Lint code
 	$(call exec,uv run ruff format --check)
 	$(call exec,uv run ruff check)
-	$(call exec,uv run gruff check)
+	$(call exec,uv run gruff check $(shell git ls-files "*.py" ":!gdown/_vendor/_ytdlp_cookies.py"))
 	$(call exec,uv run ty check --no-progress)
 	$(call exec,uv run taplo fmt --check $(shell git ls-files "*.toml"))
 	$(call exec,uv run mdformat --check $(shell git ls-files "*.md"))
 	$(call exec,uv run yamlfix --check $(shell git ls-files "*.yml" "*.yaml"))
 	$(call exec,uv run typos)
+
+vendor:  # Regenerate the vendored yt-dlp cookie module
+	$(call exec,uv run python scripts/vendor_ytdlp_cookies.py)
 
 test:  # Run tests
 	$(call exec,uv run pytest -v tests/ $(PYTEST_ARGS))

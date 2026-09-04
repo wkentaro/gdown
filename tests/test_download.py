@@ -1,6 +1,8 @@
+import http.cookiejar
 import http.server
 import io
 import os
+import sqlite3
 import sys
 import threading
 import unittest.mock
@@ -13,11 +15,18 @@ from typing import NamedTuple
 import pytest
 import requests
 
+from gdown._vendor._ytdlp_cookies import extract_cookies_from_browser
 from gdown.download import CHUNK_SIZE
 from gdown.download import GoogleDriveFileToDownload
+from gdown.download import _CookieExtractionLogger
+from gdown.download import _get_session
+from gdown.download import _import_cookies_from_browser
+from gdown.download import _load_cookies
+from gdown.download import _save_cookies
 from gdown.download import download
 from gdown.exceptions import DownloadError
 
+from .conftest import build_google_cookie
 from .conftest import build_response
 
 DOWNLOAD_URL: Final[str] = (
@@ -527,3 +536,181 @@ def test_download_keeps_part_when_the_connection_closes_early(
     (part,) = tmp_path.glob("output*.part")
     # How much of the unfinished chunk survives depends on the HTTP client.
     assert len(part.read_bytes()) >= CHUNK_SIZE
+
+
+def test_import_cookies_from_browser_merges_into_file(
+    *, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # A bare filename has no directory part, which the save path must tolerate.
+    cookies_file = "cookies.txt"
+    _save_cookies(
+        cookies=[build_google_cookie(name="OTHER", value="kept")],
+        cookies_file=cookies_file,
+    )
+
+    def fake_extractor(
+        browser_name: str, *_args: object, **_kwargs: object
+    ) -> list[http.cookiejar.Cookie]:
+        assert browser_name == "firefox"
+        return [
+            build_google_cookie(name="SID", value="from-browser"),
+            build_google_cookie(name="NID", value="persistent", expires=4102444800),
+        ]
+
+    monkeypatch.setattr(
+        "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser", fake_extractor
+    )
+
+    n_cookies = _import_cookies_from_browser(
+        browser="firefox", cookies_file=cookies_file
+    )
+    assert n_cookies == 2  # noqa: PLR2004
+    # A second import must replace, not duplicate, the existing entries.
+    _import_cookies_from_browser(browser="firefox", cookies_file=cookies_file)
+
+    assert {(c.name, c.value) for c in _load_cookies(cookies_file=cookies_file)} == {
+        ("OTHER", "kept"),
+        ("SID", "from-browser"),
+        ("NID", "persistent"),
+    }
+    if os.name != "nt":
+        assert oct(os.stat(cookies_file).st_mode & 0o777) == "0o600"
+
+
+def test_cookie_extraction_logger_prints_once_flagged_warning_once(
+    *, capsys: pytest.CaptureFixture[str]
+) -> None:
+    logger = _CookieExtractionLogger()
+    # The vendored Chromium path spells the flag this way and repeats the
+    # warning for every cookie it cannot decrypt.
+    for _ in range(3):
+        logger.warning("cannot decrypt v10 cookies", only_once=True)
+
+    assert capsys.readouterr().err == "warning: cannot decrypt v10 cookies\n"
+
+
+def test_import_cookies_from_browser_converts_chromium_expiry(
+    *, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cookies_file = str(tmp_path / "cookies.txt")
+    # Chromium counts microseconds since 1601; these are 2100-01-01 and
+    # 2000-01-01, so the second is expired.
+    future = 15746918400000000
+    past = 12591158400000000
+
+    def fake_extractor(
+        _browser_name: str, *_args: object, **_kwargs: object
+    ) -> list[http.cookiejar.Cookie]:
+        return [
+            build_google_cookie(name="NID", expires=future),
+            build_google_cookie(name="OLD", expires=past),
+        ]
+
+    monkeypatch.setattr(
+        "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser", fake_extractor
+    )
+
+    _import_cookies_from_browser(browser="chrome", cookies_file=cookies_file)
+
+    saved = {c.name: c.expires for c in _load_cookies(cookies_file=cookies_file)}
+    assert saved == {"NID": 4102444800}
+
+
+def test_load_cookies_keeps_extension_exported_session_cookies(
+    *, tmp_path: Path
+) -> None:
+    cookies_file = tmp_path / "cookies.txt"
+    # Browser extensions write session cookies with an expiry of 0.
+    cookies_file.write_text(
+        "# Netscape HTTP Cookie File\n"
+        ".google.com\tTRUE\t/\tTRUE\t0\tSID\tsession\n"
+        ".google.com\tTRUE\t/\tTRUE\t1\tOLD\texpired\n"
+    )
+
+    jar = _load_cookies(cookies_file=str(cookies_file))
+
+    assert {c.name for c in jar} == {"SID"}
+    assert next(iter(jar)).expires is None
+
+
+def test_load_cookies_replaces_unreadable_file(*, tmp_path: Path) -> None:
+    cookies_file = tmp_path / "cookies.txt"
+    cookies_file.write_bytes(b"\x80not a cookies file")
+
+    with pytest.warns(UserWarning, match="Replacing unreadable cookies file"):
+        jar = _load_cookies(cookies_file=str(cookies_file))
+
+    assert len(jar) == 0
+
+
+def test_download_warns_when_cookies_cannot_be_saved(*, tmp_path: Path) -> None:
+    mock_response = unittest.mock.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="test.bin"',
+    }
+    mock_response.iter_content = lambda **_kwargs: [b"data"]
+    mock_response.url = "https://drive.google.com/uc?id=dummy"
+    mock_sess = unittest.mock.Mock()
+    mock_sess.get.return_value = mock_response
+    mock_sess.cookies = []
+    unwritable = str(tmp_path / "missing" / "cookies.txt")
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download"],
+            "_get_session",
+            return_value=(mock_sess, unwritable),
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download"],
+            "_save_cookies",
+            side_effect=OSError("read-only"),
+        ),
+        pytest.warns(UserWarning, match="Failed to save cookies"),
+    ):
+        download(id="dummy", output=str(tmp_path / "out"), quiet=True)
+
+    assert (tmp_path / "out").read_bytes() == b"data"
+
+
+def test_vendored_extractor_reads_firefox_profile(*, tmp_path: Path) -> None:
+    connection = sqlite3.connect(tmp_path / "cookies.sqlite")
+    connection.executescript(
+        """
+        PRAGMA user_version = 13;
+        CREATE TABLE moz_cookies (
+            host TEXT, name TEXT, value TEXT, path TEXT, expiry INTEGER,
+            isSecure INTEGER, originAttributes TEXT DEFAULT ''
+        );
+        INSERT INTO moz_cookies (host, name, value, path, expiry, isSecure)
+        VALUES ('.google.com', 'SID', 'from-firefox', '/', 4102444800, 1);
+        """
+    )
+    connection.close()
+
+    jar = extract_cookies_from_browser("firefox", profile=str(tmp_path))
+
+    assert [(c.domain, c.name, c.value) for c in jar] == [
+        (".google.com", "SID", "from-firefox")
+    ]
+
+
+def test_get_session_loads_cookies_file(*, tmp_path: Path) -> None:
+    cookies_file = tmp_path / "cache" / "cookies.txt"
+    _save_cookies(
+        cookies=[build_google_cookie(name="SID", value="saved")],
+        cookies_file=str(cookies_file),
+    )
+
+    sess, used_file = _get_session(
+        proxy=None,
+        use_cookies=True,
+        user_agent="test",
+        cookies_file=str(cookies_file),
+    )
+
+    assert used_file == str(cookies_file)
+    assert sess.cookies.get("SID", domain=".google.com") == "saved"

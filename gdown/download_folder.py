@@ -69,6 +69,7 @@ def download_folder(
     user_agent: str | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     resume: bool = False,  # noqa: FBT001, FBT002
+    cookies_file: str | None = None,
 ) -> list[str] | list[GoogleDriveFileToDownload]:  # noqa: GR005 -- public API accepts both call styles
     """Downloads entire folder from URL.
 
@@ -104,6 +105,10 @@ def download_folder(
         Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
         Default is False.
+    cookies_file:
+        Netscape cookies file to load when a session opens and save after
+        every Google Drive file response. Default is
+        ~/.cache/gdown/cookies.txt. Ignored when use_cookies is False.
 
     Returns
     -------
@@ -137,7 +142,12 @@ def download_folder(
         # We need to use different user agent for folder download c.f., file
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
 
-    sess, _ = _get_session(proxy=proxy, use_cookies=use_cookies, user_agent=user_agent)
+    sess, _ = _get_session(
+        proxy=proxy,
+        use_cookies=use_cookies,
+        user_agent=user_agent,
+        cookies_file=cookies_file,
+    )
     try:
         if not quiet:
             print("Retrieving folder contents", file=sys.stderr)
@@ -200,6 +210,7 @@ def download_folder(
                 use_cookies=use_cookies,
                 verify=verify,
                 resume=resume,
+                cookies_file=cookies_file,
             )
             files.append(local_path)
     if not quiet:

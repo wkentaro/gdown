@@ -1,5 +1,5 @@
 [files]
-extend-exclude = ["tests/data/"]
+extend-exclude = ["tests/data/", "gdown/_vendor/_ytdlp_cookies.py"]
 
 [default.extend-words]
 # Substrings in Google Drive file IDs
