@@ -4,3 +4,7 @@ class DownloadError(Exception):
 
 class FileURLRetrievalError(DownloadError):
     pass
+
+
+class HashMismatchError(DownloadError, AssertionError):
+    pass

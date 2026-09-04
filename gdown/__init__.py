@@ -7,11 +7,13 @@ from .download import download
 from .download_folder import download_folder
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
+from .exceptions import HashMismatchError
 from .extractall import extractall
 
 __all__ = [
     "DownloadError",
     "FileURLRetrievalError",
+    "HashMismatchError",
     "cached_download",
     "download",
     "download_folder",

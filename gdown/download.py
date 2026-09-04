@@ -24,9 +24,12 @@ import bs4
 import requests
 import tqdm
 
+from ._filehash import assert_filehash
+from ._filehash import parse_filehash
 from ._vendor._ytdlp_shim import _YDLLogger
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
+from .exceptions import HashMismatchError
 from .parse_url import parse_url
 
 CHUNK_SIZE: Final = 512 * 1024  # 512KB
@@ -270,6 +273,7 @@ def download(
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
+    hash: str | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -320,6 +324,13 @@ def download(
         Netscape cookies file to load before the request and save after
         every Google Drive response. Default is ~/.cache/gdown/cookies.txt.
         Ignored when use_cookies is False.
+    hash:
+        Expected hash of the downloaded file in the format of
+        {algorithm}:{hash_value} such as sha256:abcdef.... Supported algorithms
+        are those guaranteed by hashlib except shake_128 and shake_256.
+        Requires output to be a filename. When resume skips an already
+        downloaded file, that file is verified too and a mismatch raises
+        instead of downloading it again.
 
     Returns
     -------
@@ -331,7 +342,11 @@ def download(
     Raises
     ------
     ValueError
-        If neither url nor id is specified, or both are specified.
+        If neither url nor id is specified, or both are specified, or hash is
+        specified with a file object as output or with skip_download, or hash
+        is malformed or names an unsupported algorithm.
+    HashMismatchError
+        If hash is specified and the file does not match it.
     FileURLRetrievalError
         If the file URL cannot be retrieved from Google Drive, or if
         skip_download is True and no Google Drive filename can be resolved.
@@ -342,6 +357,14 @@ def download(
     """
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
+    if hash is not None:
+        if output is not None and not isinstance(output, str):
+            raise ValueError("hash can only be verified when output is a filename")
+        if skip_download:
+            raise ValueError("hash cannot be verified when skip_download is True")
+        # Reject a malformed hash before spending the download it would reject.
+        algorithm, hash_value = parse_filehash(hash=hash)
+        hash = f"{algorithm}:{hash_value}"
     if id is not None:
         url = f"https://drive.google.com/uc?id={id}"
     assert url is not None
@@ -477,6 +500,8 @@ def download(
 
     if isinstance(output, str):
         if resume and os.path.isfile(output):
+            if hash is not None:
+                assert_filehash(path=output, hash=hash)
             if not quiet:
                 print(f"Skipping already downloaded file {output}", file=sys.stderr)
             return output
@@ -583,6 +608,14 @@ def download(
 
     if tmp_file is not None:
         assert isinstance(output, str)
+        if hash is not None:
+            try:
+                assert_filehash(path=tmp_file, hash=hash)
+            except HashMismatchError:
+                # The body may be corrupt rather than partial, so resuming it
+                # could only append to garbage; drop it instead of leaving it.
+                os.remove(tmp_file)
+                raise
         shutil.move(tmp_file, output)
     if isinstance(output, str) and last_modified_time:
         mtime = last_modified_time.timestamp()

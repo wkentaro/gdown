@@ -25,6 +25,7 @@ from gdown.download import _load_cookies
 from gdown.download import _save_cookies
 from gdown.download import download
 from gdown.exceptions import DownloadError
+from gdown.exceptions import HashMismatchError
 
 from .conftest import build_google_cookie
 from .conftest import build_response
@@ -714,3 +715,188 @@ def test_get_session_loads_cookies_file(*, tmp_path: Path) -> None:
 
     assert used_file == str(cookies_file)
     assert sess.cookies.get("SID", domain=".google.com") == "saved"
+
+
+DATA_HASH_VALUE: Final[str] = "8d777f385d3dfec8815d20f7496026dc"
+DATA_HASH: Final[str] = f"md5:{DATA_HASH_VALUE}"
+
+
+def test_download_writes_output_when_hash_matches(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    result = download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        use_cookies=False,
+        hash=DATA_HASH,
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"data"
+    assert list(tmp_path.glob("output*.part")) == []
+
+
+def test_download_writes_output_when_hash_is_upper_case(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    result = download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        use_cookies=False,
+        hash=f"md5:{DATA_HASH_VALUE.upper()}",
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"data"
+
+
+def test_download_writes_output_when_hash_is_omitted(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    result = download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        use_cookies=False,
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"data"
+
+
+def test_download_discards_body_when_hash_mismatches(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    with pytest.raises(HashMismatchError, match="File hash doesn't match"):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=True,
+            use_cookies=False,
+            hash="md5:" + "0" * 32,
+        )
+
+    assert not output.exists()
+    assert list(tmp_path.glob("output*.part")) == []
+
+
+@pytest.mark.parametrize(
+    ("hash", "message"),
+    [
+        # shake_* is in hashlib.algorithms_guaranteed but has no fixed digest.
+        ("shake_128:00", "Unsupported hash algorithm"),
+        ("crc32:00000000", "Unsupported hash algorithm"),
+        ("8d777f385d3dfec8815d20f7496026dc", "Invalid hash"),
+        ("md5:zzzz", "must be hexadecimal"),
+        (f"sha256:{DATA_HASH_VALUE}", "characters long"),
+    ],
+)
+def test_download_rejects_bad_hash_before_downloading(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    hash: str,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        download(
+            url="https://example.com/file",
+            output=str(tmp_path / "output"),
+            quiet=True,
+            use_cookies=False,
+            hash=hash,
+        )
+
+    download_session.get.assert_not_called()
+
+
+def test_download_rejects_hash_with_file_object_output(
+    *,
+    download_session: unittest.mock.Mock,
+) -> None:
+    with pytest.raises(ValueError, match="output is a filename"):
+        download(
+            url="https://example.com/file",
+            output=io.BytesIO(),
+            quiet=True,
+            use_cookies=False,
+            hash=DATA_HASH,
+        )
+
+    download_session.get.assert_not_called()
+
+
+def test_download_rejects_hash_with_skip_download(
+    *,
+    download_session: unittest.mock.Mock,
+) -> None:
+    with pytest.raises(ValueError, match="skip_download"):
+        download(
+            url="https://example.com/file",
+            quiet=True,
+            use_cookies=False,
+            skip_download=True,
+            hash=DATA_HASH,
+        )
+
+    download_session.get.assert_not_called()
+
+
+def test_download_skips_resumed_file_when_hash_matches(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = tmp_path / "output"
+    output.write_bytes(b"data")
+
+    result = download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        use_cookies=False,
+        resume=True,
+        hash=DATA_HASH,
+    )
+
+    assert result == str(output)
+    download_session.get.return_value.iter_content.assert_not_called()
+
+
+def test_download_verifies_hash_of_resume_skipped_file(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+    output.write_bytes(b"stale")
+
+    with pytest.raises(HashMismatchError, match="File hash doesn't match"):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=True,
+            use_cookies=False,
+            resume=True,
+            hash=DATA_HASH,
+        )
+
+    assert output.read_bytes() == b"stale"

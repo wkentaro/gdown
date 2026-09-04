@@ -176,6 +176,13 @@ gdown.download(id="0B9P1L--7Wd2vNm9zMTJWOGxobkU", output="output.npz")
 url = "https://drive.google.com/file/d/0B9P1L--7Wd2vNm9zMTJWOGxobkU/view?usp=sharing"
 gdown.download(url=url, output="output.npz")
 
+# Download with hash verification
+gdown.download(
+    url=url,
+    output="output.npz",
+    hash="md5:fa837a88f0c40c513d975104edf3da17",
+)
+
 # Download with hash verification and caching
 gdown.cached_download(
     url=url,
