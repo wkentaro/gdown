@@ -205,8 +205,8 @@ Google throttles downloads when too many people access the same file.
 If you can still open the file in your browser, try exporting cookies:
 
 1. Install a browser extension like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
-1. Export `cookies.txt` and move it to `~/.cache/gdown/cookies.txt`
-1. Run the download again
+2. Export `cookies.txt` and move it to `~/.cache/gdown/cookies.txt`
+3. Run the download again
 
 Once the file is in place, gdown loads it automatically (no extra flags needed).
 
