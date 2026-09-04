@@ -32,6 +32,7 @@ from .conftest import build_response
 DOWNLOAD_URL: Final[str] = (
     "https://raw.githubusercontent.com/wkentaro/gdown/3.1.0/gdown/__init__.py"
 )
+DATA_MD5: Final[str] = "md5:8d777f385d3dfec8815d20f7496026dc"
 
 
 class DownloadEnv(NamedTuple):
@@ -390,6 +391,106 @@ def test_download_google_slides_without_extension(*, tmp_path: Path) -> None:
     )
     assert isinstance(output, str)
     assert output.endswith(".pptx")
+
+
+def test_download_saves_file_when_hash_matches(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    result = download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        hash=DATA_MD5,
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"data"
+
+
+def test_download_discards_file_when_hash_mismatches(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    with pytest.raises(AssertionError, match="File hash doesn't match"):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=True,
+            hash="md5:" + "0" * 32,
+        )
+
+    assert not output.exists()
+    assert list(tmp_path.glob("output*.part")) == []
+
+
+def test_download_saves_file_without_hash(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    result = download(url="https://example.com/file", output=str(output), quiet=True)
+
+    assert result == str(output)
+    assert output.read_bytes() == b"data"
+
+
+def test_download_rejects_unsupported_hash_algorithm(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+
+    with pytest.raises(ValueError, match="Unsupported hash algorithm: crc32"):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=True,
+            hash="crc32:adf3f363",
+        )
+
+    assert not output.exists()
+
+
+def test_download_rejects_hash_with_file_object_output(
+    *, download_session: unittest.mock.Mock
+) -> None:
+    with pytest.raises(ValueError, match="output is a filename"):
+        download(
+            url="https://example.com/file",
+            output=io.BytesIO(),
+            quiet=True,
+            hash=DATA_MD5,
+        )
+
+    download_session.get.assert_not_called()
+
+
+def test_download_verifies_file_skipped_by_resume(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,  # noqa: ARG001
+) -> None:
+    output = tmp_path / "output"
+    output.write_bytes(b"stale")
+
+    with pytest.raises(AssertionError, match="File hash doesn't match"):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=True,
+            resume=True,
+            hash=DATA_MD5,
+        )
 
 
 def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(

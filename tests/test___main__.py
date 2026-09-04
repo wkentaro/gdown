@@ -16,8 +16,8 @@ from gdown.__main__ import BROWSERS
 from gdown.__main__ import file_size
 from gdown.__main__ import main
 from gdown._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
-from gdown.cached_download import _assert_filehash
-from gdown.cached_download import _compute_filehash
+from gdown.download import _assert_filehash
+from gdown.download import _compute_filehash
 from gdown.download_folder import _GoogleDriveFile
 
 from .conftest import GITHUB_RELEASE_URL

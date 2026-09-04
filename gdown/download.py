@@ -2,6 +2,7 @@ import collections
 import contextlib
 import datetime
 import email.utils
+import hashlib
 import os
 import os.path as osp
 import re
@@ -144,6 +145,38 @@ def _get_modified_time_from_response(
     return email.utils.parsedate_to_datetime(raw)
 
 
+def _compute_filehash(*, path: str, algorithm: str) -> str:
+    BLOCKSIZE: Final = 65536
+
+    if algorithm not in hashlib.algorithms_guaranteed:
+        raise ValueError(
+            f"Unsupported hash algorithm: {algorithm}. "
+            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
+        )
+
+    algorithm_instance = getattr(hashlib, algorithm)()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(BLOCKSIZE), b""):
+            algorithm_instance.update(block)
+    return f"{algorithm}:{algorithm_instance.hexdigest()}"
+
+
+def _assert_filehash(*, path: str, hash: str) -> None:
+    if ":" not in hash:
+        raise ValueError(
+            f"Invalid hash: {hash}. "
+            "Hash must be in the format of {algorithm}:{hash_value}."
+        )
+    algorithm = hash.split(":")[0]
+
+    hash_actual = _compute_filehash(path=path, algorithm=algorithm)
+
+    if hash_actual != hash:
+        raise AssertionError(
+            f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
+        )
+
+
 def _load_cookies(*, cookies_file: str) -> MozillaCookieJar:
     cookies_file = osp.expanduser(cookies_file)
     cookie_jar = MozillaCookieJar(cookies_file)
@@ -270,6 +303,7 @@ def download(
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
+    hash: str | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -320,6 +354,9 @@ def download(
         Netscape cookies file to load before the request and save after
         every Google Drive response. Default is ~/.cache/gdown/cookies.txt.
         Ignored when use_cookies is False.
+    hash:
+        Expected hash of the downloaded file in the format of
+        {algorithm}:{hash_value}. Requires output to be a filename.
 
     Returns
     -------
@@ -331,7 +368,9 @@ def download(
     Raises
     ------
     ValueError
-        If neither url nor id is specified, or both are specified.
+        If neither url nor id is specified, both are specified, output is not
+        a filename when hash is specified, or hash is malformed or uses an
+        unsupported algorithm.
     FileURLRetrievalError
         If the file URL cannot be retrieved from Google Drive, or if
         skip_download is True and no Google Drive filename can be resolved.
@@ -342,6 +381,8 @@ def download(
     """
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
+    if hash and output is not None and not isinstance(output, str):
+        raise ValueError("hash can only be verified when output is a filename")
     if id is not None:
         url = f"https://drive.google.com/uc?id={id}"
     assert url is not None
@@ -477,6 +518,8 @@ def download(
 
     if isinstance(output, str):
         if resume and os.path.isfile(output):
+            if hash:
+                _assert_filehash(path=output, hash=hash)
             if not quiet:
                 print(f"Skipping already downloaded file {output}", file=sys.stderr)
             return output
@@ -583,6 +626,12 @@ def download(
 
     if tmp_file is not None:
         assert isinstance(output, str)
+        if hash:
+            try:
+                _assert_filehash(path=tmp_file, hash=hash)
+            except AssertionError:
+                os.remove(tmp_file)
+                raise
         shutil.move(tmp_file, output)
     if isinstance(output, str) and last_modified_time:
         mtime = last_modified_time.timestamp()
