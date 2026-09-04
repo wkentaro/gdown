@@ -184,15 +184,18 @@ def _save_cookies(*, cookies: Iterable[Cookie], cookies_file: str) -> None:
 
 class _CookieExtractionLogger(_YDLLogger):
     # The vendored extractor reports keyring and decryption trouble here. Its
-    # Chromium and Safari paths still use the older only_once spelling.
+    # Chromium and Safari paths still use the older only_once spelling, and
+    # they raise the same warning for every cookie in the browser's database.
+    def __init__(self) -> None:
+        super().__init__()
+        self._seen: set[str] = set()
+
     def warning(
-        self,
-        message: str,
-        /,
-        *,
-        once: bool = False,  # noqa: ARG002
-        only_once: bool = False,  # noqa: ARG002
+        self, message: str, /, *, once: bool = False, only_once: bool = False
     ) -> None:
+        if (once or only_once) and message in self._seen:
+            return
+        self._seen.add(message)
         print(f"warning: {message}", file=sys.stderr)
 
     def error(self, message: str, /, *, is_error: bool = True) -> None:  # noqa: ARG002

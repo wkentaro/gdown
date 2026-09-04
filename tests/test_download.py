@@ -590,8 +590,10 @@ def test_import_cookies_from_browser_accepts_extractor_warnings(
         logger: _CookieExtractionLogger,
         **_kwargs: object,
     ) -> list[http.cookiejar.Cookie]:
-        # The vendored Chromium and Safari paths spell the keyword this way.
-        logger.warning("cannot decrypt v10 cookies: no key found", only_once=True)
+        # The vendored Chromium and Safari paths spell the keyword this way
+        # and repeat the warning for every cookie they fail to decrypt.
+        for _ in range(3):
+            logger.warning("cannot decrypt v10 cookies: no key found", only_once=True)
         return [build_google_cookie(name="SID")]
 
     monkeypatch.setattr(
@@ -603,7 +605,7 @@ def test_import_cookies_from_browser_accepts_extractor_warnings(
     )
 
     assert n_cookies == 1
-    assert "warning: cannot decrypt v10 cookies" in capsys.readouterr().err
+    assert capsys.readouterr().err.count("warning: cannot decrypt v10 cookies") == 1
 
 
 def test_import_cookies_from_browser_converts_chromium_expiry(
