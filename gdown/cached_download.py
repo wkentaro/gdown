@@ -33,11 +33,6 @@ class _DownloadKwargs(TypedDict, total=False):
 
 
 cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
-if not osp.exists(cache_root):
-    try:
-        os.makedirs(cache_root)
-    except OSError:
-        pass
 
 
 # Parameters remain positional-or-keyword for backward compatibility.
@@ -108,8 +103,8 @@ def cached_download(
         os.makedirs(osp.dirname(path))
     except OSError:
         pass
-    temp_root = tempfile.mkdtemp(dir=cache_root)
-    try:
+    os.makedirs(cache_root, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=cache_root) as temp_root:
         temp_path = osp.join(temp_root, "dl")
 
         log_message_hash = f"Hash: {hash}\n" if hash else ""
@@ -127,9 +122,6 @@ def cached_download(
             _assert_filehash(path=temp_path, hash=hash)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
-    except Exception:
-        shutil.rmtree(temp_root)
-        raise
 
     # postprocess
     if postprocess is not None:
