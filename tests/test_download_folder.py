@@ -178,7 +178,7 @@ def test_download_folder_parses_id_before_url_suffix(*, tmp_path: Path) -> None:
     with unittest.mock.patch.object(
         sys.modules["gdown.download_folder"],
         "_download_and_parse_google_drive_link",
-        return_value=_make_folder_root(name="folder", child_name="file.txt"),
+        return_value=_make_folder_root(name="folder", child_names=["file.txt"]),
     ) as parse_folder:
         download_folder(
             url=f"https://drive.google.com/drive/folders/{folder_id}/view",
