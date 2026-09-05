@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Final
 
 import pytest
+import requests
 
 from gdown.download_folder import _GoogleDriveFile
 from gdown.download_folder import _parse_embedded_folder_view
@@ -351,3 +352,44 @@ def test_download_folder_continues_after_truncation_then_resumes(
         assert stderr == ""
     else:
         assert "Download completed\n" in stderr
+
+
+@pytest.mark.parametrize("user_agent", [None, "custom-agent"])
+def test_download_folder_preserves_user_agent(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, user_agent: str | None
+) -> None:
+    agents = []
+    file_id = "x" * 25
+
+    def get_response(
+        session: requests.Session, url: str, **_kwargs: object
+    ) -> unittest.mock.Mock:
+        agents.append(session.headers["User-Agent"])
+        if "embeddedfolderview" in url:
+            response = unittest.mock.Mock()
+            response.status_code = 200
+            response.text = (
+                "<title>folder</title>"
+                f'<a href="https://drive.google.com/file/d/{file_id}/view">file.txt</a>'
+            )
+            return response
+        return build_response(
+            headers={"Content-Disposition": 'attachment; filename="file.txt"'},
+            chunks=[b"data"],
+        )
+
+    monkeypatch.setattr(requests.Session, "get", get_response)
+    files = download_folder(
+        id="folder-id",
+        output=str(tmp_path),
+        quiet=True,
+        use_cookies=False,
+        user_agent=user_agent,
+    )
+    assert files == [str(tmp_path / "file.txt")]
+    assert (tmp_path / "file.txt").read_bytes() == b"data"
+    if user_agent is None:
+        assert "Chrome/98" in agents[0]
+        assert "Chrome/39" in agents[1]
+    else:
+        assert agents == [user_agent, user_agent]
