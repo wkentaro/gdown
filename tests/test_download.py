@@ -1,3 +1,4 @@
+import contextlib
 import http.cookiejar
 import http.server
 import io
@@ -14,6 +15,7 @@ from typing import NamedTuple
 
 import pytest
 import requests
+from urllib3.response import HTTPResponse
 
 from gdown._vendor._ytdlp_cookies import extract_cookies_from_browser
 from gdown.download import CHUNK_SIZE
@@ -714,3 +716,89 @@ def test_get_session_loads_cookies_file(*, tmp_path: Path) -> None:
 
     assert used_file == str(cookies_file)
     assert sess.cookies.get("SID", domain=".google.com") == "saved"
+
+
+@pytest.mark.parametrize(
+    "mode", ["listing", "existing", "confirmation", "request", "output"]
+)
+def test_download_closes_resources_before_transfer(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    mode: str,
+) -> None:
+    response = requests.Response()
+    response.status_code = 200
+    response.headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="file.txt"',
+    }
+    body = io.BytesIO(b"data")
+    response.raw = HTTPResponse(body=body, preload_content=False)
+    download_session.get.return_value = response
+    output = tmp_path / "output"
+    if mode == "existing":
+        output.write_bytes(b"existing")
+    if mode == "confirmation":
+        del response.headers["Content-Disposition"]
+    if mode == "request":
+        download_session.get.side_effect = requests.ConnectionError("offline")
+    if mode == "output":
+        output = tmp_path / "missing" / "output"
+
+    expected_error = {
+        "confirmation": DownloadError,
+        "request": requests.ConnectionError,
+        "output": FileNotFoundError,
+    }.get(mode)
+    with contextlib.ExitStack() as stack:
+        if expected_error is not None:
+            stack.enter_context(pytest.raises(expected_error))
+        download(
+            id="file-id",
+            output=str(output),
+            quiet=True,
+            use_cookies=False,
+            skip_download=mode == "listing",
+            resume=mode == "existing",
+        )
+
+    download_session.close.assert_called_once_with()
+    if mode != "request":
+        assert body.closed
+    if mode == "existing":
+        assert output.read_bytes() == b"existing"
+
+
+def test_download_closes_replaced_responses(
+    *, tmp_path: Path, download_session: unittest.mock.Mock
+) -> None:
+    responses = []
+    bodies = []
+    for status in [500, 200, 206]:
+        response = requests.Response()
+        response.status_code = status
+        response.headers = {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": 'attachment; filename="file.txt"',
+        }
+        body = io.BytesIO(b"data")
+        response.raw = HTTPResponse(body=body, preload_content=False)
+        responses.append(response)
+        bodies.append(body)
+
+    def get_response(*_args: object, **_kwargs: object) -> requests.Response:
+        index = download_session.get.call_count - 1
+        if index:
+            assert bodies[index - 1].closed
+        return responses[index]
+
+    download_session.get.side_effect = get_response
+    output = tmp_path / "output"
+    (tmp_path / "output.partial.part").write_bytes(b"partial")
+    download(
+        id="file-id", output=str(output), resume=True, quiet=True, use_cookies=False
+    )
+    assert output.read_bytes() == b"partialdata"
+    assert all(body.closed for body in bodies)
+    download_session.close.assert_called_once_with()
