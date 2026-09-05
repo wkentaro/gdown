@@ -87,16 +87,19 @@ gdown "$url" -O "my_name.${filename##*.}"
 
 ```bash
 # Download an entire folder
-gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder --folder
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl -O /tmp/folder
 
 # List folder contents as a JSON array (each entry has url and path)
-gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --json
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --json
 
 # Filter by path and download matches
-gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --folder --json \
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --json \
   | jq -r '.[] | select(.path | test("shad")) | .url' \
   | xargs -n1 gdown
 ```
+
+Folder URLs are detected automatically. A bare folder ID still requires
+`--folder` because file and folder IDs have the same format.
 
 #### Google Docs, Sheets, Slides
 

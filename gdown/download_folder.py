@@ -16,6 +16,7 @@ from .download import _get_session
 from .download import _sanitize_filename
 from .download import download
 from .exceptions import DownloadError
+from .parse_url import _parse_google_drive_folder_id
 
 
 class _GoogleDriveFile:
@@ -231,7 +232,10 @@ def download_folder(
 
 
 def _extract_folder_id(*, url: str) -> str:
-    return urllib.parse.urlparse(url).path.rstrip("/").split("/")[-1]
+    return (
+        _parse_google_drive_folder_id(url=url)
+        or urllib.parse.urlparse(url).path.rstrip("/").split("/")[-1]
+    )
 
 
 def _parse_embedded_folder_view(
@@ -288,12 +292,8 @@ def _parse_embedded_folder_view(
             children.append((file_id, file_name, "application/octet-stream"))
             continue
 
-        folder_match = re.match(
-            pattern=r"https://drive\.google\.com/drive/folders/([-\w]{25,})",
-            string=href,
-        )
-        if folder_match:
-            child_folder_id = folder_match.group(1)
+        child_folder_id = _parse_google_drive_folder_id(url=href)
+        if child_folder_id is not None:
             child_name = a_tag.get_text(strip=True)
             children.append((child_folder_id, child_name, _GoogleDriveFile.TYPE_FOLDER))
             continue

@@ -18,6 +18,7 @@ from .download import _import_cookies_from_browser
 from .download import download
 from .download_folder import download_folder
 from .exceptions import DownloadError
+from .parse_url import _parse_google_drive_folder_id
 
 BROWSERS: Final = tuple(sorted(SUPPORTED_BROWSERS))
 
@@ -131,7 +132,7 @@ def main() -> None:
     parser.add_argument(
         "--folder",
         action="store_true",
-        help="download entire folder instead of a single file",
+        help="download a folder by ID (folder URLs are detected automatically)",
     )
     parser.add_argument(
         "--json",
@@ -220,7 +221,16 @@ def main() -> None:
         id = args.url_or_id
 
     try:
-        if args.folder:
+        folder_id = _parse_google_drive_folder_id(url=url) if url is not None else None
+        is_folder = args.folder or folder_id is not None
+        if args.folder and folder_id is not None and not args.quiet:
+            print(
+                "warning: `--folder` is no longer required for folder URLs and will "
+                "be removed in a future release",
+                file=sys.stderr,
+            )
+
+        if is_folder:
             if not (args.output is None or isinstance(args.output, str)):
                 raise ValueError("--folder does not support stdout output (-O -)")
             result = download_folder(
@@ -255,7 +265,7 @@ def main() -> None:
             )
 
         if args.json:
-            files = result if args.folder else [result]
+            files = result if is_folder else [result]
             entries = []
             for file in files:
                 assert isinstance(file, GoogleDriveFileToDownload)
