@@ -1,4 +1,5 @@
 import os.path as osp
+import re
 import sys
 import tempfile
 import unittest.mock
@@ -31,23 +32,24 @@ def test_download_folder_google_slides_without_extension(*, tmp_path: Path) -> N
     assert files[0].endswith(".pptx")
 
 
-def _make_folder_root(*, name: str, child_name: str) -> _GoogleDriveFile:
+def _make_folder_root(*, name: str, child_names: list[str]) -> _GoogleDriveFile:
     return _GoogleDriveFile(
         id="root_id",
         name=name,
         type=_GoogleDriveFile.TYPE_FOLDER,
         children=[
             _GoogleDriveFile(
-                id="child_id",
+                id=f"child_{index}",
                 name=child_name,
                 type="text/plain",
-            ),
+            )
+            for index, child_name in enumerate(child_names)
         ],
     )
 
 
 def test_root_folder_name_path_traversal_is_sanitized(*, tmp_path: Path) -> None:
-    root = _make_folder_root(name="../../evil", child_name="safe_file.txt")
+    root = _make_folder_root(name="../../evil", child_names=["safe_file.txt"])
     output_dir = str(tmp_path) + osp.sep
 
     with unittest.mock.patch.object(
@@ -68,8 +70,10 @@ def test_root_folder_name_path_traversal_is_sanitized(*, tmp_path: Path) -> None
         assert resolved.startswith(osp.realpath(output_dir))
 
 
-def test_download_folder_propagates_download_error(*, tmp_path: Path) -> None:
-    root = _make_folder_root(name="folder", child_name="file.txt")
+def test_download_folder_lists_every_failed_file(*, tmp_path: Path) -> None:
+    root = _make_folder_root(name="folder", child_names=["first.txt", "second.txt"])
+    first_path = tmp_path / "folder" / "first.txt"
+    second_path = tmp_path / "folder" / "second.txt"
 
     with (
         unittest.mock.patch.object(
@@ -80,15 +84,71 @@ def test_download_folder_propagates_download_error(*, tmp_path: Path) -> None:
         unittest.mock.patch.object(
             sys.modules["gdown.download_folder"],
             "download",
-            side_effect=DownloadError("access denied"),
+            side_effect=[DownloadError("first error"), DownloadError("second error")],
         ),
-        pytest.raises(DownloadError, match="access denied"),
+        pytest.raises(DownloadError) as exc_info,
     ):
         download_folder(
             url="https://drive.google.com/drive/folders/dummy",
             output=str(tmp_path) + osp.sep,
             quiet=True,
         )
+
+    assert str(first_path) in str(exc_info.value)
+    assert str(second_path) in str(exc_info.value)
+
+
+def test_download_folder_does_not_catch_other_errors(*, tmp_path: Path) -> None:
+    root = _make_folder_root(name="folder", child_names=["first.txt", "second.txt"])
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "download",
+            side_effect=OSError("disk full"),
+        ) as mock_download,
+        pytest.raises(OSError, match="disk full"),
+    ):
+        download_folder(
+            url="https://drive.google.com/drive/folders/dummy",
+            output=str(tmp_path) + osp.sep,
+            quiet=True,
+        )
+
+    mock_download.assert_called_once()
+
+
+def test_download_folder_returns_every_file_after_success(
+    *, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _make_folder_root(name="folder", child_names=["first.txt", "second.txt"])
+    downloaded_paths = [str(tmp_path / name) for name in ("first.txt", "second.txt")]
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "download",
+            side_effect=downloaded_paths,
+        ),
+    ):
+        files = download_folder(
+            url="https://drive.google.com/drive/folders/dummy",
+            output=str(tmp_path) + osp.sep,
+            quiet=False,
+        )
+
+    assert files == downloaded_paths
+    assert "Download completed\n" in capsys.readouterr().err
 
 
 def test_download_folder_closes_session_when_parsing_raises() -> None:
@@ -188,20 +248,48 @@ def test_download_folder_dry_run() -> None:
         assert hasattr(file, "local_path")
 
 
-def test_download_folder_fails_when_a_file_ends_before_announced_size(
-    *, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.parametrize("quiet", [False, True])
+def test_download_folder_continues_after_truncation_then_resumes(
+    *, tmp_path: Path, capsys: pytest.CaptureFixture[str], quiet: bool
 ) -> None:
-    root = _make_folder_root(name="folder", child_name="file.txt")
-    response = build_response(
-        headers={
-            "Content-Disposition": 'attachment; filename="file.txt"',
-            "Content-Length": "10",
-        },
-        chunks=[b"data"],
-    )
-    session = unittest.mock.Mock()
-    session.get.return_value = response
-    session.cookies = []
+    root = _make_folder_root(name="folder", child_names=["first.txt", "second.txt"])
+    first_path = tmp_path / "first.txt"
+    second_path = tmp_path / "second.txt"
+    responses = {
+        "child_0": build_response(
+            headers={
+                "Content-Disposition": 'attachment; filename="first.txt"',
+                "Content-Length": "10",
+            },
+            chunks=[b"data"],
+        ),
+        "child_1": build_response(
+            headers={
+                "Content-Disposition": 'attachment; filename="second.txt"',
+                "Content-Length": "6",
+            },
+            chunks=[b"second"],
+        ),
+    }
+
+    def get_response(
+        url: str, *, headers: dict[str, str] | None = None, **_kwargs: object
+    ) -> unittest.mock.Mock:
+        if headers is not None:
+            assert headers == {"Range": "bytes=4-"}
+            return build_response(headers={"Content-Length": "6"}, chunks=[b"123456"])
+        file_id = url.rsplit("=", 1)[1]
+        if file_id == "child_1" and not second_path.exists():
+            stderr = capsys.readouterr().err
+            if quiet:
+                assert stderr == ""
+            else:
+                assert (
+                    f"Failed to download {first_path}: Download is incomplete" in stderr
+                )
+                assert "received 4 bytes" in stderr
+                assert "Download completed" not in stderr
+        return responses[file_id]
 
     with (
         unittest.mock.patch.object(
@@ -209,21 +297,39 @@ def test_download_folder_fails_when_a_file_ends_before_announced_size(
             "_download_and_parse_google_drive_link",
             return_value=root,
         ),
-        unittest.mock.patch.object(
-            sys.modules["gdown.download"],
-            "_get_session",
-            return_value=(session, str(tmp_path / "cookies.txt")),
-        ),
-        pytest.raises(DownloadError, match="received 4 bytes"),
+        unittest.mock.patch("requests.sessions.Session.get", side_effect=get_response),
     ):
-        download_folder(
-            url="https://drive.google.com/drive/folders/dummy",
-            output=str(tmp_path) + osp.sep,
-            quiet=False,
+        with pytest.raises(DownloadError, match=re.escape(str(first_path))):
+            download_folder(
+                id="root_id", output=str(tmp_path), quiet=quiet, use_cookies=False
+            )
+
+        stderr = capsys.readouterr().err
+        assert "Download completed" not in stderr
+        if quiet:
+            assert stderr == ""
+        assert not first_path.exists()
+        (part,) = tmp_path.glob("first.txt*.part")
+        assert part.read_bytes() == b"data"
+        assert second_path.read_bytes() == b"second"
+
+        responses["child_1"].iter_content.side_effect = AssertionError(
+            "Completed files must not be downloaded again"
+        )
+        files = download_folder(
+            id="root_id",
+            output=str(tmp_path),
+            quiet=quiet,
+            use_cookies=False,
+            resume=True,
         )
 
-    assert "Download completed" not in capsys.readouterr().err
-    assert not (tmp_path / "folder" / "file.txt").exists()
-    part_files = list((tmp_path / "folder").glob("file.txt*.part"))
-    assert len(part_files) == 1
-    assert part_files[0].read_bytes() == b"data"
+    assert files == [str(first_path), str(second_path)]
+    assert first_path.read_bytes() == b"data123456"
+    assert second_path.read_bytes() == b"second"
+    assert not part.exists()
+    stderr = capsys.readouterr().err
+    if quiet:
+        assert stderr == ""
+    else:
+        assert "Download completed\n" in stderr

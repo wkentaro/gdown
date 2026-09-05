@@ -181,6 +181,7 @@ def download_folder(
         os.makedirs(root_dir)
 
     files = []
+    failed_paths: list[str] = []
     for id, path in directory_structure:
         local_path = osp.join(root_dir, path)
 
@@ -201,18 +202,29 @@ def download_folder(
                 download_output = local_path
             else:
                 download_output = osp.dirname(local_path) + osp.sep
-            local_path = download(
-                url="https://drive.google.com/uc?id=" + id,
-                output=download_output,
-                quiet=quiet,
-                proxy=proxy,
-                speed=speed,
-                use_cookies=use_cookies,
-                verify=verify,
-                resume=resume,
-                cookies_file=cookies_file,
-            )
-            files.append(local_path)
+            try:
+                downloaded_path = download(
+                    url="https://drive.google.com/uc?id=" + id,
+                    output=download_output,
+                    quiet=quiet,
+                    proxy=proxy,
+                    speed=speed,
+                    use_cookies=use_cookies,
+                    verify=verify,
+                    resume=resume,
+                    cookies_file=cookies_file,
+                )
+            except DownloadError as e:
+                failed_paths.append(local_path)
+                if not quiet:
+                    print(f"Failed to download {local_path}: {e}", file=sys.stderr)
+                continue
+            files.append(downloaded_path)
+    if failed_paths:
+        raise DownloadError(
+            "Failed to download the following files:\n"
+            + "\n".join(f"- {path}" for path in failed_paths)
+        )
     if not quiet:
         print("Download completed", file=sys.stderr)
     return files
