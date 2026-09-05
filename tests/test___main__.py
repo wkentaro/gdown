@@ -136,7 +136,7 @@ def test_download_a_folder_with_more_than_50_files() -> None:
     url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
 
     with tempfile.TemporaryDirectory() as d:
-        cmd = ["gdown", "--no-cookies", url, "-O", d, "--folder"]
+        cmd = ["gdown", "--no-cookies", url, "-O", d]
         subprocess.check_call(cmd)
 
         filenames = sorted(os.listdir(d))
@@ -162,8 +162,39 @@ def test_download_slides_from_gdrive() -> None:
     _test_cli_with_md5(url_or_id=file_id, md5=md5, options=["--format", "pdf"])
 
 
+@pytest.mark.parametrize(
+    ("folder_args", "expected_warning"),
+    [
+        (
+            [
+                "https://drive.google.com/drive/folders/1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV"
+            ],
+            False,
+        ),
+        (
+            [
+                "https://drive.google.com/drive/folders/1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV",
+                "--folder",
+            ],
+            True,
+        ),
+        (
+            [
+                "https://drive.google.com/drive/folders/1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV",
+                "--folder",
+                "--quiet",
+            ],
+            False,
+        ),
+        (["1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV", "--folder"], False),
+    ],
+)
 def test_json_flag_outputs_json_array(
-    *, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    folder_args: list[str],
+    expected_warning: bool,
 ) -> None:
     root = _GoogleDriveFile(
         id="root_id",
@@ -180,12 +211,7 @@ def test_json_flag_outputs_json_array(
     monkeypatch.setattr(
         sys,
         "argv",
-        [
-            "gdown",
-            "https://drive.google.com/drive/folders/dummy",
-            "--folder",
-            "--json",
-        ],
+        ["gdown", "--no-cookies", *folder_args, "--json"],
     )
     with unittest.mock.patch.object(
         sys.modules["gdown.download_folder"],
@@ -195,6 +221,7 @@ def test_json_flag_outputs_json_array(
         main()
 
     captured = capsys.readouterr()
+    assert ("`--folder` is no longer required" in captured.err) is expected_warning
     entries = json.loads(captured.out)
     assert entries == [
         {
@@ -202,6 +229,32 @@ def test_json_flag_outputs_json_array(
             "path": "track.mp3",
         }
     ]
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (
+            [
+                "https://drive.google.com/drive/folders/1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV",
+                "-O",
+                "-",
+            ],
+            "--folder does not support stdout output",
+        ),
+        (["https://[broken"], "Invalid IPv6 URL"),
+    ],
+)
+def test_cli_reports_invalid_input(*, args: list[str], message: str) -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "gdown", "--no-cookies", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert message in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_json_flag_preserves_subfolder_path(

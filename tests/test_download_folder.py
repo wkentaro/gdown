@@ -112,6 +112,24 @@ def test_download_folder_closes_session_when_parsing_raises() -> None:
     session.close.assert_called_once_with()
 
 
+def test_download_folder_parses_id_before_url_suffix(*, tmp_path: Path) -> None:
+    folder_id = "1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV"
+
+    with unittest.mock.patch.object(
+        sys.modules["gdown.download_folder"],
+        "_download_and_parse_google_drive_link",
+        return_value=_make_folder_root(name="folder", child_name="file.txt"),
+    ) as parse_folder:
+        download_folder(
+            url=f"https://drive.google.com/drive/folders/{folder_id}/view",
+            output=str(tmp_path),
+            quiet=True,
+            skip_download=True,
+        )
+
+    assert parse_folder.call_args.kwargs["folder_id"] == folder_id
+
+
 def test_parse_embedded_folder_view() -> None:
     html_file = osp.join(here, "data/embedded-folder-view-sample.html")
     with open(html_file) as f:

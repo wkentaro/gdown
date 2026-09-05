@@ -1,3 +1,4 @@
+from gdown.parse_url import _parse_google_drive_folder_id
 from gdown.parse_url import parse_url
 
 from .conftest import GITHUB_RELEASE_URL
@@ -5,6 +6,23 @@ from .conftest import GITHUB_RELEASE_URL
 
 def test_parse_url_non_gdrive() -> None:
     assert parse_url(GITHUB_RELEASE_URL) == (None, False)
+
+
+def test_parse_google_drive_folder_id() -> None:
+    folder_id = "1uUbx_lRLLE9O4WnI8TS77dUOJw_DjljV"
+
+    assert (
+        _parse_google_drive_folder_id(
+            url=f"https://drive.google.com/drive/folders/{folder_id}?usp=sharing"
+        )
+        == folder_id
+    )
+    assert (
+        _parse_google_drive_folder_id(
+            url=f"https://drive.google.com/file/d/{folder_id}/view"
+        )
+        is None
+    )
 
 
 def test_parse_url() -> None:

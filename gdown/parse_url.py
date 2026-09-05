@@ -7,6 +7,15 @@ def is_google_drive_url(url: str) -> bool:  # noqa: GR005 -- public API accepts 
     return parsed.hostname in ["drive.google.com", "docs.google.com"]
 
 
+def _parse_google_drive_folder_id(*, url: str) -> str | None:
+    parsed = urllib.parse.urlparse(url)
+    if not is_google_drive_url(url=url):
+        return None
+
+    match = re.match(r"^/drive/folders/([-\w]{25,})(?:/|$)", parsed.path)
+    return match.group(1) if match else None
+
+
 def parse_url(url: str) -> tuple[str | None, bool]:  # noqa: GR005 -- public API accepts both call styles
     """Parse URLs especially for Google Drive links.
 
