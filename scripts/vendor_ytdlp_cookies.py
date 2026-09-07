@@ -27,13 +27,19 @@ OUT: Final = (
 
 
 class Module:
+    name: str
+    lines: list[str]
+    body: list[ast.stmt]
+    defs: dict[str, ast.stmt]
+    # bound name -> (relative module or None, upstream name, import node)
+    imports: dict[str, tuple[str | None, str, ast.stmt]]
+
     def __init__(self, *, name: str, source: str) -> None:
         self.name = name
         self.lines = source.splitlines(keepends=True)
         self.body = ast.parse(source).body
-        self.defs: dict[str, ast.stmt] = {}
-        # bound name -> (relative module or None, upstream name, import node)
-        self.imports: dict[str, tuple[str | None, str, ast.stmt]] = {}
+        self.defs = {}
+        self.imports = {}
         for node in self.body:
             if isinstance(node, ast.Import | ast.ImportFrom):
                 module = None

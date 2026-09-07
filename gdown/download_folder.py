@@ -20,6 +20,11 @@ from .parse_url import _parse_google_drive_folder_id
 
 
 class _GoogleDriveFile:
+    id: str
+    name: str
+    type: str
+    children: list[_GoogleDriveFile]
+
     TYPE_FOLDER: Final = "application/vnd.google-apps.folder"
     TYPE_DOCUMENT: Final = "application/vnd.google-apps.document"
     TYPE_SPREADSHEET: Final = "application/vnd.google-apps.spreadsheet"
