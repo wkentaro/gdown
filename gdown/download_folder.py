@@ -36,7 +36,7 @@ class _GoogleDriveFile:
 
     def __post_init__(self) -> None:
         if self.children is None:
-            self.children = []  # noqa: GR012 -- preserve legacy None initialization of this schema field
+            self.children = []
 
     def is_folder(self) -> bool:
         return self.type == self.TYPE_FOLDER
