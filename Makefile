@@ -28,7 +28,7 @@ format:  # Format code
 lint:  # Lint code
 	$(call exec,uv run ruff format --check)
 	$(call exec,uv run ruff check)
-	$(call exec,uv run gruff check $(shell git ls-files "*.py" ":!gdown/_vendor/_ytdlp_cookies.py"))
+	$(call exec,uv run gruff check $(shell git ls-files "*.py" ":!gdown/_vendor/**"))
 	$(call exec,uv run ty check --no-progress)
 	$(call exec,uv run taplo fmt --check $(shell git ls-files "*.toml"))
 	$(call exec,uv run mdformat --check $(shell git ls-files "*.md"))

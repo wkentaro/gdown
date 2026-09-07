@@ -44,7 +44,7 @@ Homepage = "https://github.com/wkentaro/gdown"
 
 [dependency-groups]
 dev = [
-  "gruff>=0.0.6",
+  "gruff>=0.0.10",
   "mdformat>=0.7.17",
   "pytest>=8.3.5",
   "pytest-xdist>=3.6.1",
@@ -85,10 +85,10 @@ markers = ["network: tests that require network access (Google Drive, GitHub)"]
 select = ["GR"]
 
 [tool.ruff]
-extend-exclude = ["gdown/_vendor/_ytdlp_cookies.py"]
+extend-exclude = ["gdown/_vendor/"]
 
 [tool.ty.src]
-exclude = ["gdown/_vendor/_ytdlp_cookies.py"]
+exclude = ["gdown/_vendor/"]
 
 [tool.ruff.lint]
 extend-select = [
