@@ -5,7 +5,10 @@ import os.path as osp
 import re
 import sys
 import urllib.parse
+from dataclasses import dataclass
+from dataclasses import field
 from http import HTTPStatus
+from typing import ClassVar
 from typing import Final
 
 import bs4
@@ -19,29 +22,19 @@ from .exceptions import DownloadError
 from .parse_url import _parse_google_drive_folder_id
 
 
+@dataclass(kw_only=True, eq=False)
 class _GoogleDriveFile:
     id: str
     name: str
     type: str
-    children: list[_GoogleDriveFile]
+    children: list[_GoogleDriveFile] = field(default_factory=list)
 
-    TYPE_FOLDER: Final = "application/vnd.google-apps.folder"
-    TYPE_DOCUMENT: Final = "application/vnd.google-apps.document"
-    TYPE_SPREADSHEET: Final = "application/vnd.google-apps.spreadsheet"
-    TYPE_PRESENTATION: Final = "application/vnd.google-apps.presentation"
-
-    def __init__(
-        self,
-        *,
-        id: str,
-        name: str,
-        type: str,
-        children: list[_GoogleDriveFile] | None = None,
-    ) -> None:
-        self.id = id
-        self.name = name
-        self.type = type
-        self.children = children if children is not None else []
+    # Python versions below 3.13 cannot combine class-variable and final
+    # annotations; these constants must stay out of the generated constructor.
+    TYPE_FOLDER: ClassVar[str] = "application/vnd.google-apps.folder"  # noqa: GR004
+    TYPE_DOCUMENT: ClassVar[str] = "application/vnd.google-apps.document"  # noqa: GR004
+    TYPE_SPREADSHEET: ClassVar[str] = "application/vnd.google-apps.spreadsheet"  # noqa: GR004
+    TYPE_PRESENTATION: ClassVar[str] = "application/vnd.google-apps.presentation"  # noqa: GR004
 
     def is_folder(self) -> bool:
         return self.type == self.TYPE_FOLDER
