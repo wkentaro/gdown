@@ -5,7 +5,10 @@ import os.path as osp
 import re
 import sys
 import urllib.parse
+from dataclasses import dataclass
+from dataclasses import field
 from http import HTTPStatus
+from typing import ClassVar
 from typing import Final
 
 import bs4
@@ -19,24 +22,21 @@ from .exceptions import DownloadError
 from .parse_url import _parse_google_drive_folder_id
 
 
+@dataclass(eq=False, kw_only=True)
 class _GoogleDriveFile:
-    TYPE_FOLDER: Final = "application/vnd.google-apps.folder"
-    TYPE_DOCUMENT: Final = "application/vnd.google-apps.document"
-    TYPE_SPREADSHEET: Final = "application/vnd.google-apps.spreadsheet"
-    TYPE_PRESENTATION: Final = "application/vnd.google-apps.presentation"
+    TYPE_FOLDER: ClassVar[str] = "application/vnd.google-apps.folder"  # noqa: GR004 -- ClassVar keeps constants out of dataclass fields on Python 3.10
+    TYPE_DOCUMENT: ClassVar[str] = "application/vnd.google-apps.document"  # noqa: GR004 -- ClassVar keeps constants out of dataclass fields on Python 3.10
+    TYPE_SPREADSHEET: ClassVar[str] = "application/vnd.google-apps.spreadsheet"  # noqa: GR004 -- ClassVar keeps constants out of dataclass fields on Python 3.10
+    TYPE_PRESENTATION: ClassVar[str] = "application/vnd.google-apps.presentation"  # noqa: GR004 -- ClassVar keeps constants out of dataclass fields on Python 3.10
 
-    def __init__(
-        self,
-        *,
-        id: str,
-        name: str,
-        type: str,
-        children: list[_GoogleDriveFile] | None = None,
-    ) -> None:
-        self.id = id
-        self.name = name
-        self.type = type
-        self.children = children if children is not None else []
+    id: str
+    name: str
+    type: str
+    children: list[_GoogleDriveFile] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.children is None:
+            self.children = []  # noqa: GR012 -- preserve legacy None initialization of this schema field
 
     def is_folder(self) -> bool:
         return self.type == self.TYPE_FOLDER

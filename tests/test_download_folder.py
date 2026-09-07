@@ -612,3 +612,29 @@ def test_download_folder_preserves_user_agent(
         assert "Chrome/39" in agents[1]
     else:
         assert agents == [user_agent, user_agent]
+
+
+def test_drive_file_owns_default_children_and_keeps_supplied_list() -> None:
+    first = _GoogleDriveFile(id="a", name="a", type=_GoogleDriveFile.TYPE_FOLDER)
+    second = _GoogleDriveFile(id="b", name="b", type=_GoogleDriveFile.TYPE_FOLDER)
+    supplied = [first]
+    parent = _GoogleDriveFile(
+        id="parent", name="parent", type=_GoogleDriveFile.TYPE_FOLDER, children=supplied
+    )
+    legacy = _GoogleDriveFile(
+        id="legacy",
+        name="legacy",
+        type=first.type,
+        children=None,  # ty: ignore[invalid-argument-type] -- legacy callers supplied None
+    )
+    first.children.append(second)
+    assert legacy.children == []
+    assert second.children == []
+    assert parent.children is supplied
+    assert first.is_folder()
+    assert not first.is_google_native()
+    assert first != _GoogleDriveFile(
+        id="a", name="a", type=first.type, children=first.children
+    )
+    with pytest.raises(TypeError):
+        _GoogleDriveFile(id="a", name="a", type=first.type, TYPE_FOLDER="overridden")  # ty: ignore[unknown-argument] -- verify runtime rejection

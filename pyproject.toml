@@ -83,6 +83,7 @@ markers = ["network: tests that require network access (Google Drive, GitHub)"]
 
 [tool.gruff.lint]
 select = ["GR"]
+per-file-ignores = { "gdown/_vendor/_ytdlp_cookies.py" = ["GR"] }
 
 [tool.ruff]
 extend-exclude = ["gdown/_vendor/_ytdlp_cookies.py"]
