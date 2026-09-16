@@ -385,6 +385,65 @@ def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
     return tmp_file, False
 
 
+def _write_response(
+    *,
+    res: requests.Response,
+    f: BinaryIO,
+    tmp_file: str | None,
+    start_size: int,
+    quiet: bool,
+    speed: float | None,
+    progress: Callable[[int, int | None], None] | None,
+    hasher: "hashlib._Hash | None",
+    stack: contextlib.ExitStack,
+) -> None:
+    content_length = _get_content_length_from_response(response=res)
+    total = None if content_length is None else content_length + start_size
+    expected_size = (
+        content_length if _is_content_length_comparable(response=res) else None
+    )
+    if not quiet:
+        pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+        stack.callback(pbar.close)
+    t_start = time.time()
+    downloaded = 0
+    truncation_error: requests.exceptions.ChunkedEncodingError | None = None
+    try:
+        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+            f.write(chunk)
+            if hasher is not None:
+                hasher.update(chunk)
+            downloaded += len(chunk)
+            if not quiet:
+                pbar.update(len(chunk))
+            if progress is not None:
+                progress(downloaded + start_size, total)
+            if speed is None:
+                continue
+            elapsed_time_expected = downloaded / speed
+            elapsed_time = time.time() - t_start
+            if elapsed_time < elapsed_time_expected:
+                time.sleep(elapsed_time_expected - elapsed_time)
+    except requests.exceptions.ChunkedEncodingError as e:
+        # Some HTTP client versions enforce Content-Length themselves, so a
+        # body that ends early surfaces here rather than as a short read.
+        truncation_error = e
+
+    if truncation_error is None and (
+        expected_size is None or downloaded >= expected_size
+    ):
+        return
+    message = f"Download is incomplete: received {downloaded + start_size} bytes"
+    if expected_size is not None:
+        message += f" but the server announced {total} bytes"
+    if tmp_file is not None:
+        message += (
+            f".\nThe received bytes are kept in {tmp_file}, which resume "
+            "(--continue on the command line) picks up"
+        )
+    raise DownloadError(message + ".") from truncation_error
+
+
 # Parameters remain positional-or-keyword for backward compatibility.
 def download(
     url: str | None = None,
@@ -602,50 +661,17 @@ def download(
             )
             responses.callback(res.close)
 
-        content_length = _get_content_length_from_response(response=res)
-        total = None if content_length is None else content_length + start_size
-        expected_size = (
-            content_length if _is_content_length_comparable(response=res) else None
+        _write_response(
+            res=res,
+            f=f,
+            tmp_file=tmp_file,
+            start_size=start_size,
+            quiet=quiet,
+            speed=speed,
+            progress=progress,
+            hasher=hasher,
+            stack=stack,
         )
-        if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
-            stack.callback(pbar.close)
-        t_start = time.time()
-        downloaded = 0
-        truncation_error: requests.exceptions.ChunkedEncodingError | None = None
-        try:
-            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-                f.write(chunk)
-                if hasher is not None:
-                    hasher.update(chunk)
-                downloaded += len(chunk)
-                if not quiet:
-                    pbar.update(len(chunk))
-                if progress is not None:
-                    progress(downloaded + start_size, total)
-                if speed is None:
-                    continue
-                elapsed_time_expected = downloaded / speed
-                elapsed_time = time.time() - t_start
-                if elapsed_time < elapsed_time_expected:
-                    time.sleep(elapsed_time_expected - elapsed_time)
-        except requests.exceptions.ChunkedEncodingError as e:
-            # Some HTTP client versions enforce Content-Length themselves, so a
-            # body that ends early surfaces here rather than as a short read.
-            truncation_error = e
-
-    if truncation_error is not None or (
-        expected_size is not None and downloaded < expected_size
-    ):
-        message = f"Download is incomplete: received {downloaded + start_size} bytes"
-        if expected_size is not None:
-            message += f" but the server announced {total} bytes"
-        if tmp_file is not None:
-            message += (
-                f".\nThe received bytes are kept in {tmp_file}, which resume "
-                "(--continue on the command line) picks up"
-            )
-        raise DownloadError(message + ".") from truncation_error
 
     if tmp_file is not None:
         assert isinstance(output, str)
