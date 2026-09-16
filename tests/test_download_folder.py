@@ -203,10 +203,12 @@ def test_parse_embedded_folder_view() -> None:
     mock_sess = unittest.mock.Mock()
     mock_sess.get.return_value = mock_response
 
+    TIMEOUT: Final = 1.5
     result = _parse_embedded_folder_view(
-        sess=mock_sess, folder_id="test_folder_id", verify=True, timeout=None
+        sess=mock_sess, folder_id="test_folder_id", verify=True, timeout=TIMEOUT
     )
 
+    assert mock_sess.get.call_args.kwargs["timeout"] == TIMEOUT
     assert result is not None
     folder_name, children = result
     assert folder_name == "files_100"
