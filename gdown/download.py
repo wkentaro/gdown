@@ -15,6 +15,7 @@ import urllib.parse
 import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
+from collections.abc import Iterator
 from http import HTTPStatus
 from http.cookiejar import Cookie
 from http.cookiejar import MozillaCookieJar
@@ -385,45 +386,25 @@ def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
     return tmp_file, False
 
 
-def _write_response(
+def _iter_response_chunks(
     *,
     res: requests.Response,
-    f: BinaryIO,
     tmp_file: str | None,
     start_size: int,
-    quiet: bool,
-    speed: float | None,
-    progress: Callable[[int, int | None], None] | None,
-    hasher: "hashlib._Hash | None",
-    stack: contextlib.ExitStack,
-) -> None:
+) -> Iterator[bytes]:
     content_length = _get_content_length_from_response(response=res)
     total = None if content_length is None else content_length + start_size
     expected_size = (
         content_length if _is_content_length_comparable(response=res) else None
     )
-    if not quiet:
-        pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
-        stack.callback(pbar.close)
-    t_start = time.time()
     downloaded = 0
     truncation_error: requests.exceptions.ChunkedEncodingError | None = None
+    # Exceptions raised by the consumer do not enter this generator,
+    # so writes, hashing and caller callbacks propagate unchanged.
     try:
         for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-            f.write(chunk)
-            if hasher is not None:
-                hasher.update(chunk)
             downloaded += len(chunk)
-            if not quiet:
-                pbar.update(len(chunk))
-            if progress is not None:
-                progress(downloaded + start_size, total)
-            if speed is None:
-                continue
-            elapsed_time_expected = downloaded / speed
-            elapsed_time = time.time() - t_start
-            if elapsed_time < elapsed_time_expected:
-                time.sleep(elapsed_time_expected - elapsed_time)
+            yield chunk
     except requests.exceptions.ChunkedEncodingError as e:
         # Some HTTP client versions enforce Content-Length themselves, so a
         # body that ends early surfaces here rather than as a short read.
@@ -442,6 +423,44 @@ def _write_response(
             "(--continue on the command line) picks up"
         )
     raise DownloadError(message + ".") from truncation_error
+
+
+def _write_response(
+    *,
+    res: requests.Response,
+    f: BinaryIO,
+    tmp_file: str | None,
+    start_size: int,
+    quiet: bool,
+    speed: float | None,
+    progress: Callable[[int, int | None], None] | None,
+    hasher: "hashlib._Hash | None",
+    stack: contextlib.ExitStack,
+) -> None:
+    content_length = _get_content_length_from_response(response=res)
+    total = None if content_length is None else content_length + start_size
+    if not quiet:
+        pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+        stack.callback(pbar.close)
+    t_start = time.time()
+    downloaded = 0
+    for chunk in _iter_response_chunks(
+        res=res, tmp_file=tmp_file, start_size=start_size
+    ):
+        f.write(chunk)
+        if hasher is not None:
+            hasher.update(chunk)
+        downloaded += len(chunk)
+        if not quiet:
+            pbar.update(len(chunk))
+        if progress is not None:
+            progress(downloaded + start_size, total)
+        if speed is None:
+            continue
+        elapsed_time_expected = downloaded / speed
+        elapsed_time = time.time() - t_start
+        if elapsed_time < elapsed_time_expected:
+            time.sleep(elapsed_time_expected - elapsed_time)
 
 
 # Parameters remain positional-or-keyword for backward compatibility.
