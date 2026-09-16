@@ -264,6 +264,186 @@ def _get_session(
     return sess, cookies_file
 
 
+def _get_download_response(
+    *,
+    sess: requests.Session,
+    responses: contextlib.ExitStack,
+    url: str,
+    gdrive_file_id: str | None,
+    format: str | None,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    use_cookies: bool,
+    cookies_file: str,
+) -> tuple[requests.Response, str]:
+    url_origin = url
+    while True:
+        responses.close()
+        res = sess.get(url, stream=True, verify=verify, timeout=timeout)
+        responses.callback(res.close)
+
+        if not gdrive_file_id:
+            return res, url
+
+        if url == url_origin and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            # The file could be Google Docs or Spreadsheets.
+            url = f"https://drive.google.com/open?id={gdrive_file_id}"
+            continue
+
+        if res.headers["Content-Type"].startswith("text/html"):
+            if "/document/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/document/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="docx" if format is None else format,
+                    )
+                )
+                continue
+            elif "/spreadsheets/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/spreadsheets/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="xlsx" if format is None else format,
+                    )
+                )
+                continue
+            elif "/presentation/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/presentation/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="pptx" if format is None else format,
+                    )
+                )
+                continue
+        elif (
+            "Content-Disposition" in res.headers
+            and res.headers["Content-Disposition"].endswith("pptx")
+            and format not in {None, "pptx"}
+        ):
+            url = (
+                "https://docs.google.com/presentation/d/{id}/export"
+                "?format={format}".format(
+                    id=gdrive_file_id,
+                    format="pptx" if format is None else format,
+                )
+            )
+            continue
+
+        if use_cookies:
+            try:
+                _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
+            except OSError as e:
+                # Persisting cookies must never cost a download that succeeded.
+                warnings.warn(
+                    f"Failed to save cookies to {cookies_file}: {e}", stacklevel=3
+                )
+
+        if "Content-Disposition" in res.headers:
+            return res, url
+
+        try:
+            url = get_url_from_gdrive_confirmation(res.text)
+        except FileURLRetrievalError as e:
+            message = (
+                "Failed to retrieve file url:\n\n{}\n\n"
+                "You may still be able to access the file from the browser:"
+                "\n\n\t{}\n\n"
+                "but Gdown can't. Please check connections and permissions."
+            ).format(
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
+                url_origin,
+            )
+            raise FileURLRetrievalError(message)
+
+
+def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
+    existing_tmp_files = []
+    for file in os.listdir(osp.dirname(output) or "."):
+        if file.startswith(osp.basename(output)) and file.endswith(".part"):
+            existing_tmp_files.append(osp.join(osp.dirname(output), file))
+    if resume and existing_tmp_files:
+        if len(existing_tmp_files) != 1:
+            lines = ["There are multiple temporary files to resume:", ""]
+            for file in existing_tmp_files:
+                lines.append(f"\t{file}")
+            lines.append("")
+            lines.append("Please remove them except one to resume downloading.")
+            raise DownloadError("\n".join(lines))
+        return existing_tmp_files[0], True
+    # Close the temporary file before reopening it for Windows compatibility (#153).
+    tmp_file_obj = tempfile.NamedTemporaryFile(
+        suffix=".part",
+        prefix=osp.basename(output),
+        dir=osp.dirname(output),
+        delete=False,
+    )
+    tmp_file = tmp_file_obj.name
+    tmp_file_obj.close()
+    return tmp_file, False
+
+
+def _write_response(
+    *,
+    res: requests.Response,
+    f: BinaryIO,
+    tmp_file: str | None,
+    start_size: int,
+    quiet: bool,
+    speed: float | None,
+    progress: Callable[[int, int | None], None] | None,
+    hasher: "hashlib._Hash | None",
+    stack: contextlib.ExitStack,
+) -> None:
+    content_length = _get_content_length_from_response(response=res)
+    total = None if content_length is None else content_length + start_size
+    expected_size = (
+        content_length if _is_content_length_comparable(response=res) else None
+    )
+    if not quiet:
+        pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+        stack.callback(pbar.close)
+    t_start = time.time()
+    downloaded = 0
+    truncation_error: requests.exceptions.ChunkedEncodingError | None = None
+    try:
+        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+            f.write(chunk)
+            if hasher is not None:
+                hasher.update(chunk)
+            downloaded += len(chunk)
+            if not quiet:
+                pbar.update(len(chunk))
+            if progress is not None:
+                progress(downloaded + start_size, total)
+            if speed is None:
+                continue
+            elapsed_time_expected = downloaded / speed
+            elapsed_time = time.time() - t_start
+            if elapsed_time < elapsed_time_expected:
+                time.sleep(elapsed_time_expected - elapsed_time)
+    except requests.exceptions.ChunkedEncodingError as e:
+        # Some HTTP client versions enforce Content-Length themselves, so a
+        # body that ends early surfaces here rather than as a short read.
+        truncation_error = e
+
+    if truncation_error is None and (
+        expected_size is None or downloaded >= expected_size
+    ):
+        return
+    message = f"Download is incomplete: received {downloaded + start_size} bytes"
+    if expected_size is not None:
+        message += f" but the server announced {total} bytes"
+    if tmp_file is not None:
+        message += (
+            f".\nThe received bytes are kept in {tmp_file}, which resume "
+            "(--continue on the command line) picks up"
+        )
+    raise DownloadError(message + ".") from truncation_error
+
+
 # Parameters remain positional-or-keyword for backward compatibility.
 def download(
     url: str | None = None,
@@ -392,91 +572,17 @@ def download(
             url_origin = url
             is_gdrive_download_link = True
 
-        while True:
-            responses.close()
-            res = sess.get(url, stream=True, verify=verify, timeout=timeout)
-            responses.callback(res.close)
-
-            if not (gdrive_file_id and is_gdrive_download_link):
-                break
-
-            if (
-                url == url_origin
-                and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-            ):
-                # The file could be Google Docs or Spreadsheets.
-                url = f"https://drive.google.com/open?id={gdrive_file_id}"
-                continue
-
-            if res.headers["Content-Type"].startswith("text/html"):
-                if "/document/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/document/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="docx" if format is None else format,
-                        )
-                    )
-                    continue
-                elif "/spreadsheets/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/spreadsheets/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="xlsx" if format is None else format,
-                        )
-                    )
-                    continue
-                elif "/presentation/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/presentation/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="pptx" if format is None else format,
-                        )
-                    )
-                    continue
-            elif (
-                "Content-Disposition" in res.headers
-                and res.headers["Content-Disposition"].endswith("pptx")
-                and format not in {None, "pptx"}
-            ):
-                url = (
-                    "https://docs.google.com/presentation/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="pptx" if format is None else format,
-                    )
-                )
-                continue
-
-            if use_cookies:
-                try:
-                    _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
-                except OSError as e:
-                    # Persisting cookies must never cost a download that succeeded.
-                    warnings.warn(
-                        f"Failed to save cookies to {cookies_file}: {e}", stacklevel=2
-                    )
-
-            if "Content-Disposition" in res.headers:
-                # This is the file
-                break
-
-            # Need to redirect with confirmation
-            try:
-                url = get_url_from_gdrive_confirmation(res.text)
-            except FileURLRetrievalError as e:
-                message = (
-                    "Failed to retrieve file url:\n\n{}\n\n"
-                    "You may still be able to access the file from the browser:"
-                    "\n\n\t{}\n\n"
-                    "but Gdown can't. Please check connections and permissions."
-                ).format(
-                    textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
-                    url_origin,
-                )
-                raise FileURLRetrievalError(message)
+        res, url = _get_download_response(
+            sess=sess,
+            responses=responses,
+            url=url,
+            gdrive_file_id=gdrive_file_id,
+            format=format,
+            verify=verify,
+            timeout=timeout,
+            use_cookies=use_cookies,
+            cookies_file=cookies_file,
+        )
 
         filename_from_url = None
         last_modified_time = None
@@ -513,30 +619,7 @@ def download(
                     print(f"Skipping already downloaded file {output}", file=sys.stderr)
                 return output
 
-            existing_tmp_files = []
-            for file in os.listdir(osp.dirname(output) or "."):
-                if file.startswith(osp.basename(output)) and file.endswith(".part"):
-                    existing_tmp_files.append(osp.join(osp.dirname(output), file))
-            if resume and existing_tmp_files:
-                if len(existing_tmp_files) != 1:
-                    lines = ["There are multiple temporary files to resume:", ""]
-                    for file in existing_tmp_files:
-                        lines.append(f"\t{file}")
-                    lines.append("")
-                    lines.append("Please remove them except one to resume downloading.")
-                    raise DownloadError("\n".join(lines))
-                tmp_file = existing_tmp_files[0]
-            else:
-                resume = False
-                # Avoid mkstemp which doesn't work on Windows (#153)
-                tmp_file_obj = tempfile.NamedTemporaryFile(
-                    suffix=".part",
-                    prefix=osp.basename(output),
-                    dir=osp.dirname(output),
-                    delete=False,
-                )
-                tmp_file = tmp_file_obj.name
-                tmp_file_obj.close()
+            tmp_file, resume = _prepare_partial_file(output=output, resume=resume)
             f = open(tmp_file, "ab")
             stack.callback(f.close)
         else:
@@ -578,50 +661,17 @@ def download(
             )
             responses.callback(res.close)
 
-        content_length = _get_content_length_from_response(response=res)
-        total = None if content_length is None else content_length + start_size
-        expected_size = (
-            content_length if _is_content_length_comparable(response=res) else None
+        _write_response(
+            res=res,
+            f=f,
+            tmp_file=tmp_file,
+            start_size=start_size,
+            quiet=quiet,
+            speed=speed,
+            progress=progress,
+            hasher=hasher,
+            stack=stack,
         )
-        if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
-            stack.callback(pbar.close)
-        t_start = time.time()
-        downloaded = 0
-        truncation_error: requests.exceptions.ChunkedEncodingError | None = None
-        try:
-            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-                f.write(chunk)
-                if hasher is not None:
-                    hasher.update(chunk)
-                downloaded += len(chunk)
-                if not quiet:
-                    pbar.update(len(chunk))
-                if progress is not None:
-                    progress(downloaded + start_size, total)
-                if speed is None:
-                    continue
-                elapsed_time_expected = downloaded / speed
-                elapsed_time = time.time() - t_start
-                if elapsed_time < elapsed_time_expected:
-                    time.sleep(elapsed_time_expected - elapsed_time)
-        except requests.exceptions.ChunkedEncodingError as e:
-            # Some HTTP client versions enforce Content-Length themselves, so a
-            # body that ends early surfaces here rather than as a short read.
-            truncation_error = e
-
-    if truncation_error is not None or (
-        expected_size is not None and downloaded < expected_size
-    ):
-        message = f"Download is incomplete: received {downloaded + start_size} bytes"
-        if expected_size is not None:
-            message += f" but the server announced {total} bytes"
-        if tmp_file is not None:
-            message += (
-                f".\nThe received bytes are kept in {tmp_file}, which resume "
-                "(--continue on the command line) picks up"
-            )
-        raise DownloadError(message + ".") from truncation_error
 
     if tmp_file is not None:
         assert isinstance(output, str)
