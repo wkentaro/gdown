@@ -27,6 +27,7 @@ class _DownloadKwargs(TypedDict, total=False):
     verify: bool | str
     id: str | None
     resume: bool
+    retries: int
     format: str | None
     user_agent: str | None
     progress: Callable[[int, int | None], None] | None

@@ -8,6 +8,7 @@ import sqlite3
 import sys
 import threading
 import unittest.mock
+from http import HTTPStatus
 from pathlib import Path
 from typing import BinaryIO
 from typing import Final
@@ -59,6 +60,7 @@ def download_session(
     response = build_response(headers={"Content-Length": "4"}, chunks=[b"data"])
 
     session = unittest.mock.Mock()
+    session.headers = {}
     session.get.return_value = response
     monkeypatch.setattr(
         sys.modules["gdown.download"],
@@ -420,7 +422,10 @@ def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(
 
     download_session.get.side_effect = [
         download_session.get.return_value,
-        build_response(headers={"Content-Length": "6"}, chunks=[b"123456"]),
+        build_response(
+            headers={"Content-Length": "6", "Content-Range": "bytes 4-9/10"},
+            chunks=[b"123456"],
+        ),
     ]
     download(
         url="https://example.com/file", output=str(output), quiet=True, resume=True
@@ -440,7 +445,10 @@ def test_download_counts_resumed_bytes_toward_announced_size(
     part.write_bytes(b"partial")
     download_session.get.side_effect = [
         build_response(headers={"Content-Length": "11"}, chunks=[b"partial"]),
-        build_response(headers={"Content-Length": "4"}, chunks=[b"da"]),
+        build_response(
+            headers={"Content-Length": "4", "Content-Range": "bytes 7-10/11"},
+            chunks=[b"da"],
+        ),
     ]
 
     with pytest.raises(DownloadError, match="received 9 bytes.*announced 11 bytes"):
@@ -460,7 +468,10 @@ def test_download_feeds_resumed_bytes_to_hasher(
     (tmp_path / "output.partial.part").write_bytes(b"partial")
     download_session.get.side_effect = [
         build_response(headers={"Content-Length": "11"}, chunks=[b"partial"]),
-        build_response(headers={"Content-Length": "4"}, chunks=[b"data"]),
+        build_response(
+            headers={"Content-Length": "4", "Content-Range": "bytes 7-10/11"},
+            chunks=[b"data"],
+        ),
     ]
     hasher = hashlib.sha256()
 
@@ -901,6 +912,8 @@ def test_download_closes_replaced_responses(
             "Content-Type": "application/octet-stream",
             "Content-Disposition": 'attachment; filename="file.txt"',
         }
+        if status == HTTPStatus.PARTIAL_CONTENT:
+            response.headers["Content-Range"] = "bytes 7-10/11"
         body = io.BytesIO(b"data")
         response.raw = HTTPResponse(body=body, preload_content=False)
         responses.append(response)

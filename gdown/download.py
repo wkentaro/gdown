@@ -5,6 +5,7 @@ import email.utils
 import hashlib
 import os
 import os.path as osp
+import random
 import re
 import shutil
 import sys
@@ -21,6 +22,7 @@ from http.cookiejar import Cookie
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
 from typing import Final
+from typing import NoReturn
 
 import bs4
 import requests
@@ -265,6 +267,112 @@ def _get_session(
     return sess, cookies_file
 
 
+def _validate_retries(*, retries: int) -> None:
+    if type(retries) is not int or retries < 0:
+        raise ValueError("retries must be a nonnegative integer")
+
+
+class _RetryDownload:
+    def __init__(
+        self,
+        *,
+        session: requests.Session,
+        verify: bool | str,
+        timeout: float | tuple[float, float] | None,
+        retries: int,
+        quiet: bool,
+    ) -> None:
+        self._session = session
+        self._verify = verify
+        self._timeout = timeout
+        self._retries = retries
+        self._quiet = quiet
+        self._attempt = 0
+
+    def get_attempts(self) -> range:
+        return range(self._retries - self._attempt + 1)
+
+    def raise_exhausted(self, *, error: Exception) -> NoReturn:
+        if self._retries and isinstance(error, requests.exceptions.RequestException):
+            raise DownloadError(
+                f"Download failed after {self._retries} retries: {error}"
+            ) from error
+        raise error
+
+    def wait(self, *, error: Exception) -> None:
+        if isinstance(
+            error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
+        ):
+            raise error
+        if self._attempt == self._retries:
+            self.raise_exhausted(error=error)
+        delay = random.uniform(0, min(2 ** min(self._attempt, 5), 30))
+        self._attempt += 1
+        if not self._quiet:
+            print(
+                f"Retrying ({self._attempt}/{self._retries}) in {delay:.1f}s: {error}",
+                file=sys.stderr,
+            )
+        time.sleep(delay)
+
+    def get_response(
+        self,
+        *,
+        url: str,
+        headers: dict[str, str] | None = None,
+    ) -> requests.Response:
+        last_error = None
+        for _ in self.get_attempts():
+            if last_error is not None:
+                self.wait(error=last_error)
+            try:
+                return self._session.get(
+                    url,
+                    headers=headers,
+                    stream=True,
+                    verify=self._verify,
+                    timeout=self._timeout,
+                )
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+                requests.exceptions.ChunkedEncodingError,
+            ) as error:
+                if isinstance(
+                    error,
+                    (requests.exceptions.SSLError, requests.exceptions.ProxyError),
+                ):
+                    raise
+                last_error = error
+        assert last_error is not None
+        self.raise_exhausted(error=last_error)
+
+
+def _validate_resumed_response(*, response: requests.Response, offset: int) -> int:
+    match = re.fullmatch(
+        r"bytes (\d+)-(\d+)/(\d+|\*)", response.headers.get("Content-Range", "")
+    )
+    if (
+        response.status_code != HTTPStatus.PARTIAL_CONTENT
+        or match is None
+        or int(match[1]) != offset
+        or int(match[2]) < offset
+        or (match[3] != "*" and int(match[2]) >= int(match[3]))
+        or not _has_only_identity_encoding(response=response, header="Content-Encoding")
+        or (
+            _is_content_length_comparable(response=response)
+            and (length := _get_content_length_from_response(response=response))
+            is not None
+            and length != int(match[2]) - offset + 1
+        )
+    ):
+        raise DownloadError(
+            "Server did not honor the requested byte range; "
+            "the partial file is preserved."
+        )
+    return int(match[3]) - offset if match[3] != "*" else int(match[2]) - offset + 1
+
+
 def _get_download_response(
     *,
     sess: requests.Session,
@@ -272,15 +380,14 @@ def _get_download_response(
     url: str,
     gdrive_file_id: str | None,
     format: str | None,
-    verify: bool | str,
-    timeout: float | tuple[float, float] | None,
+    retry: _RetryDownload,
     use_cookies: bool,
     cookies_file: str,
 ) -> tuple[requests.Response, str]:
     url_origin = url
     while True:
         responses.close()
-        res = sess.get(url, stream=True, verify=verify, timeout=timeout)
+        res = retry.get_response(url=url)
         responses.callback(res.close)
 
         if not gdrive_file_id:
@@ -292,6 +399,7 @@ def _get_download_response(
             continue
 
         if res.headers["Content-Type"].startswith("text/html"):
+            assert res.url is not None
             if "/document/" in res.url and "/export" not in res.url:
                 url = (
                     "https://docs.google.com/document/d/{id}/export"
@@ -346,7 +454,17 @@ def _get_download_response(
             return res, url
 
         try:
-            url = get_url_from_gdrive_confirmation(res.text)
+            contents = res.text
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as error:
+            responses.close()
+            retry.wait(error=error)
+            continue
+        try:
+            url = get_url_from_gdrive_confirmation(contents)
         except FileURLRetrievalError as e:
             message = (
                 "Failed to retrieve file url:\n\n{}\n\n"
@@ -389,45 +507,101 @@ def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
 def _iter_response_chunks(
     *,
     res: requests.Response,
+    retry: _RetryDownload,
+    responses: contextlib.ExitStack,
+    url: str,
     tmp_file: str | None,
     start_size: int,
-) -> Iterator[bytes]:
-    content_length = _get_content_length_from_response(response=res)
-    total = None if content_length is None else content_length + start_size
-    expected_size = (
-        content_length if _is_content_length_comparable(response=res) else None
-    )
+    flush: Callable[[], None],
+    pbar: tqdm.tqdm | None,
+) -> Iterator[tuple[bytes, int | None]]:
     downloaded = 0
-    truncation_error: requests.exceptions.ChunkedEncodingError | None = None
-    # Exceptions raised by the consumer do not enter this generator,
-    # so writes, hashing and caller callbacks propagate unchanged.
-    try:
-        for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-            downloaded += len(chunk)
-            yield chunk
-    except requests.exceptions.ChunkedEncodingError as e:
-        # Some HTTP client versions enforce Content-Length themselves, so a
-        # body that ends early surfaces here rather than as a short read.
-        truncation_error = e
+    reconnect = start_size != 0
+    validator = res.headers.get("ETag")
+    if validator is None or validator.startswith("W/"):
+        validator = res.headers.get("Last-Modified")
+    for _ in retry.get_attempts():
+        offset = start_size + downloaded
+        range_size = None
+        if reconnect:
+            headers = {"Range": f"bytes={offset}-"} if offset else None
+            if headers is not None and validator:
+                # A changed remote file must not be spliced onto old bytes.
+                headers["If-Range"] = validator
+            responses.close()
+            res = retry.get_response(
+                url=url,
+                headers=headers,
+            )
+            responses.callback(res.close)
+            if offset:
+                range_size = _validate_resumed_response(response=res, offset=offset)
+            else:
+                res.raise_for_status()
 
-    if truncation_error is None and (
-        expected_size is None or downloaded >= expected_size
-    ):
-        return
-    message = f"Download is incomplete: received {downloaded + start_size} bytes"
-    if expected_size is not None:
-        message += f" but the server announced {total} bytes"
-    if tmp_file is not None:
-        message += (
-            f".\nThe received bytes are kept in {tmp_file}, which resume "
-            "(--continue on the command line) picks up"
+        content_length = (
+            range_size
+            if range_size is not None
+            else _get_content_length_from_response(response=res)
         )
-    raise DownloadError(message + ".") from truncation_error
+        total = None if content_length is None else content_length + offset
+        expected_size = (
+            content_length
+            if range_size is not None or _is_content_length_comparable(response=res)
+            else None
+        )
+        if pbar is not None:
+            pbar.total = total
+        received = 0
+        transfer_error: Exception | None = None
+        # Exceptions raised by the consumer do not enter this generator,
+        # so writes, hashing and caller callbacks cannot trigger a retry.
+        try:
+            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+                if expected_size is not None and received + len(chunk) > expected_size:
+                    raise DownloadError("Response exceeds the announced byte range")
+                received += len(chunk)
+                downloaded += len(chunk)
+                yield chunk, total
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as error:
+            transfer_error = error
+
+        if isinstance(transfer_error, requests.exceptions.ChunkedEncodingError) or (
+            transfer_error is None
+            and expected_size is not None
+            and received < expected_size
+        ):
+            message = (
+                f"Download is incomplete: received {start_size + downloaded} bytes"
+            )
+            if expected_size is not None:
+                message += f" but the server announced {total} bytes"
+            if tmp_file is not None:
+                message += (
+                    f".\nThe received bytes are kept in {tmp_file}, which resume "
+                    "(--continue on the command line) picks up"
+                )
+            incomplete = DownloadError(message + ".")
+            incomplete.__cause__ = transfer_error
+            transfer_error = incomplete
+        if transfer_error is None:
+            return
+        responses.close()
+        flush()
+        retry.wait(error=transfer_error)
+        reconnect = True
 
 
 def _write_response(
     *,
     res: requests.Response,
+    retry: _RetryDownload,
+    responses: contextlib.ExitStack,
+    url: str,
     f: BinaryIO,
     tmp_file: str | None,
     start_size: int,
@@ -437,21 +611,32 @@ def _write_response(
     hasher: "hashlib._Hash | None",
     stack: contextlib.ExitStack,
 ) -> None:
-    content_length = _get_content_length_from_response(response=res)
-    total = None if content_length is None else content_length + start_size
+    pbar = None
     if not quiet:
-        pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
+        pbar = tqdm.tqdm(
+            total=_get_content_length_from_response(response=res),
+            unit="B",
+            initial=start_size,
+            unit_scale=True,
+        )
         stack.callback(pbar.close)
     t_start = time.time()
     downloaded = 0
-    for chunk in _iter_response_chunks(
-        res=res, tmp_file=tmp_file, start_size=start_size
+    for chunk, total in _iter_response_chunks(
+        res=res,
+        retry=retry,
+        responses=responses,
+        url=url,
+        tmp_file=tmp_file,
+        start_size=start_size,
+        flush=f.flush,
+        pbar=pbar,
     ):
         f.write(chunk)
         if hasher is not None:
             hasher.update(chunk)
         downloaded += len(chunk)
-        if not quiet:
+        if pbar is not None:
             pbar.update(len(chunk))
         if progress is not None:
             progress(downloaded + start_size, total)
@@ -482,6 +667,7 @@ def download(
     cookies_file: str | None = None,
     hasher: "hashlib._Hash | None" = None,
     timeout: float | tuple[float, float] | None = None,
+    retries: int = 0,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -541,6 +727,12 @@ def download(
         value or as a (connect, read) pair, as in requests. Default is None,
         which waits forever.
 
+    retries:
+        Additional attempts for transient network failures, per file. Default
+        is zero. Retries resume the current transfer; use resume=True to reuse
+        earlier partial downloads and skip completed files. Requires a filesystem
+        destination. Ignored when skip_download is True.
+
     Returns
     -------
     output:
@@ -560,6 +752,14 @@ def download(
         announced number of bytes, or multiple temporary files exist during
         resume).
     """
+    _validate_retries(retries=retries)
+    if (
+        not skip_download
+        and retries
+        and output is not None
+        and not isinstance(output, str)
+    ):
+        raise ValueError("retries requires a filesystem destination, not a stream")
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is not None:
@@ -582,6 +782,16 @@ def download(
         )
 
         stack.callback(sess.close)
+        retry = _RetryDownload(
+            session=sess,
+            verify=verify,
+            timeout=timeout,
+            retries=0 if skip_download else retries,
+            quiet=quiet,
+        )
+        if not skip_download and (retries or resume):
+            # Byte offsets must refer to the bytes written on disk.
+            sess.headers["Accept-Encoding"] = "identity"
         responses = stack.enter_context(contextlib.ExitStack())
 
         gdrive_file_id, is_gdrive_download_link = parse_url(url=url)
@@ -597,8 +807,7 @@ def download(
             url=url,
             gdrive_file_id=gdrive_file_id,
             format=format,
-            verify=verify,
-            timeout=timeout,
+            retry=retry,
             use_cookies=use_cookies,
             cookies_file=cookies_file,
         )
@@ -619,6 +828,7 @@ def download(
                 id=gdrive_file_id, path=filename_from_url, local_path=filename_from_url
             )
 
+        res.raise_for_status()
         if filename_from_url is None:
             filename_from_url = _sanitize_filename(filename=osp.basename(url))
 
@@ -672,16 +882,11 @@ def download(
             with open(tmp_file, "rb") as resumed:
                 for block in iter(lambda: resumed.read(CHUNK_SIZE), b""):
                     hasher.update(block)
-        if start_size != 0:
-            headers = {"Range": f"bytes={start_size}-"}
-            responses.close()
-            res = sess.get(
-                url, headers=headers, stream=True, verify=verify, timeout=timeout
-            )
-            responses.callback(res.close)
-
         _write_response(
             res=res,
+            retry=retry,
+            responses=responses,
+            url=url,
             f=f,
             tmp_file=tmp_file,
             start_size=start_size,

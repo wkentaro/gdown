@@ -17,6 +17,7 @@ import requests
 from .download import GoogleDriveFileToDownload
 from .download import _get_session
 from .download import _sanitize_filename
+from .download import _validate_retries
 from .download import download
 from .exceptions import DownloadError
 from .parse_url import _parse_google_drive_folder_id
@@ -80,6 +81,7 @@ def download_folder(
     resume: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
     timeout: float | tuple[float, float] | None = None,
+    retries: int = 0,
 ) -> list[str] | list[GoogleDriveFileToDownload]:  # noqa: GR005 -- public API accepts both call styles
     """Downloads entire folder from URL.
 
@@ -123,6 +125,10 @@ def download_folder(
         Seconds to wait for the server between bytes, either as a single
         value or as a (connect, read) pair, as in requests. Default is None,
         which waits forever.
+    retries:
+        Additional attempts per file for transient network failures. Default is
+        zero. Retries resume the current transfer; resume=True also reuses earlier
+        downloads. Folder discovery and skip_download do not retry.
 
     Returns
     -------
@@ -145,6 +151,7 @@ def download_folder(
         "1ZXEhzbLRLU1giKKRJkjm8N04cO_JoYE2",
     )
     """
+    _validate_retries(retries=retries)
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is None:
@@ -231,6 +238,7 @@ def download_folder(
                 user_agent=user_agent,
                 skip_download=skip_download,
                 timeout=timeout,
+                retries=retries,
             )
         except DownloadError as e:
             if skip_download:

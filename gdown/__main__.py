@@ -142,6 +142,15 @@ def main() -> None:
         "skipping fully downloaded ones",
     )
     parser.add_argument(
+        "--retries",
+        type=int,
+        default=0,
+        metavar="N",
+        help="retry transient failures up to N times per file, resuming the current "
+        "transfer; use --continue to resume earlier downloads and skip completed "
+        "files (filesystem destinations only; excludes --json and folder discovery)",
+    )
+    parser.add_argument(
         "--folder",
         action="store_true",
         help="download a folder by ID (folder URLs are detected automatically)",
@@ -269,6 +278,7 @@ def main() -> None:
                 skip_download=args.json,
                 cookies_file=cookies_file,
                 timeout=args.timeout,
+                retries=args.retries,
             )
         else:
             result = download(
@@ -286,6 +296,7 @@ def main() -> None:
                 skip_download=args.json,
                 cookies_file=cookies_file,
                 timeout=args.timeout,
+                retries=args.retries,
             )
 
         if args.json:
