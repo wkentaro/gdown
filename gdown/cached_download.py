@@ -108,6 +108,7 @@ def cached_download(
         temp_path = osp.join(temp_root, "dl")
 
         log_message_hash = f"Hash: {hash}\n" if hash else ""
+        hasher = _new_hasher(hash=hash) if hash else None
         download(
             url=url,
             output=temp_path,
@@ -116,10 +117,12 @@ def cached_download(
                 "start": f"Cached downloading...\n{log_message_hash}",
                 "output": f"To: {path}\n",
             },
+            hasher=hasher,
             **kwargs,
         )
-        if hash:
-            _assert_filehash(path=temp_path, hash=hash)
+        if hasher is not None:
+            assert hash is not None
+            _assert_hash(hash_actual=_format_hash(hasher=hasher), hash=hash)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
 

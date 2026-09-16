@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import http.cookiejar
 import http.server
 import io
@@ -443,6 +444,30 @@ def test_download_counts_resumed_bytes_toward_announced_size(
         )
 
     assert part.read_bytes() == b"partialda"
+
+
+def test_download_feeds_resumed_bytes_to_hasher(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = tmp_path / "output"
+    (tmp_path / "output.partial.part").write_bytes(b"partial")
+    download_session.get.side_effect = [
+        build_response(headers={"Content-Length": "11"}, chunks=[b"partial"]),
+        build_response(headers={"Content-Length": "4"}, chunks=[b"data"]),
+    ]
+    hasher = hashlib.sha256()
+
+    download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        resume=True,
+        hasher=hasher,
+    )
+
+    assert hasher.hexdigest() == hashlib.sha256(b"partialdata").hexdigest()
 
 
 def test_download_fails_when_body_ends_early_for_a_caller_stream(

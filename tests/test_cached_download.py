@@ -1,7 +1,11 @@
+import hashlib
+import http.server
 import os
 import subprocess
 import sys
 import tempfile
+import threading
+import unittest.mock
 from pathlib import Path
 
 import pytest
@@ -74,6 +78,52 @@ def test_cached_download_cleans_staging(
             )
         assert not output.exists()
     assert not [path for path in cache.iterdir() if path.is_dir()]
+
+
+@pytest.mark.parametrize("matches", [True, False])
+def test_cached_download_hashes_the_stream_without_rereading_the_file(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, matches: bool
+) -> None:
+    body = b"cached download body"
+    digest = hashlib.sha256(body).hexdigest() if matches else "0" * 64
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+    monkeypatch.setattr(
+        sys.modules["gdown.cached_download"], "cache_root", str(tmp_path / "cache")
+    )
+    monkeypatch.setattr(
+        sys.modules["gdown.cached_download"],
+        "_compute_filehash",
+        unittest.mock.Mock(side_effect=AssertionError("read the finished file back")),
+    )
+    path = tmp_path / "file"
+
+    def download_file() -> str:
+        return gdown.cached_download(
+            url=f"http://127.0.0.1:{server.server_port}/",
+            path=str(path),
+            quiet=True,
+            hash=f"sha256:{digest}",
+        )
+
+    try:
+        if matches:
+            assert download_file() == str(path)
+            assert path.read_bytes() == body
+        else:
+            with pytest.raises(AssertionError, match="File hash doesn't match"):
+                download_file()
+            assert not path.exists()
+    finally:
+        server.server_close()
 
 
 def test_import_does_not_create_cache(*, tmp_path: Path) -> None:
