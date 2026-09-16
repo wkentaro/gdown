@@ -204,7 +204,7 @@ def test_parse_embedded_folder_view() -> None:
     mock_sess.get.return_value = mock_response
 
     result = _parse_embedded_folder_view(
-        sess=mock_sess, folder_id="test_folder_id", verify=True
+        sess=mock_sess, folder_id="test_folder_id", verify=True, timeout=None
     )
 
     assert result is not None
@@ -255,7 +255,7 @@ def test_parse_embedded_folder_view_http_error() -> None:
 
     with pytest.raises(DownloadError, match="status code 404"):
         _parse_embedded_folder_view(
-            sess=mock_sess, folder_id="nonexistent", verify=True
+            sess=mock_sess, folder_id="nonexistent", verify=True, timeout=None
         )
 
 
@@ -268,7 +268,9 @@ def test_parse_embedded_folder_view_malformed_html() -> None:
     mock_sess.get.return_value = mock_response
 
     with pytest.raises(DownloadError, match="page structure may have changed"):
-        _parse_embedded_folder_view(sess=mock_sess, folder_id="test", verify=True)
+        _parse_embedded_folder_view(
+            sess=mock_sess, folder_id="test", verify=True, timeout=None
+        )
 
 
 @pytest.mark.parametrize(
@@ -471,6 +473,32 @@ def test_download_folder_resumes_google_native_export_filename(
     assert export_path.read_bytes() == b"data123456"
     assert not part.exists()
     assert not (tmp_path / "report.v2").exists()
+
+
+def test_download_folder_passes_timeout_to_each_file(*, tmp_path: Path) -> None:
+    TIMEOUT: Final = 1.5
+    root = _make_folder_root(name="folder", child_names=["first.txt"])
+    download_mock = unittest.mock.Mock(return_value=str(tmp_path / "first.txt"))
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"], "download", download_mock
+        ),
+    ):
+        download_folder(
+            id="root_id",
+            output=str(tmp_path),
+            quiet=True,
+            use_cookies=False,
+            timeout=TIMEOUT,
+        )
+
+    assert download_mock.call_args.kwargs["timeout"] == TIMEOUT
 
 
 @pytest.mark.network
