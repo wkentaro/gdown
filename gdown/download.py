@@ -2,6 +2,7 @@ import collections
 import contextlib
 import datetime
 import email.utils
+import hashlib
 import os
 import os.path as osp
 import re
@@ -280,6 +281,7 @@ def download(
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
+    hasher: "hashlib._Hash | None" = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -330,6 +332,10 @@ def download(
         Netscape cookies file to load before the request and save after
         every Google Drive response. Default is ~/.cache/gdown/cookies.txt.
         Ignored when use_cookies is False.
+    hasher:
+        A hashlib object fed every downloaded byte, so a caller verifying the
+        file does not have to read it back afterwards. Bytes already on disk
+        from a resumed download are fed to it before the transfer starts.
 
     Returns
     -------
@@ -554,6 +560,11 @@ def download(
             )
 
         start_size = f.tell() if tmp_file is not None else 0
+        if hasher is not None and start_size != 0:
+            assert tmp_file is not None
+            with open(tmp_file, "rb") as resumed:
+                for block in iter(lambda: resumed.read(CHUNK_SIZE), b""):
+                    hasher.update(block)
         if start_size != 0:
             headers = {"Range": f"bytes={start_size}-"}
             responses.close()
@@ -574,6 +585,8 @@ def download(
         try:
             for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
                 f.write(chunk)
+                if hasher is not None:
+                    hasher.update(chunk)
                 downloaded += len(chunk)
                 if not quiet:
                     pbar.update(len(chunk))
