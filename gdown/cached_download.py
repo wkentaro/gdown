@@ -109,6 +109,7 @@ def cached_download(
         temp_path = osp.join(temp_root, "dl")
 
         log_message_hash = f"Hash: {hash}\n" if hash else ""
+        hasher = _new_hasher(hash=hash) if hash else None
         download(
             url=url,
             output=temp_path,
@@ -117,10 +118,12 @@ def cached_download(
                 "start": f"Cached downloading...\n{log_message_hash}",
                 "output": f"To: {path}\n",
             },
+            hasher=hasher,
             **kwargs,
         )
-        if hash:
-            _assert_filehash(path=temp_path, hash=hash)
+        if hasher is not None:
+            assert hash is not None
+            _assert_hash(hash_actual=_format_hash(hasher=hasher), hash=hash)
         with filelock.FileLock(lock_path):
             shutil.move(temp_path, path)
 
@@ -147,17 +150,34 @@ def _compute_filehash(*, path: str, algorithm: str) -> str:
     return f"{algorithm}:{algorithm_instance.hexdigest()}"
 
 
-def _assert_filehash(*, path: str, hash: str) -> None:
+def _new_hasher(*, hash: str) -> hashlib._Hash:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "
             "Hash must be in the format of {algorithm}:{hash_value}."
         )
     algorithm = hash.split(":")[0]
+    if algorithm not in hashlib.algorithms_guaranteed:
+        raise ValueError(
+            f"Unsupported hash algorithm: {algorithm}. "
+            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
+        )
+    return hashlib.new(algorithm)
 
-    hash_actual = _compute_filehash(path=path, algorithm=algorithm)
 
+def _format_hash(*, hasher: hashlib._Hash) -> str:
+    return f"{hasher.name}:{hasher.hexdigest()}"
+
+
+def _assert_hash(*, hash_actual: str, hash: str) -> None:
     if hash_actual != hash:
         raise AssertionError(
             f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
         )
+
+
+def _assert_filehash(*, path: str, hash: str) -> None:
+    hasher = _new_hasher(hash=hash)
+    _assert_hash(
+        hash_actual=_compute_filehash(path=path, algorithm=hasher.name), hash=hash
+    )

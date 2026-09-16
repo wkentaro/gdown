@@ -2,6 +2,7 @@ import collections
 import contextlib
 import datetime
 import email.utils
+import hashlib
 import os
 import os.path as osp
 import re
@@ -282,6 +283,7 @@ def download(
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
     timeout: float | tuple[float, float] | None = None,
+    hasher: "hashlib._Hash | None" = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -337,6 +339,10 @@ def download(
         Seconds to wait for the server between bytes, either as a single
         value or as a (connect, read) pair, as in requests. Default is None,
         which waits forever.
+    hasher:
+        A hashlib object fed every downloaded byte, so a caller verifying the
+        file does not have to read it back afterwards. Bytes already on disk
+        from a resumed download are fed to it before the transfer starts.
 
     Returns
     -------
@@ -565,6 +571,11 @@ def download(
             )
 
         start_size = f.tell() if tmp_file is not None else 0
+        if hasher is not None and start_size != 0:
+            assert tmp_file is not None
+            with open(tmp_file, "rb") as resumed:
+                for block in iter(lambda: resumed.read(CHUNK_SIZE), b""):
+                    hasher.update(block)
         if start_size != 0:
             headers = {"Range": f"bytes={start_size}-"}
             responses.close()
@@ -588,6 +599,8 @@ def download(
         try:
             for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
                 f.write(chunk)
+                if hasher is not None:
+                    hasher.update(chunk)
                 downloaded += len(chunk)
                 if not quiet:
                     pbar.update(len(chunk))
