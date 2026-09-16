@@ -446,7 +446,10 @@ def test_download_folder_resumes_google_native_export_filename(
         if headers is None:
             return truncated_response
         assert headers == {"Range": "bytes=4-"}
-        return build_response(headers={"Content-Length": "6"}, chunks=[b"123456"])
+        return build_response(
+            headers={"Content-Length": "6", "Content-Range": "bytes 4-9/10"},
+            chunks=[b"123456"],
+        )
 
     with (
         unittest.mock.patch.object(
@@ -545,7 +548,10 @@ def test_download_folder_continues_after_truncation_then_resumes(
     ) -> unittest.mock.Mock:
         if headers is not None:
             assert headers == {"Range": "bytes=4-"}
-            return build_response(headers={"Content-Length": "6"}, chunks=[b"123456"])
+            return build_response(
+                headers={"Content-Length": "6", "Content-Range": "bytes 4-9/10"},
+                chunks=[b"123456"],
+            )
         file_id = url.rsplit("=", 1)[1]
         if file_id == "child_1" and not second_path.exists():
             stderr = capsys.readouterr().err
