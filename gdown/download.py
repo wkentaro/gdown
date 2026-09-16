@@ -264,6 +264,101 @@ def _get_session(
     return sess, cookies_file
 
 
+def _get_download_response(
+    *,
+    sess: requests.Session,
+    responses: contextlib.ExitStack,
+    url: str,
+    gdrive_file_id: str | None,
+    format: str | None,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    use_cookies: bool,
+    cookies_file: str,
+) -> tuple[requests.Response, str]:
+    url_origin = url
+    while True:
+        responses.close()
+        res = sess.get(url, stream=True, verify=verify, timeout=timeout)
+        responses.callback(res.close)
+
+        if not gdrive_file_id:
+            return res, url
+
+        if url == url_origin and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            # The file could be Google Docs or Spreadsheets.
+            url = f"https://drive.google.com/open?id={gdrive_file_id}"
+            continue
+
+        if res.headers["Content-Type"].startswith("text/html"):
+            if "/document/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/document/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="docx" if format is None else format,
+                    )
+                )
+                continue
+            elif "/spreadsheets/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/spreadsheets/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="xlsx" if format is None else format,
+                    )
+                )
+                continue
+            elif "/presentation/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/presentation/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="pptx" if format is None else format,
+                    )
+                )
+                continue
+        elif (
+            "Content-Disposition" in res.headers
+            and res.headers["Content-Disposition"].endswith("pptx")
+            and format not in {None, "pptx"}
+        ):
+            url = (
+                "https://docs.google.com/presentation/d/{id}/export"
+                "?format={format}".format(
+                    id=gdrive_file_id,
+                    format="pptx" if format is None else format,
+                )
+            )
+            continue
+
+        if use_cookies:
+            try:
+                _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
+            except OSError as e:
+                # Persisting cookies must never cost a download that succeeded.
+                warnings.warn(
+                    f"Failed to save cookies to {cookies_file}: {e}", stacklevel=3
+                )
+
+        if "Content-Disposition" in res.headers:
+            return res, url
+
+        try:
+            url = get_url_from_gdrive_confirmation(res.text)
+        except FileURLRetrievalError as e:
+            message = (
+                "Failed to retrieve file url:\n\n{}\n\n"
+                "You may still be able to access the file from the browser:"
+                "\n\n\t{}\n\n"
+                "but Gdown can't. Please check connections and permissions."
+            ).format(
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
+                url_origin,
+            )
+            raise FileURLRetrievalError(message)
+
+
 # Parameters remain positional-or-keyword for backward compatibility.
 def download(
     url: str | None = None,
@@ -392,91 +487,17 @@ def download(
             url_origin = url
             is_gdrive_download_link = True
 
-        while True:
-            responses.close()
-            res = sess.get(url, stream=True, verify=verify, timeout=timeout)
-            responses.callback(res.close)
-
-            if not (gdrive_file_id and is_gdrive_download_link):
-                break
-
-            if (
-                url == url_origin
-                and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-            ):
-                # The file could be Google Docs or Spreadsheets.
-                url = f"https://drive.google.com/open?id={gdrive_file_id}"
-                continue
-
-            if res.headers["Content-Type"].startswith("text/html"):
-                if "/document/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/document/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="docx" if format is None else format,
-                        )
-                    )
-                    continue
-                elif "/spreadsheets/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/spreadsheets/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="xlsx" if format is None else format,
-                        )
-                    )
-                    continue
-                elif "/presentation/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/presentation/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="pptx" if format is None else format,
-                        )
-                    )
-                    continue
-            elif (
-                "Content-Disposition" in res.headers
-                and res.headers["Content-Disposition"].endswith("pptx")
-                and format not in {None, "pptx"}
-            ):
-                url = (
-                    "https://docs.google.com/presentation/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="pptx" if format is None else format,
-                    )
-                )
-                continue
-
-            if use_cookies:
-                try:
-                    _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
-                except OSError as e:
-                    # Persisting cookies must never cost a download that succeeded.
-                    warnings.warn(
-                        f"Failed to save cookies to {cookies_file}: {e}", stacklevel=2
-                    )
-
-            if "Content-Disposition" in res.headers:
-                # This is the file
-                break
-
-            # Need to redirect with confirmation
-            try:
-                url = get_url_from_gdrive_confirmation(res.text)
-            except FileURLRetrievalError as e:
-                message = (
-                    "Failed to retrieve file url:\n\n{}\n\n"
-                    "You may still be able to access the file from the browser:"
-                    "\n\n\t{}\n\n"
-                    "but Gdown can't. Please check connections and permissions."
-                ).format(
-                    textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
-                    url_origin,
-                )
-                raise FileURLRetrievalError(message)
+        res, url = _get_download_response(
+            sess=sess,
+            responses=responses,
+            url=url,
+            gdrive_file_id=gdrive_file_id,
+            format=format,
+            verify=verify,
+            timeout=timeout,
+            use_cookies=use_cookies,
+            cookies_file=cookies_file,
+        )
 
         filename_from_url = None
         last_modified_time = None
