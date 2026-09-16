@@ -63,19 +63,20 @@ def retry_server() -> Iterator[RetryServer]:
             thread.join()
 
 
+@pytest.mark.parametrize("connection_failure_first", [True, False])
 def test_retry_resumes_its_own_partial_and_hashes_each_byte_once(
     *,
     retry_server: RetryServer,
     retry_delays: list[float],
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    connection_failure_first: bool,
 ) -> None:
     url, replies, ranges = retry_server
     prefix = b"a" * CHUNK_SIZE
     body = prefix + b"end"
     replies.extend(
         [
-            (0, {}, b""),
             (200, {"Content-Length": str(len(body))}, prefix),
             (
                 206,
@@ -87,6 +88,7 @@ def test_retry_resumes_its_own_partial_and_hashes_each_byte_once(
             ),
         ]
     )
+    replies.insert(0 if connection_failure_first else 1, (0, {}, b""))
     output = tmp_path / "output"
     output.write_bytes(b"old completed file")
     old_part = tmp_path / "output.old.part"
@@ -106,7 +108,11 @@ def test_retry_resumes_its_own_partial_and_hashes_each_byte_once(
     assert list(tmp_path.glob("*.part")) == [old_part]
     assert hasher.digest() == hashlib.sha256(body).digest()
     assert progress == [(CHUNK_SIZE, len(body)), (len(body), len(body))]
-    assert ranges == [None, None, f"bytes={CHUNK_SIZE}-"]
+    assert ranges == [
+        None,
+        None if connection_failure_first else f"bytes={CHUNK_SIZE}-",
+        f"bytes={CHUNK_SIZE}-",
+    ]
     assert retry_delays == [1, 2]
     assert "Retrying (2/2)" in capsys.readouterr().err
 
