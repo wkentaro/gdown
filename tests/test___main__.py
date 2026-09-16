@@ -14,8 +14,11 @@ from collections.abc import Callable
 from typing import Final
 
 import pytest
+import requests
+import urllib3
 
 from gdown.__main__ import BROWSERS
+from gdown.__main__ import _is_timeout
 from gdown.__main__ import file_size
 from gdown.__main__ import main
 from gdown._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
@@ -374,8 +377,25 @@ def test_cli_timeout_gives_up_on_a_stalled_server(*, tmp_path: pathlib.Path) -> 
         server.server_close()
 
     assert result.returncode != 0
-    assert "timed out" in result.stderr
-    assert "Traceback" not in result.stderr
+    assert "Timed out: no response from the server for 0.5 seconds." in result.stderr
+    assert "report issues" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (requests.exceptions.ReadTimeout(), True),
+        (
+            requests.exceptions.ConnectionError(
+                urllib3.exceptions.ReadTimeoutError(None, "/", "Read timed out.")
+            ),
+            True,
+        ),
+        (requests.exceptions.ConnectionError("Connection refused"), False),
+    ],
+)
+def test_is_timeout(*, error: Exception, expected: bool) -> None:
+    assert _is_timeout(error) is expected
 
 
 def test_json_flag_preserves_subfolder_path(

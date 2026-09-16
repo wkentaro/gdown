@@ -9,6 +9,7 @@ from typing import Any
 from typing import Final
 
 import requests
+import urllib3
 
 from . import __version__
 from ._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
@@ -53,6 +54,17 @@ def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API ac
     elif unit == "B":
         pass
     return size
+
+
+def _is_timeout(error: Exception) -> bool:
+    # A stall mid-stream reaches us as a ConnectionError wrapping urllib3's
+    # read timeout, not as a requests Timeout, so check both shapes.
+    return isinstance(error, requests.exceptions.Timeout) or (
+        isinstance(error, requests.exceptions.ConnectionError)
+        and any(
+            isinstance(arg, urllib3.exceptions.ReadTimeoutError) for arg in error.args
+        )
+    )
 
 
 def main() -> None:
@@ -300,6 +312,12 @@ def main() -> None:
         )
         sys.exit(1)
     except Exception as e:
+        if _is_timeout(e):
+            print(
+                f"Timed out: no response from the server for {args.timeout} seconds.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         print(
             "Error:\n\n{}\n\nTo report issues, please visit "
             "https://github.com/wkentaro/gdown/issues.".format(
