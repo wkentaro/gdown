@@ -153,11 +153,21 @@ def main() -> None:
         "--user-agent",
         help="User-Agent to use for downloading file.",
     )
+    parser.add_argument(
+        "--timeout",
+        metavar="SECONDS",
+        type=float,
+        help="give up when the server sends nothing for this many seconds "
+        "(default: wait forever)",
+    )
 
     args = parser.parse_args()
 
     if args.json and args.output is not None:
         parser.error("--json cannot be combined with -O/--output")
+
+    if args.timeout is not None and args.timeout <= 0:
+        parser.error("--timeout needs a positive number of seconds")
 
     if args.no_cookies and ("cookies" in args or args.cookies_from_browser):
         parser.error(
@@ -246,6 +256,7 @@ def main() -> None:
                 resume=args.continue_,
                 skip_download=args.json,
                 cookies_file=cookies_file,
+                timeout=args.timeout,
             )
         else:
             result = download(
@@ -262,6 +273,7 @@ def main() -> None:
                 user_agent=args.user_agent,
                 skip_download=args.json,
                 cookies_file=cookies_file,
+                timeout=args.timeout,
             )
 
         if args.json:

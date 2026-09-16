@@ -1,11 +1,13 @@
 import hashlib
 import http.cookiejar
+import http.server
 import json
 import os
 import pathlib
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest.mock
 from collections.abc import Callable
@@ -319,6 +321,10 @@ def test_json_flag_native_probe_failure_prints_no_listing(
             "--folder does not support stdout output",
         ),
         (["https://[broken"], "Invalid IPv6 URL"),
+        (
+            ["https://example.com/file", "--timeout", "0"],
+            "--timeout needs a positive number of seconds",
+        ),
     ],
 )
 def test_cli_reports_invalid_input(*, args: list[str], message: str) -> None:
@@ -330,6 +336,45 @@ def test_cli_reports_invalid_input(*, args: list[str], message: str) -> None:
     )
     assert result.returncode != 0
     assert message in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_cli_timeout_gives_up_on_a_stalled_server(*, tmp_path: pathlib.Path) -> None:
+    released = threading.Event()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", "1024")
+            self.end_headers()
+            released.wait(timeout=30)
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "gdown",
+                "--no-cookies",
+                f"http://127.0.0.1:{server.server_port}/",
+                "-O",
+                str(tmp_path / "file"),
+                "--timeout",
+                "0.5",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        released.set()
+        server.server_close()
+
+    assert result.returncode != 0
+    assert "timed out" in result.stderr
     assert "Traceback" not in result.stderr
 
 
