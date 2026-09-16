@@ -359,6 +359,32 @@ def _get_download_response(
             raise FileURLRetrievalError(message)
 
 
+def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
+    existing_tmp_files = []
+    for file in os.listdir(osp.dirname(output) or "."):
+        if file.startswith(osp.basename(output)) and file.endswith(".part"):
+            existing_tmp_files.append(osp.join(osp.dirname(output), file))
+    if resume and existing_tmp_files:
+        if len(existing_tmp_files) != 1:
+            lines = ["There are multiple temporary files to resume:", ""]
+            for file in existing_tmp_files:
+                lines.append(f"\t{file}")
+            lines.append("")
+            lines.append("Please remove them except one to resume downloading.")
+            raise DownloadError("\n".join(lines))
+        return existing_tmp_files[0], True
+    # Close the temporary file before reopening it for Windows compatibility (#153).
+    tmp_file_obj = tempfile.NamedTemporaryFile(
+        suffix=".part",
+        prefix=osp.basename(output),
+        dir=osp.dirname(output),
+        delete=False,
+    )
+    tmp_file = tmp_file_obj.name
+    tmp_file_obj.close()
+    return tmp_file, False
+
+
 # Parameters remain positional-or-keyword for backward compatibility.
 def download(
     url: str | None = None,
@@ -534,30 +560,7 @@ def download(
                     print(f"Skipping already downloaded file {output}", file=sys.stderr)
                 return output
 
-            existing_tmp_files = []
-            for file in os.listdir(osp.dirname(output) or "."):
-                if file.startswith(osp.basename(output)) and file.endswith(".part"):
-                    existing_tmp_files.append(osp.join(osp.dirname(output), file))
-            if resume and existing_tmp_files:
-                if len(existing_tmp_files) != 1:
-                    lines = ["There are multiple temporary files to resume:", ""]
-                    for file in existing_tmp_files:
-                        lines.append(f"\t{file}")
-                    lines.append("")
-                    lines.append("Please remove them except one to resume downloading.")
-                    raise DownloadError("\n".join(lines))
-                tmp_file = existing_tmp_files[0]
-            else:
-                resume = False
-                # Avoid mkstemp which doesn't work on Windows (#153)
-                tmp_file_obj = tempfile.NamedTemporaryFile(
-                    suffix=".part",
-                    prefix=osp.basename(output),
-                    dir=osp.dirname(output),
-                    delete=False,
-                )
-                tmp_file = tmp_file_obj.name
-                tmp_file_obj.close()
+            tmp_file, resume = _prepare_partial_file(output=output, resume=resume)
             f = open(tmp_file, "ab")
             stack.callback(f.close)
         else:
