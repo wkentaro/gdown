@@ -133,30 +133,41 @@ def cached_download(
 def _compute_filehash(*, path: str, algorithm: str) -> str:
     BLOCKSIZE: Final = 65536
 
-    if algorithm not in hashlib.algorithms_guaranteed:
-        raise ValueError(
-            f"Unsupported hash algorithm: {algorithm}. "
-            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
-        )
-
-    algorithm_instance = getattr(hashlib, algorithm)()
+    hasher = hashlib.new(algorithm)
     with open(path, "rb") as f:
         for block in iter(lambda: f.read(BLOCKSIZE), b""):
-            algorithm_instance.update(block)
-    return f"{algorithm}:{algorithm_instance.hexdigest()}"
+            hasher.update(block)
+    return _format_hash(hasher=hasher)
 
 
-def _assert_filehash(*, path: str, hash: str) -> None:
+def _new_hasher(*, hash: str) -> hashlib._Hash:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "
             "Hash must be in the format of {algorithm}:{hash_value}."
         )
     algorithm = hash.split(":")[0]
+    if algorithm not in hashlib.algorithms_guaranteed:
+        raise ValueError(
+            f"Unsupported hash algorithm: {algorithm}. "
+            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
+        )
+    return hashlib.new(algorithm)
 
-    hash_actual = _compute_filehash(path=path, algorithm=algorithm)
 
+def _format_hash(*, hasher: hashlib._Hash) -> str:
+    return f"{hasher.name}:{hasher.hexdigest()}"
+
+
+def _assert_hash(*, hash_actual: str, hash: str) -> None:
     if hash_actual != hash:
         raise AssertionError(
             f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
         )
+
+
+def _assert_filehash(*, path: str, hash: str) -> None:
+    hasher = _new_hasher(hash=hash)
+    _assert_hash(
+        hash_actual=_compute_filehash(path=path, algorithm=hasher.name), hash=hash
+    )
