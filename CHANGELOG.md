@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## 6.3.0 - 2026-09-16
+
+### Added
+
+- Add a `secretstorage` installation extra for importing Chromium cookies from GNOME Keyring with `pip install 'gdown[secretstorage]'` or `uvx --from 'gdown[secretstorage]' gdown`. ([#505](https://github.com/wkentaro/gdown/pull/505))
+- `download()`, `download_folder()`, and `cached_download()` accept a requests-style `timeout`, exposed on the command line as `--timeout SECONDS`, so a stalled server no longer blocks forever. ([#510](https://github.com/wkentaro/gdown/pull/510))
+- Add opt-in `--retries N` and Python `retries=N` for automatic recovery of interrupted file and folder downloads, with bounded backoff and validated byte-range resume; `--continue` still controls reuse of earlier downloads. ([#517](https://github.com/wkentaro/gdown/pull/517))
+
+### Changed
+
+- `cached_download()` verifies `hash` while streaming instead of reading the finished file back from disk. ([#512](https://github.com/wkentaro/gdown/pull/512))
+- The command line reports a hit `--timeout` as a timeout instead of asking to file an issue. ([#513](https://github.com/wkentaro/gdown/pull/513))
+
+### Fixed
+
+- Propagate progress callback exceptions unchanged instead of misreporting chunked-encoding errors as incomplete downloads. ([#519](https://github.com/wkentaro/gdown/pull/519))
+
 ## 6.2.0 - 2026-09-06
 
 ### Added
