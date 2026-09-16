@@ -387,7 +387,9 @@ def test_cli_timeout_gives_up_on_a_stalled_server(*, tmp_path: pathlib.Path) -> 
         (requests.exceptions.ReadTimeout(), True),
         (
             requests.exceptions.ConnectionError(
-                urllib3.exceptions.ReadTimeoutError(None, "/", "Read timed out.")
+                urllib3.exceptions.ReadTimeoutError(
+                    urllib3.HTTPConnectionPool("localhost"), "/", "Read timed out."
+                )
             ),
             True,
         ),

@@ -56,7 +56,7 @@ def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API ac
     return size
 
 
-def _is_timeout(error: Exception) -> bool:
+def _is_timeout(error: Exception, /) -> bool:
     # A stall mid-stream reaches us as a ConnectionError wrapping urllib3's
     # read timeout, not as a requests Timeout, so check both shapes.
     return isinstance(error, requests.exceptions.Timeout) or (
