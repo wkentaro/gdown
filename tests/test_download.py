@@ -541,6 +541,35 @@ def test_download_keeps_part_when_the_connection_closes_early(
     assert len(part.read_bytes()) >= CHUNK_SIZE
 
 
+def test_download_times_out_when_the_server_stalls(*, tmp_path: Path) -> None:
+    released = threading.Event()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", str(CHUNK_SIZE))
+            self.end_headers()
+            released.wait(timeout=30)
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+    output = tmp_path / "output"
+
+    try:
+        with pytest.raises(requests.exceptions.RequestException, match="timed out"):
+            download(
+                url=f"http://127.0.0.1:{server.server_port}/",
+                output=str(output),
+                quiet=True,
+                timeout=0.5,
+            )
+    finally:
+        released.set()
+        server.server_close()
+
+    assert not output.exists()
+
+
 def test_import_cookies_from_browser_merges_into_file(
     *, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

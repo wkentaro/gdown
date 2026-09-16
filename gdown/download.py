@@ -280,6 +280,7 @@ def download(
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
+    timeout: float | tuple[float, float] | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -330,6 +331,10 @@ def download(
         Netscape cookies file to load before the request and save after
         every Google Drive response. Default is ~/.cache/gdown/cookies.txt.
         Ignored when use_cookies is False.
+    timeout:
+        Seconds to wait for the server between bytes, either as a single
+        value or as a (connect, read) pair, as in requests. Default is None,
+        which waits forever.
 
     Returns
     -------
@@ -383,7 +388,7 @@ def download(
 
         while True:
             responses.close()
-            res = sess.get(url, stream=True, verify=verify)
+            res = sess.get(url, stream=True, verify=verify, timeout=timeout)
             responses.callback(res.close)
 
             if not (gdrive_file_id and is_gdrive_download_link):
@@ -557,7 +562,9 @@ def download(
         if start_size != 0:
             headers = {"Range": f"bytes={start_size}-"}
             responses.close()
-            res = sess.get(url, headers=headers, stream=True, verify=verify)
+            res = sess.get(
+                url, headers=headers, stream=True, verify=verify, timeout=timeout
+            )
             responses.callback(res.close)
 
         content_length = _get_content_length_from_response(response=res)
