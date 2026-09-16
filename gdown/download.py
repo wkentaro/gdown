@@ -17,6 +17,8 @@ import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
+from dataclasses import dataclass
+from dataclasses import field
 from http import HTTPStatus
 from http.cookiejar import Cookie
 from http.cookiejar import MozillaCookieJar
@@ -272,80 +274,71 @@ def _validate_retries(*, retries: int) -> None:
         raise ValueError("retries must be a nonnegative integer")
 
 
-class _RetryDownload:
-    def __init__(
-        self,
-        *,
-        session: requests.Session,
-        verify: bool | str,
-        timeout: float | tuple[float, float] | None,
-        retries: int,
-        quiet: bool,
-    ) -> None:
-        self._session = session
-        self._verify = verify
-        self._timeout = timeout
-        self._retries = retries
-        self._quiet = quiet
-        self._attempt = 0
+@dataclass(kw_only=True)
+class _RetryState:
+    retries: int
+    quiet: bool
+    attempt: int = field(default=0, init=False)
 
-    def get_attempts(self) -> range:
-        return range(self._retries - self._attempt + 1)
 
-    def raise_exhausted(self, *, error: Exception) -> NoReturn:
-        if self._retries and isinstance(error, requests.exceptions.RequestException):
-            raise DownloadError(
-                f"Download failed after {self._retries} retries: {error}"
-            ) from error
+def _raise_retries_exhausted(*, error: Exception, retries: int) -> NoReturn:
+    if retries and isinstance(error, requests.exceptions.RequestException):
+        raise DownloadError(
+            f"Download failed after {retries} retries: {error}"
+        ) from error
+    raise error
+
+
+def _wait_for_retry(*, retry: _RetryState, error: Exception) -> None:
+    if isinstance(
+        error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
+    ):
         raise error
+    if retry.attempt == retry.retries:
+        _raise_retries_exhausted(error=error, retries=retry.retries)
+    delay = random.uniform(0, min(2 ** min(retry.attempt, 5), 30))
+    retry.attempt += 1
+    if not retry.quiet:
+        print(
+            f"Retrying ({retry.attempt}/{retry.retries}) in {delay:.1f}s: {error}",
+            file=sys.stderr,
+        )
+    time.sleep(delay)
 
-    def wait(self, *, error: Exception) -> None:
-        if isinstance(
-            error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
-        ):
-            raise error
-        if self._attempt == self._retries:
-            self.raise_exhausted(error=error)
-        delay = random.uniform(0, min(2 ** min(self._attempt, 5), 30))
-        self._attempt += 1
-        if not self._quiet:
-            print(
-                f"Retrying ({self._attempt}/{self._retries}) in {delay:.1f}s: {error}",
-                file=sys.stderr,
+
+def _get_response_with_retries(
+    *,
+    sess: requests.Session,
+    url: str,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
+    headers: dict[str, str] | None,
+) -> requests.Response:
+    last_error = None
+    for _ in range(retry.retries - retry.attempt + 1):
+        if last_error is not None:
+            _wait_for_retry(retry=retry, error=last_error)
+        try:
+            return sess.get(
+                url,
+                headers=headers,
+                stream=True,
+                verify=verify,
+                timeout=timeout,
             )
-        time.sleep(delay)
-
-    def get_response(
-        self,
-        *,
-        url: str,
-        headers: dict[str, str] | None = None,
-    ) -> requests.Response:
-        last_error = None
-        for _ in self.get_attempts():
-            if last_error is not None:
-                self.wait(error=last_error)
-            try:
-                return self._session.get(
-                    url,
-                    headers=headers,
-                    stream=True,
-                    verify=self._verify,
-                    timeout=self._timeout,
-                )
-            except (
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.ChunkedEncodingError,
-            ) as error:
-                if isinstance(
-                    error,
-                    (requests.exceptions.SSLError, requests.exceptions.ProxyError),
-                ):
-                    raise
-                last_error = error
-        assert last_error is not None
-        self.raise_exhausted(error=last_error)
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as error:
+            if isinstance(
+                error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
+            ):
+                raise
+            last_error = error
+    assert last_error is not None
+    _raise_retries_exhausted(error=last_error, retries=retry.retries)
 
 
 def _validate_resumed_response(*, response: requests.Response, offset: int) -> int:
@@ -380,14 +373,23 @@ def _get_download_response(
     url: str,
     gdrive_file_id: str | None,
     format: str | None,
-    retry: _RetryDownload,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
     use_cookies: bool,
     cookies_file: str,
 ) -> tuple[requests.Response, str]:
     url_origin = url
     while True:
         responses.close()
-        res = retry.get_response(url=url)
+        res = _get_response_with_retries(
+            sess=sess,
+            url=url,
+            verify=verify,
+            timeout=timeout,
+            retry=retry,
+            headers=None,
+        )
         responses.callback(res.close)
 
         if not gdrive_file_id:
@@ -461,7 +463,7 @@ def _get_download_response(
             requests.exceptions.ChunkedEncodingError,
         ) as error:
             responses.close()
-            retry.wait(error=error)
+            _wait_for_retry(retry=retry, error=error)
             continue
         try:
             url = get_url_from_gdrive_confirmation(contents)
@@ -506,8 +508,11 @@ def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
 
 def _iter_response_chunks(
     *,
+    sess: requests.Session,
     res: requests.Response,
-    retry: _RetryDownload,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
     responses: contextlib.ExitStack,
     url: str,
     tmp_file: str | None,
@@ -520,7 +525,7 @@ def _iter_response_chunks(
     validator = res.headers.get("ETag")
     if validator is None or validator.startswith("W/"):
         validator = res.headers.get("Last-Modified")
-    for _ in retry.get_attempts():
+    for _ in range(retry.retries - retry.attempt + 1):
         offset = start_size + downloaded
         range_size = None
         if reconnect:
@@ -529,8 +534,12 @@ def _iter_response_chunks(
                 # A changed remote file must not be spliced onto old bytes.
                 headers["If-Range"] = validator
             responses.close()
-            res = retry.get_response(
+            res = _get_response_with_retries(
+                sess=sess,
                 url=url,
+                verify=verify,
+                timeout=timeout,
+                retry=retry,
                 headers=headers,
             )
             responses.callback(res.close)
@@ -592,14 +601,17 @@ def _iter_response_chunks(
             return
         responses.close()
         flush()
-        retry.wait(error=transfer_error)
+        _wait_for_retry(retry=retry, error=transfer_error)
         reconnect = True
 
 
 def _write_response(
     *,
+    sess: requests.Session,
     res: requests.Response,
-    retry: _RetryDownload,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
     responses: contextlib.ExitStack,
     url: str,
     f: BinaryIO,
@@ -623,7 +635,10 @@ def _write_response(
     t_start = time.time()
     downloaded = 0
     for chunk, total in _iter_response_chunks(
+        sess=sess,
         res=res,
+        verify=verify,
+        timeout=timeout,
         retry=retry,
         responses=responses,
         url=url,
@@ -782,10 +797,7 @@ def download(
         )
 
         stack.callback(sess.close)
-        retry = _RetryDownload(
-            session=sess,
-            verify=verify,
-            timeout=timeout,
+        retry = _RetryState(
             retries=0 if skip_download else retries,
             quiet=quiet,
         )
@@ -807,6 +819,8 @@ def download(
             url=url,
             gdrive_file_id=gdrive_file_id,
             format=format,
+            verify=verify,
+            timeout=timeout,
             retry=retry,
             use_cookies=use_cookies,
             cookies_file=cookies_file,
@@ -883,7 +897,10 @@ def download(
                 for block in iter(lambda: resumed.read(CHUNK_SIZE), b""):
                     hasher.update(block)
         _write_response(
+            sess=sess,
             res=res,
+            verify=verify,
+            timeout=timeout,
             retry=retry,
             responses=responses,
             url=url,
