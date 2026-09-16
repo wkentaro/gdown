@@ -341,16 +341,20 @@ def _get_response_with_retries(
     _raise_retries_exhausted(error=last_error, retries=retry.retries)
 
 
-def _validate_resumed_response(*, response: requests.Response, offset: int) -> int:
+def _validate_resumed_response(
+    *, response: requests.Response, offset: int, expected_total: int | None
+) -> int:
     match = re.fullmatch(
         r"bytes (\d+)-(\d+)/(\d+|\*)", response.headers.get("Content-Range", "")
     )
+    # An open-ended resume must cover the remaining file before publication.
     if (
         response.status_code != HTTPStatus.PARTIAL_CONTENT
         or match is None
         or int(match[1]) != offset
         or int(match[2]) < offset
-        or (match[3] != "*" and int(match[2]) >= int(match[3]))
+        or (match[3] != "*" and int(match[2]) != int(match[3]) - 1)
+        or (expected_total is not None and int(match[2]) != expected_total - 1)
         or not _has_only_identity_encoding(response=response, header="Content-Encoding")
         or (
             _is_content_length_comparable(response=response)
@@ -522,6 +526,11 @@ def _iter_response_chunks(
 ) -> Iterator[tuple[bytes, int | None]]:
     downloaded = 0
     reconnect = start_size != 0
+    expected_total = (
+        _get_content_length_from_response(response=res)
+        if _is_content_length_comparable(response=res)
+        else None
+    )
     validator = res.headers.get("ETag")
     if validator is None or validator.startswith("W/"):
         validator = res.headers.get("Last-Modified")
@@ -544,7 +553,9 @@ def _iter_response_chunks(
             )
             responses.callback(res.close)
             if offset:
-                range_size = _validate_resumed_response(response=res, offset=offset)
+                range_size = _validate_resumed_response(
+                    response=res, offset=offset, expected_total=expected_total
+                )
             else:
                 res.raise_for_status()
 
@@ -559,6 +570,8 @@ def _iter_response_chunks(
             if range_size is not None or _is_content_length_comparable(response=res)
             else None
         )
+        if expected_size is not None:
+            expected_total = total
         if pbar is not None:
             pbar.total = total
         received = 0

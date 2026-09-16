@@ -145,26 +145,34 @@ def test_retry_budget_does_not_reset_after_progress(
 
 
 @pytest.mark.parametrize(
-    "status, content_range",
+    "status, content_range, body",
     [
-        (200, None),
-        (416, None),
-        (206, "bytes 0-2/3"),
-        (206, "bytes 4-6/7"),
-        (206, "bytes 3-4/6"),
-        (206, "not a range"),
+        (200, None, b"def"),
+        (416, None, b"def"),
+        (206, "bytes 0-2/3", b"def"),
+        (206, "bytes 4-6/7", b"def"),
+        (206, "bytes 3-4/6", b"deX"),
+        (206, "bytes 3-4/*", b"de"),
+        (206, "not a range", b"def"),
     ],
 )
+@pytest.mark.parametrize("content_length", ["3", None])
 def test_retry_refuses_invalid_range_without_appending(
-    *, retry_server: RetryServer, tmp_path: Path, status: int, content_range: str | None
+    *,
+    retry_server: RetryServer,
+    tmp_path: Path,
+    status: int,
+    content_range: str | None,
+    body: bytes,
+    content_length: str | None,
 ) -> None:
     url, replies, ranges = retry_server
-    headers = {"Content-Length": "3"}
+    headers = {}
+    if content_length is not None:
+        headers["Content-Length"] = content_length
     if content_range is not None:
         headers["Content-Range"] = content_range
-    replies.extend(
-        [(200, {"Content-Length": "6"}, b"abcdef"), (status, headers, b"def")]
-    )
+    replies.extend([(200, {"Content-Length": "6"}, b"abcdef"), (status, headers, body)])
     part = tmp_path / "output.saved.part"
     part.write_bytes(b"abc")
     with pytest.raises(DownloadError, match="byte range"):
@@ -177,6 +185,25 @@ def test_retry_refuses_invalid_range_without_appending(
             use_cookies=False,
         )
     assert part.read_bytes() == b"abc"
+    assert ranges == [None, "bytes=3-"]
+
+
+def test_resume_accepts_complete_range_with_unknown_total(
+    *, retry_server: RetryServer, tmp_path: Path
+) -> None:
+    url, replies, ranges = retry_server
+    replies.extend(
+        [
+            (200, {"Content-Length": "6"}, b"abcdef"),
+            (206, {"Content-Range": "bytes 3-5/*"}, b"def"),
+        ]
+    )
+    output = tmp_path / "output"
+    part = tmp_path / "output.saved.part"
+    part.write_bytes(b"abc")
+    download(url=url, output=str(output), resume=True, quiet=True, use_cookies=False)
+    assert output.read_bytes() == b"abcdef"
+    assert not part.exists()
     assert ranges == [None, "bytes=3-"]
 
 
