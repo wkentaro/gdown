@@ -115,27 +115,32 @@ def test_download_progress(*, download_env: DownloadEnv) -> None:
     assert final_current == os.path.getsize(download_env.file_path)
 
 
+@pytest.mark.parametrize(
+    "error", [RuntimeError("stop"), requests.exceptions.ChunkedEncodingError("stop")]
+)
 def test_download_closes_resources_when_progress_raises(
     *,
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     opened_files: list[BinaryIO],
     monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
 ) -> None:
     pbar = unittest.mock.Mock()
     monkeypatch.setattr(
         sys.modules["gdown.download"].tqdm, "tqdm", lambda **_kwargs: pbar
     )
 
-    with pytest.raises(RuntimeError, match="stop"):
+    with pytest.raises(type(error)) as caught:
         download(
             url="https://example.com/file",
             output=str(tmp_path / "output"),
             quiet=False,
             use_cookies=False,
-            progress=unittest.mock.Mock(side_effect=RuntimeError("stop")),
+            progress=unittest.mock.Mock(side_effect=error),
         )
 
+    assert caught.value is error
     pbar.close.assert_called_once_with()
     assert opened_files[0].closed
     download_session.close.assert_called_once_with()
