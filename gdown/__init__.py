@@ -5,11 +5,13 @@ from . import parse_url
 from .cached_download import cached_download
 from .download import download
 from .download_folder import download_folder
+from .exceptions import DownloadCancelledError
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
 from .extractall import extractall
 
 __all__ = [
+    "DownloadCancelledError",
     "DownloadError",
     "FileURLRetrievalError",
     "cached_download",

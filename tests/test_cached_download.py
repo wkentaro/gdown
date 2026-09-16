@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import gdown
+from gdown.exceptions import DownloadCancelledError
 
 
 def _cached_download(*, hash: str) -> None:
@@ -35,7 +36,9 @@ def test_cached_download_sha256() -> None:
     )
 
 
-@pytest.mark.parametrize("outcome", ["success", "failure", "interrupt", "hash"])
+@pytest.mark.parametrize(
+    "outcome", ["success", "failure", "interrupt", "cancel", "hash"]
+)
 def test_cached_download_cleans_staging(
     *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
 ) -> None:
@@ -49,6 +52,8 @@ def test_cached_download_cleans_staging(
             raise RuntimeError("failed")
         if outcome == "interrupt":
             raise KeyboardInterrupt
+        if outcome == "cancel":
+            raise DownloadCancelledError
         return output
 
     monkeypatch.setattr(
@@ -63,6 +68,7 @@ def test_cached_download_cleans_staging(
         error = {
             "failure": RuntimeError,
             "interrupt": KeyboardInterrupt,
+            "cancel": DownloadCancelledError,
             "hash": AssertionError,
         }[outcome]
         with pytest.raises(error):

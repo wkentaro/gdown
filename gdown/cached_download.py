@@ -29,7 +29,7 @@ class _DownloadKwargs(TypedDict, total=False):
     resume: bool
     format: str | None
     user_agent: str | None
-    progress: Callable[[int, int | None], None] | None
+    progress: Callable[[int, int | None], bool | None] | None
     timeout: float | tuple[float, float] | None
 
 
