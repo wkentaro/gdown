@@ -1,19 +1,24 @@
 import hashlib
 import http.cookiejar
+import http.server
 import json
 import os
 import pathlib
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest.mock
 from collections.abc import Callable
 from typing import Final
 
 import pytest
+import requests
+import urllib3
 
 from gdown.__main__ import BROWSERS
+from gdown.__main__ import _is_timeout
 from gdown.__main__ import file_size
 from gdown.__main__ import main
 from gdown._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
@@ -319,6 +324,10 @@ def test_json_flag_native_probe_failure_prints_no_listing(
             "--folder does not support stdout output",
         ),
         (["https://[broken"], "Invalid IPv6 URL"),
+        (
+            ["https://example.com/file", "--timeout", "0"],
+            "--timeout needs a positive number of seconds",
+        ),
     ],
 )
 def test_cli_reports_invalid_input(*, args: list[str], message: str) -> None:
@@ -331,6 +340,64 @@ def test_cli_reports_invalid_input(*, args: list[str], message: str) -> None:
     assert result.returncode != 0
     assert message in result.stderr
     assert "Traceback" not in result.stderr
+
+
+def test_cli_timeout_gives_up_on_a_stalled_server(*, tmp_path: pathlib.Path) -> None:
+    released = threading.Event()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", "1024")
+            self.end_headers()
+            released.wait(timeout=30)
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "gdown",
+                "--no-cookies",
+                f"http://127.0.0.1:{server.server_port}/",
+                "-O",
+                str(tmp_path / "file"),
+                "--timeout",
+                "0.5",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        released.set()
+        server.server_close()
+
+    assert result.returncode != 0
+    assert "Timed out: no response from the server for 0.5 seconds." in result.stderr
+    assert "report issues" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (requests.exceptions.ReadTimeout(), True),
+        (
+            requests.exceptions.ConnectionError(
+                urllib3.exceptions.ReadTimeoutError(
+                    urllib3.HTTPConnectionPool("localhost"), "/", "Read timed out."
+                )
+            ),
+            True,
+        ),
+        (requests.exceptions.ConnectionError("Connection refused"), False),
+    ],
+)
+def test_is_timeout(*, error: Exception, expected: bool) -> None:
+    assert _is_timeout(error) is expected
 
 
 def test_json_flag_preserves_subfolder_path(

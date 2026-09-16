@@ -282,6 +282,7 @@ def download(
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
     hasher: "hashlib._Hash | None" = None,
+    timeout: float | tuple[float, float] | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -336,6 +337,10 @@ def download(
         A hashlib object fed every downloaded byte, so a caller verifying the
         file does not have to read it back afterwards. Bytes already on disk
         from a resumed download are fed to it before the transfer starts.
+    timeout:
+        Seconds to wait for the server between bytes, either as a single
+        value or as a (connect, read) pair, as in requests. Default is None,
+        which waits forever.
 
     Returns
     -------
@@ -389,7 +394,7 @@ def download(
 
         while True:
             responses.close()
-            res = sess.get(url, stream=True, verify=verify)
+            res = sess.get(url, stream=True, verify=verify, timeout=timeout)
             responses.callback(res.close)
 
             if not (gdrive_file_id and is_gdrive_download_link):
@@ -568,7 +573,9 @@ def download(
         if start_size != 0:
             headers = {"Range": f"bytes={start_size}-"}
             responses.close()
-            res = sess.get(url, headers=headers, stream=True, verify=verify)
+            res = sess.get(
+                url, headers=headers, stream=True, verify=verify, timeout=timeout
+            )
             responses.callback(res.close)
 
         content_length = _get_content_length_from_response(response=res)

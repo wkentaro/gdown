@@ -124,6 +124,9 @@ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --speed 1
 
 # Download via proxy
 gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --proxy http://proxy:8080
+
+# Give up when the server sends nothing for 30 seconds
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --timeout 30
 ```
 
 #### Other options
