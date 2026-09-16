@@ -6,6 +6,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import time
 import unittest.mock
 from collections.abc import Callable
 from typing import Final
@@ -137,8 +138,18 @@ def test_download_a_folder_with_more_than_50_files() -> None:
     url = "https://drive.google.com/drive/folders/1gd3xLkmjT8IckN6WtMbyFZvLR4exRIkn"
 
     with tempfile.TemporaryDirectory() as d:
-        cmd = ["gdown", "--no-cookies", url, "-O", d]
-        subprocess.check_call(cmd)
+        cmd = ["gdown", "--no-cookies", "--continue", url, "-O", d]
+        # A transient failure on any of 100 files should not discard completed
+        # downloads. Reuse the directory, but still fail after bounded retries.
+        ATTEMPTS: Final = 3
+        for attempt in range(ATTEMPTS):
+            try:
+                subprocess.run(cmd, check=True, timeout=300)
+                break
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                if attempt == ATTEMPTS - 1:
+                    raise
+                time.sleep(5 * (attempt + 1))
 
         filenames = sorted(os.listdir(d))
         assert filenames == [f"file_{i:02d}.txt" for i in range(100)]
