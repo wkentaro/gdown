@@ -27,6 +27,7 @@ from gdown.download import _import_cookies_from_browser
 from gdown.download import _load_cookies
 from gdown.download import _save_cookies
 from gdown.download import download
+from gdown.exceptions import DownloadCancelledError
 from gdown.exceptions import DownloadError
 
 from .conftest import build_google_cookie
@@ -539,6 +540,51 @@ def test_download_keeps_part_when_the_connection_closes_early(
     (part,) = tmp_path.glob("output*.part")
     # How much of the unfinished chunk survives depends on the HTTP client.
     assert len(part.read_bytes()) >= CHUNK_SIZE
+
+
+def test_download_stops_when_progress_returns_false(
+    *, tmp_path: Path, download_session: unittest.mock.Mock
+) -> None:
+    output = tmp_path / "output"
+    download_session.get.return_value = build_response(
+        headers={"Content-Length": "8"}, chunks=[b"data", b"data"]
+    )
+
+    with pytest.raises(DownloadCancelledError):
+        download(
+            url="https://example.com/file",
+            output=str(output),
+            quiet=True,
+            use_cookies=False,
+            progress=lambda *_args: False,
+        )
+
+    assert not output.exists()
+    (part,) = tmp_path.glob("output*.part")
+    assert part.read_bytes() == b"data"
+
+
+@pytest.mark.parametrize("returned", [True, None])
+def test_download_continues_when_progress_does_not_return_false(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+    returned: bool | None,
+) -> None:
+    output = tmp_path / "output"
+    download_session.get.return_value = build_response(
+        headers={"Content-Length": "8"}, chunks=[b"data", b"data"]
+    )
+
+    download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        use_cookies=False,
+        progress=lambda *_args: returned,
+    )
+
+    assert output.read_bytes() == b"datadata"
 
 
 def test_import_cookies_from_browser_merges_into_file(

@@ -25,6 +25,7 @@ import requests
 import tqdm
 
 from ._vendor._ytdlp_shim import _YDLLogger
+from .exceptions import DownloadCancelledError
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
 from .parse_url import parse_url
@@ -277,7 +278,7 @@ def download(
     format: str | None = None,
     user_agent: str | None = None,
     log_messages: dict[str, str] | None = None,
-    progress: Callable[[int, int | None], None] | None = None,
+    progress: Callable[[int, int | None], bool | None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
@@ -322,7 +323,8 @@ def download(
     progress:
         Callback called after each chunk: ``progress(bytes_so_far, bytes_total)``.
         *bytes_total* is None when Content-Length is unavailable.
-        Raise any exception from the callback to abort the download.
+        Return False from the callback to cancel the download; True and None
+        continue it. Raising any exception aborts it too.
     skip_download:
         Resolve the Google Drive filename without downloading the file body.
         Default is False.
@@ -349,6 +351,10 @@ def download(
         If the download fails (e.g., the response body ends before the
         announced number of bytes, or multiple temporary files exist during
         resume).
+    DownloadCancelledError
+        If the progress callback returns False. The output filename is left
+        untouched; the bytes received so far stay in the temporary file, which
+        resume picks up, or in the caller-provided stream.
     """
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
@@ -570,6 +576,7 @@ def download(
             stack.callback(pbar.close)
         t_start = time.time()
         downloaded = 0
+        cancelled = False
         truncation_error: requests.exceptions.ChunkedEncodingError | None = None
         try:
             for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
@@ -577,8 +584,11 @@ def download(
                 downloaded += len(chunk)
                 if not quiet:
                     pbar.update(len(chunk))
-                if progress is not None:
-                    progress(downloaded + start_size, total)
+                if progress is not None and (
+                    progress(downloaded + start_size, total) is False
+                ):
+                    cancelled = True
+                    break
                 if speed is None:
                     continue
                 elapsed_time_expected = downloaded / speed
@@ -589,6 +599,9 @@ def download(
             # Some HTTP client versions enforce Content-Length themselves, so a
             # body that ends early surfaces here rather than as a short read.
             truncation_error = e
+
+    if cancelled:
+        raise DownloadCancelledError("Download cancelled by the progress callback.")
 
     if truncation_error is not None or (
         expected_size is not None and downloaded < expected_size
