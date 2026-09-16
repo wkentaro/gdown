@@ -30,6 +30,7 @@ class _DownloadKwargs(TypedDict, total=False):
     format: str | None
     user_agent: str | None
     progress: Callable[[int, int | None], None] | None
+    timeout: float | tuple[float, float] | None
 
 
 cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
