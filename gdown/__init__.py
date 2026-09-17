@@ -1,4 +1,4 @@
-import importlib.metadata
+from importlib.metadata import version as _get_distribution_version
 
 from . import exceptions
 from . import parse_url
@@ -17,7 +17,6 @@ __all__ = [
     "download_folder",
     "exceptions",
     "extractall",
-    "importlib",
     "parse_url",
 ]
-__version__ = importlib.metadata.version("gdown")
+__version__ = _get_distribution_version("gdown")
