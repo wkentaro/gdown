@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## 6.4.0 - 2026-09-17
+
+### Added
+
+- Optional cancellation events for `download()` and `cached_download()` interrupt stalled response reads and download waits without shortening network timeouts, raising `DownloadCancelled` while preserving partial-file cleanup. ([#525](https://github.com/wkentaro/gdown/pull/525))
+
+### Changed
+
+- An invalid `--speed` value now reports the accepted units instead of an internal function name. ([#527](https://github.com/wkentaro/gdown/pull/527))
+
+### Removed
+
+- `importlib` is no longer exported from the `gdown` package; it was listed in `__all__` by accident. ([#526](https://github.com/wkentaro/gdown/pull/526))
+
 ## 6.3.0 - 2026-09-16
 
 ### Added
