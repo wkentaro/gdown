@@ -275,12 +275,16 @@ Yes. It works with any public HTTP/HTTPS URL.
 
 ## Contributing
 
+Install [just](https://just.systems/man/en/packages.html) 1.58.0 or newer and
+[uv](https://docs.astral.sh/uv/getting-started/installation/). Recipes use Bash;
+on Windows, install Git for Windows and make its Bash available on `PATH`.
+
 ```bash
 git clone https://github.com/wkentaro/gdown.git
 cd gdown
-make setup   # install dependencies
-make test    # run tests
-make lint    # run linters
+just setup   # install dependencies
+just test    # run tests
+just lint    # run linters
 ```
 
 ## License
