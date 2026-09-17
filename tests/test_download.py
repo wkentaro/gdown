@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import http.cookiejar
 import http.server
 import io
@@ -7,6 +8,7 @@ import sqlite3
 import sys
 import threading
 import unittest.mock
+from http import HTTPStatus
 from pathlib import Path
 from typing import BinaryIO
 from typing import Final
@@ -58,6 +60,7 @@ def download_session(
     response = build_response(headers={"Content-Length": "4"}, chunks=[b"data"])
 
     session = unittest.mock.Mock()
+    session.headers = {}
     session.get.return_value = response
     monkeypatch.setattr(
         sys.modules["gdown.download"],
@@ -114,27 +117,32 @@ def test_download_progress(*, download_env: DownloadEnv) -> None:
     assert final_current == os.path.getsize(download_env.file_path)
 
 
+@pytest.mark.parametrize(
+    "error", [RuntimeError("stop"), requests.exceptions.ChunkedEncodingError("stop")]
+)
 def test_download_closes_resources_when_progress_raises(
     *,
     tmp_path: Path,
     download_session: unittest.mock.Mock,
     opened_files: list[BinaryIO],
     monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
 ) -> None:
     pbar = unittest.mock.Mock()
     monkeypatch.setattr(
         sys.modules["gdown.download"].tqdm, "tqdm", lambda **_kwargs: pbar
     )
 
-    with pytest.raises(RuntimeError, match="stop"):
+    with pytest.raises(type(error)) as caught:
         download(
             url="https://example.com/file",
             output=str(tmp_path / "output"),
             quiet=False,
             use_cookies=False,
-            progress=unittest.mock.Mock(side_effect=RuntimeError("stop")),
+            progress=unittest.mock.Mock(side_effect=error),
         )
 
+    assert caught.value is error
     pbar.close.assert_called_once_with()
     assert opened_files[0].closed
     download_session.close.assert_called_once_with()
@@ -414,7 +422,10 @@ def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(
 
     download_session.get.side_effect = [
         download_session.get.return_value,
-        build_response(headers={"Content-Length": "6"}, chunks=[b"123456"]),
+        build_response(
+            headers={"Content-Length": "6", "Content-Range": "bytes 4-9/10"},
+            chunks=[b"123456"],
+        ),
     ]
     download(
         url="https://example.com/file", output=str(output), quiet=True, resume=True
@@ -434,7 +445,10 @@ def test_download_counts_resumed_bytes_toward_announced_size(
     part.write_bytes(b"partial")
     download_session.get.side_effect = [
         build_response(headers={"Content-Length": "11"}, chunks=[b"partial"]),
-        build_response(headers={"Content-Length": "4"}, chunks=[b"da"]),
+        build_response(
+            headers={"Content-Length": "4", "Content-Range": "bytes 7-10/11"},
+            chunks=[b"da"],
+        ),
     ]
 
     with pytest.raises(DownloadError, match="received 9 bytes.*announced 11 bytes"):
@@ -443,6 +457,33 @@ def test_download_counts_resumed_bytes_toward_announced_size(
         )
 
     assert part.read_bytes() == b"partialda"
+
+
+def test_download_feeds_resumed_bytes_to_hasher(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    output = tmp_path / "output"
+    (tmp_path / "output.partial.part").write_bytes(b"partial")
+    download_session.get.side_effect = [
+        build_response(headers={"Content-Length": "11"}, chunks=[b"partial"]),
+        build_response(
+            headers={"Content-Length": "4", "Content-Range": "bytes 7-10/11"},
+            chunks=[b"data"],
+        ),
+    ]
+    hasher = hashlib.sha256()
+
+    download(
+        url="https://example.com/file",
+        output=str(output),
+        quiet=True,
+        resume=True,
+        hasher=hasher,
+    )
+
+    assert hasher.hexdigest() == hashlib.sha256(b"partialdata").hexdigest()
 
 
 def test_download_fails_when_body_ends_early_for_a_caller_stream(
@@ -539,6 +580,35 @@ def test_download_keeps_part_when_the_connection_closes_early(
     (part,) = tmp_path.glob("output*.part")
     # How much of the unfinished chunk survives depends on the HTTP client.
     assert len(part.read_bytes()) >= CHUNK_SIZE
+
+
+def test_download_times_out_when_the_server_stalls(*, tmp_path: Path) -> None:
+    released = threading.Event()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Length", str(CHUNK_SIZE))
+            self.end_headers()
+            released.wait(timeout=30)
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.handle_request, daemon=True).start()
+    output = tmp_path / "output"
+
+    try:
+        with pytest.raises(requests.exceptions.RequestException, match="timed out"):
+            download(
+                url=f"http://127.0.0.1:{server.server_port}/",
+                output=str(output),
+                quiet=True,
+                timeout=0.5,
+            )
+    finally:
+        released.set()
+        server.server_close()
+
+    assert not output.exists()
 
 
 def test_import_cookies_from_browser_merges_into_file(
@@ -842,6 +912,8 @@ def test_download_closes_replaced_responses(
             "Content-Type": "application/octet-stream",
             "Content-Disposition": 'attachment; filename="file.txt"',
         }
+        if status == HTTPStatus.PARTIAL_CONTENT:
+            response.headers["Content-Range"] = "bytes 7-10/11"
         body = io.BytesIO(b"data")
         response.raw = HTTPResponse(body=body, preload_content=False)
         responses.append(response)

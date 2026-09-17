@@ -2,28 +2,38 @@ import collections
 import contextlib
 import datetime
 import email.utils
+import hashlib
 import os
 import os.path as osp
+import random
 import re
 import shutil
 import sys
 import tempfile
 import textwrap
+import threading
 import time
 import urllib.parse
 import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
+from collections.abc import Iterator
+from dataclasses import dataclass
+from dataclasses import field
 from http import HTTPStatus
 from http.cookiejar import Cookie
 from http.cookiejar import MozillaCookieJar
 from typing import BinaryIO
 from typing import Final
+from typing import NoReturn
 
 import bs4
 import requests
 import tqdm
 
+from ._cancellation import _check_cancelled
+from ._cancellation import _configure_cancellation
+from ._cancellation import _wait_or_cancel
 from ._vendor._ytdlp_shim import _YDLLogger
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
@@ -263,6 +273,419 @@ def _get_session(
     return sess, cookies_file
 
 
+def _validate_retries(*, retries: int) -> None:
+    if type(retries) is not int or retries < 0:
+        raise ValueError("retries must be a nonnegative integer")
+
+
+@dataclass(kw_only=True)
+class _RetryState:
+    retries: int
+    quiet: bool
+    cancel: threading.Event | None = None
+    attempt: int = field(default=0, init=False)
+
+
+def _raise_retries_exhausted(*, error: Exception, retries: int) -> NoReturn:
+    if retries and isinstance(error, requests.exceptions.RequestException):
+        raise DownloadError(
+            f"Download failed after {retries} retries: {error}"
+        ) from error
+    raise error
+
+
+def _wait_for_retry(*, retry: _RetryState, error: Exception) -> None:
+    _check_cancelled(cancel=retry.cancel)
+    if isinstance(
+        error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
+    ):
+        raise error
+    if retry.attempt == retry.retries:
+        _raise_retries_exhausted(error=error, retries=retry.retries)
+    delay = random.uniform(0, min(2 ** min(retry.attempt, 5), 30))
+    retry.attempt += 1
+    if not retry.quiet:
+        print(
+            f"Retrying ({retry.attempt}/{retry.retries}) in {delay:.1f}s: {error}",
+            file=sys.stderr,
+        )
+    _wait_or_cancel(seconds=delay, cancel=retry.cancel)
+
+
+def _get_response_with_retries(
+    *,
+    sess: requests.Session,
+    url: str,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
+    headers: dict[str, str] | None,
+) -> requests.Response:
+    last_error = None
+    for _ in range(retry.retries - retry.attempt + 1):
+        _check_cancelled(cancel=retry.cancel)
+        if last_error is not None:
+            _wait_for_retry(retry=retry, error=last_error)
+        try:
+            return sess.get(
+                url,
+                headers=headers,
+                stream=True,
+                verify=verify,
+                timeout=timeout,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as error:
+            if isinstance(
+                error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
+            ):
+                raise
+            last_error = error
+    assert last_error is not None
+    _raise_retries_exhausted(error=last_error, retries=retry.retries)
+
+
+def _validate_resumed_response(
+    *, response: requests.Response, offset: int, expected_total: int | None
+) -> int:
+    match = re.fullmatch(
+        r"bytes (\d+)-(\d+)/(\d+|\*)", response.headers.get("Content-Range", "")
+    )
+    # An open-ended resume must cover the remaining file before publication.
+    if (
+        response.status_code != HTTPStatus.PARTIAL_CONTENT
+        or match is None
+        or int(match[1]) != offset
+        or int(match[2]) < offset
+        or (match[3] != "*" and int(match[2]) != int(match[3]) - 1)
+        or (expected_total is not None and int(match[2]) != expected_total - 1)
+        or not _has_only_identity_encoding(response=response, header="Content-Encoding")
+        or (
+            _is_content_length_comparable(response=response)
+            and (length := _get_content_length_from_response(response=response))
+            is not None
+            and length != int(match[2]) - offset + 1
+        )
+    ):
+        raise DownloadError(
+            "Server did not honor the requested byte range; "
+            "the partial file is preserved."
+        )
+    return int(match[3]) - offset if match[3] != "*" else int(match[2]) - offset + 1
+
+
+def _get_download_response(
+    *,
+    sess: requests.Session,
+    responses: contextlib.ExitStack,
+    url: str,
+    gdrive_file_id: str | None,
+    format: str | None,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
+    use_cookies: bool,
+    cookies_file: str,
+) -> tuple[requests.Response, str]:
+    url_origin = url
+    while True:
+        responses.close()
+        res = _get_response_with_retries(
+            sess=sess,
+            url=url,
+            verify=verify,
+            timeout=timeout,
+            retry=retry,
+            headers=None,
+        )
+        responses.callback(res.close)
+
+        if not gdrive_file_id:
+            return res, url
+
+        if url == url_origin and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            # The file could be Google Docs or Spreadsheets.
+            url = f"https://drive.google.com/open?id={gdrive_file_id}"
+            continue
+
+        if res.headers["Content-Type"].startswith("text/html"):
+            assert res.url is not None
+            if "/document/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/document/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="docx" if format is None else format,
+                    )
+                )
+                continue
+            elif "/spreadsheets/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/spreadsheets/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="xlsx" if format is None else format,
+                    )
+                )
+                continue
+            elif "/presentation/" in res.url and "/export" not in res.url:
+                url = (
+                    "https://docs.google.com/presentation/d/{id}/export"
+                    "?format={format}".format(
+                        id=gdrive_file_id,
+                        format="pptx" if format is None else format,
+                    )
+                )
+                continue
+        elif (
+            "Content-Disposition" in res.headers
+            and res.headers["Content-Disposition"].endswith("pptx")
+            and format not in {None, "pptx"}
+        ):
+            url = (
+                "https://docs.google.com/presentation/d/{id}/export"
+                "?format={format}".format(
+                    id=gdrive_file_id,
+                    format="pptx" if format is None else format,
+                )
+            )
+            continue
+
+        if use_cookies:
+            try:
+                _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
+            except OSError as e:
+                # Persisting cookies must never cost a download that succeeded.
+                warnings.warn(
+                    f"Failed to save cookies to {cookies_file}: {e}", stacklevel=3
+                )
+
+        if "Content-Disposition" in res.headers:
+            return res, url
+
+        try:
+            contents = res.text
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as error:
+            responses.close()
+            _wait_for_retry(retry=retry, error=error)
+            continue
+        try:
+            url = get_url_from_gdrive_confirmation(contents)
+        except FileURLRetrievalError as e:
+            message = (
+                "Failed to retrieve file url:\n\n{}\n\n"
+                "You may still be able to access the file from the browser:"
+                "\n\n\t{}\n\n"
+                "but Gdown can't. Please check connections and permissions."
+            ).format(
+                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
+                url_origin,
+            )
+            raise FileURLRetrievalError(message)
+
+
+def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
+    existing_tmp_files = []
+    for file in os.listdir(osp.dirname(output) or "."):
+        if file.startswith(osp.basename(output)) and file.endswith(".part"):
+            existing_tmp_files.append(osp.join(osp.dirname(output), file))
+    if resume and existing_tmp_files:
+        if len(existing_tmp_files) != 1:
+            lines = ["There are multiple temporary files to resume:", ""]
+            for file in existing_tmp_files:
+                lines.append(f"\t{file}")
+            lines.append("")
+            lines.append("Please remove them except one to resume downloading.")
+            raise DownloadError("\n".join(lines))
+        return existing_tmp_files[0], True
+    # Close the temporary file before reopening it for Windows compatibility (#153).
+    tmp_file_obj = tempfile.NamedTemporaryFile(
+        suffix=".part",
+        prefix=osp.basename(output),
+        dir=osp.dirname(output),
+        delete=False,
+    )
+    tmp_file = tmp_file_obj.name
+    tmp_file_obj.close()
+    return tmp_file, False
+
+
+def _iter_response_chunks(
+    *,
+    sess: requests.Session,
+    res: requests.Response,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
+    responses: contextlib.ExitStack,
+    url: str,
+    tmp_file: str | None,
+    start_size: int,
+    flush: Callable[[], None],
+    pbar: tqdm.tqdm | None,
+) -> Iterator[tuple[bytes, int | None]]:
+    downloaded = 0
+    reconnect = start_size != 0
+    expected_total = (
+        _get_content_length_from_response(response=res)
+        if _is_content_length_comparable(response=res)
+        else None
+    )
+    validator = res.headers.get("ETag")
+    if validator is None or validator.startswith("W/"):
+        validator = res.headers.get("Last-Modified")
+    for _ in range(retry.retries - retry.attempt + 1):
+        offset = start_size + downloaded
+        range_size = None
+        if reconnect:
+            headers = {"Range": f"bytes={offset}-"} if offset else None
+            if headers is not None and validator:
+                # A changed remote file must not be spliced onto old bytes.
+                headers["If-Range"] = validator
+            responses.close()
+            res = _get_response_with_retries(
+                sess=sess,
+                url=url,
+                verify=verify,
+                timeout=timeout,
+                retry=retry,
+                headers=headers,
+            )
+            responses.callback(res.close)
+            if offset:
+                range_size = _validate_resumed_response(
+                    response=res, offset=offset, expected_total=expected_total
+                )
+            else:
+                res.raise_for_status()
+
+        content_length = (
+            range_size
+            if range_size is not None
+            else _get_content_length_from_response(response=res)
+        )
+        total = None if content_length is None else content_length + offset
+        expected_size = (
+            content_length
+            if range_size is not None or _is_content_length_comparable(response=res)
+            else None
+        )
+        if expected_size is not None:
+            expected_total = total
+        if pbar is not None:
+            pbar.total = total
+        received = 0
+        transfer_error: Exception | None = None
+        # Exceptions raised by the consumer do not enter this generator,
+        # so writes, hashing and caller callbacks cannot trigger a retry.
+        try:
+            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
+                if expected_size is not None and received + len(chunk) > expected_size:
+                    raise DownloadError("Response exceeds the announced byte range")
+                received += len(chunk)
+                downloaded += len(chunk)
+                yield chunk, total
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ) as error:
+            transfer_error = error
+
+        if isinstance(transfer_error, requests.exceptions.ChunkedEncodingError) or (
+            transfer_error is None
+            and expected_size is not None
+            and received < expected_size
+        ):
+            message = (
+                f"Download is incomplete: received {start_size + downloaded} bytes"
+            )
+            if expected_size is not None:
+                message += f" but the server announced {total} bytes"
+            if tmp_file is not None:
+                message += (
+                    f".\nThe received bytes are kept in {tmp_file}, which resume "
+                    "(--continue on the command line) picks up"
+                )
+            incomplete = DownloadError(message + ".")
+            incomplete.__cause__ = transfer_error
+            transfer_error = incomplete
+        if transfer_error is None:
+            return
+        responses.close()
+        flush()
+        _wait_for_retry(retry=retry, error=transfer_error)
+        reconnect = True
+
+
+def _write_response(
+    *,
+    sess: requests.Session,
+    res: requests.Response,
+    verify: bool | str,
+    timeout: float | tuple[float, float] | None,
+    retry: _RetryState,
+    responses: contextlib.ExitStack,
+    url: str,
+    f: BinaryIO,
+    tmp_file: str | None,
+    start_size: int,
+    quiet: bool,
+    speed: float | None,
+    progress: Callable[[int, int | None], None] | None,
+    hasher: "hashlib._Hash | None",
+    stack: contextlib.ExitStack,
+) -> None:
+    pbar = None
+    if not quiet:
+        pbar = tqdm.tqdm(
+            total=_get_content_length_from_response(response=res),
+            unit="B",
+            initial=start_size,
+            unit_scale=True,
+        )
+        stack.callback(pbar.close)
+    t_start = time.time()
+    downloaded = 0
+    for chunk, total in _iter_response_chunks(
+        sess=sess,
+        res=res,
+        verify=verify,
+        timeout=timeout,
+        retry=retry,
+        responses=responses,
+        url=url,
+        tmp_file=tmp_file,
+        start_size=start_size,
+        flush=f.flush,
+        pbar=pbar,
+    ):
+        _check_cancelled(cancel=retry.cancel)
+        f.write(chunk)
+        if hasher is not None:
+            hasher.update(chunk)
+        downloaded += len(chunk)
+        if pbar is not None:
+            pbar.update(len(chunk))
+        if progress is not None:
+            progress(downloaded + start_size, total)
+        if speed is None:
+            continue
+        elapsed_time_expected = downloaded / speed
+        elapsed_time = time.time() - t_start
+        if elapsed_time < elapsed_time_expected:
+            _wait_or_cancel(
+                seconds=elapsed_time_expected - elapsed_time, cancel=retry.cancel
+            )
+
+
 # Parameters remain positional-or-keyword for backward compatibility.
 def download(
     url: str | None = None,
@@ -280,6 +703,10 @@ def download(
     progress: Callable[[int, int | None], None] | None = None,
     skip_download: bool = False,  # noqa: FBT001, FBT002
     cookies_file: str | None = None,
+    hasher: "hashlib._Hash | None" = None,
+    timeout: float | tuple[float, float] | None = None,
+    retries: int = 0,
+    cancel: threading.Event | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -330,6 +757,29 @@ def download(
         Netscape cookies file to load before the request and save after
         every Google Drive response. Default is ~/.cache/gdown/cookies.txt.
         Ignored when use_cookies is False.
+    hasher:
+        A hashlib object fed every downloaded byte, so a caller verifying the
+        file does not have to read it back afterwards. Bytes already on disk
+        from a resumed download are fed to it before the transfer starts.
+    timeout:
+        Seconds to wait for the server between bytes, either as a single
+        value or as a (connect, read) pair, as in requests. Default is None,
+        which waits forever.
+
+    retries:
+        Additional attempts for transient network failures, per file. Default
+        is zero. Retries resume the current transfer; use resume=True to reuse
+        earlier partial downloads and skip completed files. Requires a filesystem
+        destination. Ignored when skip_download is True.
+
+    cancel:
+        Optional threading.Event set by the caller to stop the operation before
+        its network timeout. Interrupts response-header and body reads, retry
+        backoff, and speed-limit waits. Does not interrupt DNS, connection/TLS
+        setup, proxy negotiation, filesystem operations, or caller callbacks.
+        An event already set cancels before work. The event is never cleared.
+        Partial files remain available for resume; caller-owned streams stay open.
+        Once final-file publication starts, a late event does not cancel success.
 
     Returns
     -------
@@ -349,7 +799,18 @@ def download(
         If the download fails (e.g., the response body ends before the
         announced number of bytes, or multiple temporary files exist during
         resume).
+    DownloadCancelled
+        If cancellation is requested before final-file publication. Not retried.
     """
+    _check_cancelled(cancel=cancel)
+    _validate_retries(retries=retries)
+    if (
+        not skip_download
+        and retries
+        and output is not None
+        and not isinstance(output, str)
+    ):
+        raise ValueError("retries requires a filesystem destination, not a stream")
     if not (id is None) ^ (url is None):
         raise ValueError("Either url or id has to be specified")
     if id is not None:
@@ -372,6 +833,15 @@ def download(
         )
 
         stack.callback(sess.close)
+        _configure_cancellation(session=sess, cancel=cancel)
+        retry = _RetryState(
+            retries=0 if skip_download else retries,
+            quiet=quiet,
+            cancel=cancel,
+        )
+        if not skip_download and (retries or resume):
+            # Byte offsets must refer to the bytes written on disk.
+            sess.headers["Accept-Encoding"] = "identity"
         responses = stack.enter_context(contextlib.ExitStack())
 
         gdrive_file_id, is_gdrive_download_link = parse_url(url=url)
@@ -381,91 +851,18 @@ def download(
             url_origin = url
             is_gdrive_download_link = True
 
-        while True:
-            responses.close()
-            res = sess.get(url, stream=True, verify=verify)
-            responses.callback(res.close)
-
-            if not (gdrive_file_id and is_gdrive_download_link):
-                break
-
-            if (
-                url == url_origin
-                and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-            ):
-                # The file could be Google Docs or Spreadsheets.
-                url = f"https://drive.google.com/open?id={gdrive_file_id}"
-                continue
-
-            if res.headers["Content-Type"].startswith("text/html"):
-                if "/document/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/document/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="docx" if format is None else format,
-                        )
-                    )
-                    continue
-                elif "/spreadsheets/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/spreadsheets/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="xlsx" if format is None else format,
-                        )
-                    )
-                    continue
-                elif "/presentation/" in res.url and "/export" not in res.url:
-                    url = (
-                        "https://docs.google.com/presentation/d/{id}/export"
-                        "?format={format}".format(
-                            id=gdrive_file_id,
-                            format="pptx" if format is None else format,
-                        )
-                    )
-                    continue
-            elif (
-                "Content-Disposition" in res.headers
-                and res.headers["Content-Disposition"].endswith("pptx")
-                and format not in {None, "pptx"}
-            ):
-                url = (
-                    "https://docs.google.com/presentation/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="pptx" if format is None else format,
-                    )
-                )
-                continue
-
-            if use_cookies:
-                try:
-                    _save_cookies(cookies=sess.cookies, cookies_file=cookies_file)
-                except OSError as e:
-                    # Persisting cookies must never cost a download that succeeded.
-                    warnings.warn(
-                        f"Failed to save cookies to {cookies_file}: {e}", stacklevel=2
-                    )
-
-            if "Content-Disposition" in res.headers:
-                # This is the file
-                break
-
-            # Need to redirect with confirmation
-            try:
-                url = get_url_from_gdrive_confirmation(res.text)
-            except FileURLRetrievalError as e:
-                message = (
-                    "Failed to retrieve file url:\n\n{}\n\n"
-                    "You may still be able to access the file from the browser:"
-                    "\n\n\t{}\n\n"
-                    "but Gdown can't. Please check connections and permissions."
-                ).format(
-                    textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
-                    url_origin,
-                )
-                raise FileURLRetrievalError(message)
+        res, url = _get_download_response(
+            sess=sess,
+            responses=responses,
+            url=url,
+            gdrive_file_id=gdrive_file_id,
+            format=format,
+            verify=verify,
+            timeout=timeout,
+            retry=retry,
+            use_cookies=use_cookies,
+            cookies_file=cookies_file,
+        )
 
         filename_from_url = None
         last_modified_time = None
@@ -483,6 +880,7 @@ def download(
                 id=gdrive_file_id, path=filename_from_url, local_path=filename_from_url
             )
 
+        res.raise_for_status()
         if filename_from_url is None:
             filename_from_url = _sanitize_filename(filename=osp.basename(url))
 
@@ -502,30 +900,7 @@ def download(
                     print(f"Skipping already downloaded file {output}", file=sys.stderr)
                 return output
 
-            existing_tmp_files = []
-            for file in os.listdir(osp.dirname(output) or "."):
-                if file.startswith(osp.basename(output)) and file.endswith(".part"):
-                    existing_tmp_files.append(osp.join(osp.dirname(output), file))
-            if resume and existing_tmp_files:
-                if len(existing_tmp_files) != 1:
-                    lines = ["There are multiple temporary files to resume:", ""]
-                    for file in existing_tmp_files:
-                        lines.append(f"\t{file}")
-                    lines.append("")
-                    lines.append("Please remove them except one to resume downloading.")
-                    raise DownloadError("\n".join(lines))
-                tmp_file = existing_tmp_files[0]
-            else:
-                resume = False
-                # Avoid mkstemp which doesn't work on Windows (#153)
-                tmp_file_obj = tempfile.NamedTemporaryFile(
-                    suffix=".part",
-                    prefix=osp.basename(output),
-                    dir=osp.dirname(output),
-                    delete=False,
-                )
-                tmp_file = tmp_file_obj.name
-                tmp_file_obj.close()
+            tmp_file, resume = _prepare_partial_file(output=output, resume=resume)
             f = open(tmp_file, "ab")
             stack.callback(f.close)
         else:
@@ -554,55 +929,30 @@ def download(
             )
 
         start_size = f.tell() if tmp_file is not None else 0
-        if start_size != 0:
-            headers = {"Range": f"bytes={start_size}-"}
-            responses.close()
-            res = sess.get(url, headers=headers, stream=True, verify=verify)
-            responses.callback(res.close)
-
-        content_length = _get_content_length_from_response(response=res)
-        total = None if content_length is None else content_length + start_size
-        expected_size = (
-            content_length if _is_content_length_comparable(response=res) else None
+        if hasher is not None and start_size != 0:
+            assert tmp_file is not None
+            with open(tmp_file, "rb") as resumed:
+                for block in iter(lambda: resumed.read(CHUNK_SIZE), b""):
+                    hasher.update(block)
+        _write_response(
+            sess=sess,
+            res=res,
+            verify=verify,
+            timeout=timeout,
+            retry=retry,
+            responses=responses,
+            url=url,
+            f=f,
+            tmp_file=tmp_file,
+            start_size=start_size,
+            quiet=quiet,
+            speed=speed,
+            progress=progress,
+            hasher=hasher,
+            stack=stack,
         )
-        if not quiet:
-            pbar = tqdm.tqdm(total=total, unit="B", initial=start_size, unit_scale=True)
-            stack.callback(pbar.close)
-        t_start = time.time()
-        downloaded = 0
-        truncation_error: requests.exceptions.ChunkedEncodingError | None = None
-        try:
-            for chunk in res.iter_content(chunk_size=CHUNK_SIZE):
-                f.write(chunk)
-                downloaded += len(chunk)
-                if not quiet:
-                    pbar.update(len(chunk))
-                if progress is not None:
-                    progress(downloaded + start_size, total)
-                if speed is None:
-                    continue
-                elapsed_time_expected = downloaded / speed
-                elapsed_time = time.time() - t_start
-                if elapsed_time < elapsed_time_expected:
-                    time.sleep(elapsed_time_expected - elapsed_time)
-        except requests.exceptions.ChunkedEncodingError as e:
-            # Some HTTP client versions enforce Content-Length themselves, so a
-            # body that ends early surfaces here rather than as a short read.
-            truncation_error = e
 
-    if truncation_error is not None or (
-        expected_size is not None and downloaded < expected_size
-    ):
-        message = f"Download is incomplete: received {downloaded + start_size} bytes"
-        if expected_size is not None:
-            message += f" but the server announced {total} bytes"
-        if tmp_file is not None:
-            message += (
-                f".\nThe received bytes are kept in {tmp_file}, which resume "
-                "(--continue on the command line) picks up"
-            )
-        raise DownloadError(message + ".") from truncation_error
-
+    _check_cancelled(cancel=cancel)
     if tmp_file is not None:
         assert isinstance(output, str)
         shutil.move(tmp_file, output)

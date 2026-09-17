@@ -14,15 +14,21 @@ jobs:
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
+      - uses: extractions/setup-just@4a174aa1487e2bcb3f86a8fe24a05361a4f4fff1
+        with:
+          just-version: 1.58.0
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - run: make test PYTEST_ARGS='--numprocesses=auto -m "not network"'
+      - run: just test -m "not network"
   network:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: extractions/setup-just@4a174aa1487e2bcb3f86a8fe24a05361a4f4fff1
+        with:
+          just-version: 1.58.0
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.10'
-      - run: make test PYTEST_ARGS='--numprocesses=auto -m network'
+      - run: just test -m network

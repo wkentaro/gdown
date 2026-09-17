@@ -9,6 +9,7 @@ from typing import Any
 from typing import Final
 
 import requests
+import urllib3
 
 from . import __version__
 from ._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
@@ -36,12 +37,13 @@ class _ShowVersionAction(argparse.Action):
         parser.exit()
 
 
-def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API accepts both call styles
-    if argv is None:
-        return None
+def _parse_file_size(argv: str, /) -> float:
     m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
     if not m:
-        raise TypeError
+        # The parser otherwise reports this function's name to the user.
+        raise argparse.ArgumentTypeError(
+            f"invalid size {argv!r}; give a number followed by B, KB, MB, or GB"
+        )
     size, unit = m.groups()
     size = float(size)
     if unit == "KB":
@@ -53,6 +55,17 @@ def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API ac
     elif unit == "B":
         pass
     return size
+
+
+def _is_timeout(error: Exception, /) -> bool:
+    # A stall mid-stream reaches us as a ConnectionError wrapping urllib3's
+    # read timeout, not as a requests Timeout, so check both shapes.
+    return isinstance(error, requests.exceptions.Timeout) or (
+        isinstance(error, requests.exceptions.ConnectionError)
+        and any(
+            isinstance(arg, urllib3.exceptions.ReadTimeoutError) for arg in error.args
+        )
+    )
 
 
 def main() -> None:
@@ -86,7 +99,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--speed",
-        type=file_size,
+        type=_parse_file_size,
         help="download speed limit in second (e.g., '10MB' -> 10MB/s)",
     )
     parser.add_argument(
@@ -130,6 +143,15 @@ def main() -> None:
         "skipping fully downloaded ones",
     )
     parser.add_argument(
+        "--retries",
+        type=int,
+        default=0,
+        metavar="N",
+        help="retry transient failures up to N times per file, resuming the current "
+        "transfer; use --continue to resume earlier downloads and skip completed "
+        "files (filesystem destinations only; excludes --json and folder discovery)",
+    )
+    parser.add_argument(
         "--folder",
         action="store_true",
         help="download a folder by ID (folder URLs are detected automatically)",
@@ -153,11 +175,21 @@ def main() -> None:
         "--user-agent",
         help="User-Agent to use for downloading file.",
     )
+    parser.add_argument(
+        "--timeout",
+        metavar="SECONDS",
+        type=float,
+        help="give up when the server sends nothing for this many seconds "
+        "(default: wait forever)",
+    )
 
     args = parser.parse_args()
 
     if args.json and args.output is not None:
         parser.error("--json cannot be combined with -O/--output")
+
+    if args.timeout is not None and args.timeout <= 0:
+        parser.error("--timeout needs a positive number of seconds")
 
     if args.no_cookies and ("cookies" in args or args.cookies_from_browser):
         parser.error(
@@ -246,6 +278,8 @@ def main() -> None:
                 resume=args.continue_,
                 skip_download=args.json,
                 cookies_file=cookies_file,
+                timeout=args.timeout,
+                retries=args.retries,
             )
         else:
             result = download(
@@ -262,6 +296,8 @@ def main() -> None:
                 user_agent=args.user_agent,
                 skip_download=args.json,
                 cookies_file=cookies_file,
+                timeout=args.timeout,
+                retries=args.retries,
             )
 
         if args.json:
@@ -288,6 +324,12 @@ def main() -> None:
         )
         sys.exit(1)
     except Exception as e:
+        if _is_timeout(e):
+            print(
+                f"Timed out: no response from the server for {args.timeout} seconds.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         print(
             "Error:\n\n{}\n\nTo report issues, please visit "
             "https://github.com/wkentaro/gdown/issues.".format(

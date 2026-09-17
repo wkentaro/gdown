@@ -6,6 +6,7 @@ import os.path as osp
 import shutil
 import sys
 import tempfile
+import threading
 from collections.abc import Callable
 from typing import Final
 from typing import TypedDict
@@ -17,6 +18,7 @@ else:
 
 import filelock
 
+from ._cancellation import _check_cancelled
 from .download import download
 
 
@@ -27,9 +29,12 @@ class _DownloadKwargs(TypedDict, total=False):
     verify: bool | str
     id: str | None
     resume: bool
+    retries: int
     format: str | None
     user_agent: str | None
     progress: Callable[[int, int | None], None] | None
+    timeout: float | tuple[float, float] | None
+    cancel: threading.Event | None
 
 
 cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
@@ -60,7 +65,9 @@ def cached_download(
         Hash value of file in the format of {algorithm}:{hash_value}
         such as sha256:abcdef.... Supported algorithms: md5, sha1, sha256, sha512.
     kwargs:
-        Keyword arguments to be passed to `download`.
+        Keyword arguments to be passed to `download`, including `cancel`.
+        An already-set cancellation event takes precedence over a cache hit.
+        Cancellation removes staging files and leaves the final path untouched.
 
     Returns
     -------
@@ -73,7 +80,11 @@ def cached_download(
         If url is not specified when path is not specified.
     DownloadError
         If the download fails.
+    DownloadCancelled
+        If cancellation is requested before final-file publication. Not retried.
     """
+    cancel = kwargs.get("cancel")
+    _check_cancelled(cancel=cancel)
     if path is None:
         if url is None:
             raise ValueError("url must be specified when path is not specified")
@@ -93,6 +104,7 @@ def cached_download(
     elif osp.exists(path) and hash:
         try:
             _assert_filehash(path=path, hash=hash)
+            _check_cancelled(cancel=cancel)
             return path
         except AssertionError as e:
             print(e, file=sys.stderr)
@@ -108,6 +120,7 @@ def cached_download(
         temp_path = osp.join(temp_root, "dl")
 
         log_message_hash = f"Hash: {hash}\n" if hash else ""
+        hasher = _new_hasher(hash=hash) if hash else None
         download(
             url=url,
             output=temp_path,
@@ -116,11 +129,14 @@ def cached_download(
                 "start": f"Cached downloading...\n{log_message_hash}",
                 "output": f"To: {path}\n",
             },
+            hasher=hasher,
             **kwargs,
         )
-        if hash:
-            _assert_filehash(path=temp_path, hash=hash)
+        if hasher is not None:
+            assert hash is not None
+            _assert_hash(hash_actual=_format_hash(hasher=hasher), hash=hash)
         with filelock.FileLock(lock_path):
+            _check_cancelled(cancel=cancel)
             shutil.move(temp_path, path)
 
     # postprocess
@@ -133,30 +149,41 @@ def cached_download(
 def _compute_filehash(*, path: str, algorithm: str) -> str:
     BLOCKSIZE: Final = 65536
 
-    if algorithm not in hashlib.algorithms_guaranteed:
-        raise ValueError(
-            f"Unsupported hash algorithm: {algorithm}. "
-            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
-        )
-
-    algorithm_instance = getattr(hashlib, algorithm)()
+    hasher = hashlib.new(algorithm)
     with open(path, "rb") as f:
         for block in iter(lambda: f.read(BLOCKSIZE), b""):
-            algorithm_instance.update(block)
-    return f"{algorithm}:{algorithm_instance.hexdigest()}"
+            hasher.update(block)
+    return _format_hash(hasher=hasher)
 
 
-def _assert_filehash(*, path: str, hash: str) -> None:
+def _new_hasher(*, hash: str) -> hashlib._Hash:
     if ":" not in hash:
         raise ValueError(
             f"Invalid hash: {hash}. "
             "Hash must be in the format of {algorithm}:{hash_value}."
         )
     algorithm = hash.split(":")[0]
+    if algorithm not in hashlib.algorithms_guaranteed:
+        raise ValueError(
+            f"Unsupported hash algorithm: {algorithm}. "
+            f"Supported algorithms: {hashlib.algorithms_guaranteed}"
+        )
+    return hashlib.new(algorithm)
 
-    hash_actual = _compute_filehash(path=path, algorithm=algorithm)
 
+def _format_hash(*, hasher: hashlib._Hash) -> str:
+    return f"{hasher.name}:{hasher.hexdigest()}"
+
+
+def _assert_hash(*, hash_actual: str, hash: str) -> None:
     if hash_actual != hash:
         raise AssertionError(
             f"File hash doesn't match:\nactual: {hash_actual}\nexpected: {hash}"
         )
+
+
+def _assert_filehash(*, path: str, hash: str) -> None:
+    hasher = _new_hasher(hash=hash)
+    _assert_hash(
+        hash_actual=_compute_filehash(path=path, algorithm=hasher.name), hash=hash
+    )

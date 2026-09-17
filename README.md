@@ -124,6 +124,9 @@ gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --speed 1
 
 # Download via proxy
 gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --proxy http://proxy:8080
+
+# Give up when the server sends nothing for 30 seconds
+gdown https://drive.google.com/uc?id=1l_5RK28JRL19wpT22B-DY9We3TVXnnQQ --timeout 30
 ```
 
 #### Other options
@@ -245,11 +248,26 @@ resolving each Google Drive file, whether or not it downloads it.
 ### Download stops after ~1 hour
 
 Google Drive terminates connections after approximately 1 hour for large files.
-Use `--continue` to resume, and retry until the download completes:
+Use `--continue` to reuse earlier partial downloads and skip completed files.
+Add `--retries N` for up to N automatic retries per file after a transient
+connection failure, timeout, or incomplete transfer:
 
 ```bash
-gdown --continue https://drive.google.com/uc?id=<file_id>
+gdown --continue --retries 3 https://drive.google.com/uc?id=<file_id>
+gdown --continue --retries 3 https://drive.google.com/drive/folders/<folder_id>
 ```
+
+Retries default to zero and use exponential backoff with jitter, capped at 30
+seconds. Retries resume the current transfer automatically; `--continue` controls
+whether earlier downloads are reused. Python callers can pass `retries=3` to
+`download`, `download_folder`, or `cached_download`.
+
+Retries require a filesystem destination; stdout and file-like outputs are not
+supported. Folder discovery and `--json` do not retry. If a server refuses the
+requested byte range, gdown stops that file and preserves the partial download.
+When a file exhausts its retries in a folder, remaining files are attempted and
+failures are reported at the end. Permission/quota errors and cancellation are
+not retried.
 
 ### Can I use gdown for non-Google-Drive URLs?
 
@@ -257,12 +275,16 @@ Yes. It works with any public HTTP/HTTPS URL.
 
 ## Contributing
 
+Install [just](https://just.systems/man/en/packages.html) 1.58.0 or newer and
+[uv](https://docs.astral.sh/uv/getting-started/installation/). Recipes use Bash;
+on Windows, install Git for Windows and make its Bash available on `PATH`.
+
 ```bash
 git clone https://github.com/wkentaro/gdown.git
 cd gdown
-make setup   # install dependencies
-make test    # run tests
-make lint    # run linters
+just setup   # install dependencies
+just test    # run tests
+just lint    # run linters
 ```
 
 ## License
