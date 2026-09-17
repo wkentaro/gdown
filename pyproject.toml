@@ -28,6 +28,7 @@ dependencies = [
   "beautifulsoup4",
   "filelock",
   "requests[socks]",
+  "urllib3",
   "tqdm",
   "typing_extensions>=4.0; python_version < '3.12'",
 ]

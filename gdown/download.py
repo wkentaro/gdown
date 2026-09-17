@@ -11,6 +11,7 @@ import shutil
 import sys
 import tempfile
 import textwrap
+import threading
 import time
 import urllib.parse
 import warnings
@@ -30,6 +31,9 @@ import bs4
 import requests
 import tqdm
 
+from ._cancellation import _check_cancelled
+from ._cancellation import _configure_cancellation
+from ._cancellation import _wait_or_cancel
 from ._vendor._ytdlp_shim import _YDLLogger
 from .exceptions import DownloadError
 from .exceptions import FileURLRetrievalError
@@ -278,6 +282,7 @@ def _validate_retries(*, retries: int) -> None:
 class _RetryState:
     retries: int
     quiet: bool
+    cancel: threading.Event | None = None
     attempt: int = field(default=0, init=False)
 
 
@@ -290,6 +295,7 @@ def _raise_retries_exhausted(*, error: Exception, retries: int) -> NoReturn:
 
 
 def _wait_for_retry(*, retry: _RetryState, error: Exception) -> None:
+    _check_cancelled(cancel=retry.cancel)
     if isinstance(
         error, (requests.exceptions.SSLError, requests.exceptions.ProxyError)
     ):
@@ -303,7 +309,7 @@ def _wait_for_retry(*, retry: _RetryState, error: Exception) -> None:
             f"Retrying ({retry.attempt}/{retry.retries}) in {delay:.1f}s: {error}",
             file=sys.stderr,
         )
-    time.sleep(delay)
+    _wait_or_cancel(seconds=delay, cancel=retry.cancel)
 
 
 def _get_response_with_retries(
@@ -317,6 +323,7 @@ def _get_response_with_retries(
 ) -> requests.Response:
     last_error = None
     for _ in range(retry.retries - retry.attempt + 1):
+        _check_cancelled(cancel=retry.cancel)
         if last_error is not None:
             _wait_for_retry(retry=retry, error=last_error)
         try:
@@ -660,6 +667,7 @@ def _write_response(
         flush=f.flush,
         pbar=pbar,
     ):
+        _check_cancelled(cancel=retry.cancel)
         f.write(chunk)
         if hasher is not None:
             hasher.update(chunk)
@@ -673,7 +681,9 @@ def _write_response(
         elapsed_time_expected = downloaded / speed
         elapsed_time = time.time() - t_start
         if elapsed_time < elapsed_time_expected:
-            time.sleep(elapsed_time_expected - elapsed_time)
+            _wait_or_cancel(
+                seconds=elapsed_time_expected - elapsed_time, cancel=retry.cancel
+            )
 
 
 # Parameters remain positional-or-keyword for backward compatibility.
@@ -696,6 +706,7 @@ def download(
     hasher: "hashlib._Hash | None" = None,
     timeout: float | tuple[float, float] | None = None,
     retries: int = 0,
+    cancel: threading.Event | None = None,
 ) -> str | BinaryIO | GoogleDriveFileToDownload:  # noqa: GR005 -- public API accepts both call styles
     """Download file from URL.
 
@@ -761,6 +772,15 @@ def download(
         earlier partial downloads and skip completed files. Requires a filesystem
         destination. Ignored when skip_download is True.
 
+    cancel:
+        Optional threading.Event set by the caller to stop the operation before
+        its network timeout. Interrupts response-header and body reads, retry
+        backoff, and speed-limit waits. Does not interrupt DNS, connection/TLS
+        setup, proxy negotiation, filesystem operations, or caller callbacks.
+        An event already set cancels before work. The event is never cleared.
+        Partial files remain available for resume; caller-owned streams stay open.
+        Once final-file publication starts, a late event does not cancel success.
+
     Returns
     -------
     output:
@@ -779,7 +799,10 @@ def download(
         If the download fails (e.g., the response body ends before the
         announced number of bytes, or multiple temporary files exist during
         resume).
+    DownloadCancelled
+        If cancellation is requested before final-file publication. Not retried.
     """
+    _check_cancelled(cancel=cancel)
     _validate_retries(retries=retries)
     if (
         not skip_download
@@ -810,9 +833,11 @@ def download(
         )
 
         stack.callback(sess.close)
+        _configure_cancellation(session=sess, cancel=cancel)
         retry = _RetryState(
             retries=0 if skip_download else retries,
             quiet=quiet,
+            cancel=cancel,
         )
         if not skip_download and (retries or resume):
             # Byte offsets must refer to the bytes written on disk.
@@ -927,6 +952,7 @@ def download(
             stack=stack,
         )
 
+    _check_cancelled(cancel=cancel)
     if tmp_file is not None:
         assert isinstance(output, str)
         shutil.move(tmp_file, output)
