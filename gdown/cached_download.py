@@ -6,6 +6,7 @@ import os.path as osp
 import shutil
 import sys
 import tempfile
+import threading
 from collections.abc import Callable
 from typing import Final
 from typing import TypedDict
@@ -17,6 +18,7 @@ else:
 
 import filelock
 
+from ._cancellation import _check_cancelled
 from .download import download
 
 
@@ -32,6 +34,7 @@ class _DownloadKwargs(TypedDict, total=False):
     user_agent: str | None
     progress: Callable[[int, int | None], None] | None
     timeout: float | tuple[float, float] | None
+    cancel: threading.Event | None
 
 
 cache_root = osp.join(osp.expanduser("~"), ".cache/gdown")
@@ -62,7 +65,9 @@ def cached_download(
         Hash value of file in the format of {algorithm}:{hash_value}
         such as sha256:abcdef.... Supported algorithms: md5, sha1, sha256, sha512.
     kwargs:
-        Keyword arguments to be passed to `download`.
+        Keyword arguments to be passed to `download`, including `cancel`.
+        An already-set cancellation event takes precedence over a cache hit.
+        Cancellation removes staging files and leaves the final path untouched.
 
     Returns
     -------
@@ -75,7 +80,11 @@ def cached_download(
         If url is not specified when path is not specified.
     DownloadError
         If the download fails.
+    DownloadCancelled
+        If cancellation is requested before final-file publication. Not retried.
     """
+    cancel = kwargs.get("cancel")
+    _check_cancelled(cancel=cancel)
     if path is None:
         if url is None:
             raise ValueError("url must be specified when path is not specified")
@@ -95,6 +104,7 @@ def cached_download(
     elif osp.exists(path) and hash:
         try:
             _assert_filehash(path=path, hash=hash)
+            _check_cancelled(cancel=cancel)
             return path
         except AssertionError as e:
             print(e, file=sys.stderr)
@@ -126,6 +136,7 @@ def cached_download(
             assert hash is not None
             _assert_hash(hash_actual=_format_hash(hasher=hasher), hash=hash)
         with filelock.FileLock(lock_path):
+            _check_cancelled(cancel=cancel)
             shutil.move(temp_path, path)
 
     # postprocess

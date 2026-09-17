@@ -383,6 +383,7 @@ dependencies = [
     { name = "requests", extra = ["socks"] },
     { name = "tqdm" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "urllib3" },
 ]
 
 [package.optional-dependencies]
@@ -412,6 +413,7 @@ requires-dist = [
     { name = "secretstorage", marker = "extra == 'secretstorage'" },
     { name = "tqdm" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'", specifier = ">=4.0" },
+    { name = "urllib3" },
 ]
 provides-extras = ["secretstorage"]
 
