@@ -19,7 +19,7 @@ import urllib3
 
 from gdown.__main__ import BROWSERS
 from gdown.__main__ import _is_timeout
-from gdown.__main__ import file_size
+from gdown.__main__ import _parse_file_size
 from gdown.__main__ import main
 from gdown._vendor._ytdlp_cookies import SUPPORTED_BROWSERS
 from gdown.cached_download import _assert_filehash
@@ -328,6 +328,10 @@ def test_json_flag_native_probe_failure_prints_no_listing(
             ["https://example.com/file", "--timeout", "0"],
             "--timeout needs a positive number of seconds",
         ),
+        (
+            ["https://example.com/file", "--speed", "100"],
+            "argument --speed: invalid size '100'; give a number followed by",
+        ),
     ],
 )
 def test_cli_reports_invalid_input(*, args: list[str], message: str) -> None:
@@ -585,16 +589,7 @@ def test_json_flag_single_file_without_drive_filename_raises(
     ],
 )
 def test_file_size_parses_units(*, argv: str, expected: float) -> None:
-    assert file_size(argv) == expected
-
-
-def test_file_size_none_returns_none() -> None:
-    assert file_size(None) is None
-
-
-def test_file_size_without_unit_raises_type_error() -> None:
-    with pytest.raises(TypeError):
-        file_size("100")
+    assert _parse_file_size(argv) == expected
 
 
 EXTRACTOR: Final = "gdown._vendor._ytdlp_cookies.extract_cookies_from_browser"
