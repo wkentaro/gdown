@@ -37,12 +37,13 @@ class _ShowVersionAction(argparse.Action):
         parser.exit()
 
 
-def file_size(argv: str | None) -> float | None:  # noqa: GR005 -- public API accepts both call styles
-    if argv is None:
-        return None
+def _parse_file_size(argv: str, /) -> float:
     m = re.match(r"([0-9]+)(GB|MB|KB|B)", argv)
     if not m:
-        raise TypeError
+        # The parser otherwise reports this function's name to the user.
+        raise argparse.ArgumentTypeError(
+            f"invalid size {argv!r}; give a number followed by B, KB, MB, or GB"
+        )
     size, unit = m.groups()
     size = float(size)
     if unit == "KB":
@@ -98,7 +99,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--speed",
-        type=file_size,
+        type=_parse_file_size,
         help="download speed limit in second (e.g., '10MB' -> 10MB/s)",
     )
     parser.add_argument(
