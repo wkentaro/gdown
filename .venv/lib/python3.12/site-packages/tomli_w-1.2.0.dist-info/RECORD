@@ -1,0 +1,10 @@
+tomli_w-1.2.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+tomli_w-1.2.0.dist-info/LICENSE,sha256=uAgWsNUwuKzLTCIReDeQmEpuO2GSLCte6S8zcqsnQv4,1072
+tomli_w-1.2.0.dist-info/METADATA,sha256=ZugawuQXdbXr3c-7n0rncVjkxXOf1S0jHhTy__2pyN4,5703
+tomli_w-1.2.0.dist-info/RECORD,,
+tomli_w-1.2.0.dist-info/WHEEL,sha256=CpUCUxeHQbRN5UGRQHYRJorO5Af-Qy_fHMctcQ8DSGI,82
+tomli_w/__init__.py,sha256=uF6lpLZfP5dKagMn7OLX1XAiVu_4hHMVuPuhYq-j9BA,157
+tomli_w/__pycache__/__init__.cpython-312.pyc,,
+tomli_w/__pycache__/_writer.cpython-312.pyc,,
+tomli_w/_writer.py,sha256=dsifFS2xYf1i76mmRyfz9y125xC7Z_HQ845ZKhJsYXs,6961
+tomli_w/py.typed,sha256=8PjyZ1aVoQpRVvt71muvuq5qE-jTFZkK-GLHkhdebmc,26
