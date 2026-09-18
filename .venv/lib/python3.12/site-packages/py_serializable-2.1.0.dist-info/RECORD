@@ -1,0 +1,16 @@
+py_serializable-2.1.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+py_serializable-2.1.0.dist-info/LICENSE,sha256=xx0jnfkXJvxRnG63LTGOxlggYnIysveWIZ6H3PNdCrQ,11357
+py_serializable-2.1.0.dist-info/METADATA,sha256=N_n1QTZt5wOAlJYPMBZC7UbcgvNwE1hULdjiAL1b71c,4271
+py_serializable-2.1.0.dist-info/RECORD,,
+py_serializable-2.1.0.dist-info/WHEEL,sha256=b4K_helf-jlQoXBBETfwnf4B04YC67LOev0jo4fX5m8,88
+py_serializable/__init__.py,sha256=qt7unq3IWGbyj93izFj03jjgvCuNX0CUfsXeg5xd7BE,63618
+py_serializable/__pycache__/__init__.cpython-312.pyc,,
+py_serializable/__pycache__/formatters.cpython-312.pyc,,
+py_serializable/__pycache__/helpers.cpython-312.pyc,,
+py_serializable/__pycache__/json.cpython-312.pyc,,
+py_serializable/__pycache__/xml.cpython-312.pyc,,
+py_serializable/formatters.py,sha256=YB9kPU8iiL7jhoMuytY0nc9i7ns1vZeORgbRfhH-G0o,3390
+py_serializable/helpers.py,sha256=KMqPTyp05ZiA49hLNCSpP4J3PR1fUXqlKjmArJnuNAo,7401
+py_serializable/json.py,sha256=dX6gc5RWsWgtIRlWeQWgNqkpwM1XEBLD05kl0apMD5o,713
+py_serializable/py.typed,sha256=EFHg9-wbl4yUKjj8V3gUwoBZQam2tFkzh9IuCnmNyew,153
+py_serializable/xml.py,sha256=nep9eMGfTP0d4emAPHUCDg46Q7K_6vPEABfJ2aHjTy4,3225

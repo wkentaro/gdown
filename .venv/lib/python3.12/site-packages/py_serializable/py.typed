@@ -1,0 +1,2 @@
+# Marker file for PEP 561.  This package uses inline types.
+# This file is needed to allow other packages to type-check their code against this package.

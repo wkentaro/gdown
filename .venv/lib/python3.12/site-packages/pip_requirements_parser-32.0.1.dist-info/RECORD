@@ -1,0 +1,13 @@
+__pycache__/packaging_legacy_version.cpython-312.pyc,,
+__pycache__/pip_requirements_parser.cpython-312.pyc,,
+packaging_legacy_version.py,sha256=HMdcuL3EG0u8d9pdqkhkyVyuVJi-mGycYtOPw8-HAiE,5092
+pip_requirements_parser-32.0.1.dist-info/AUTHORS.rst,sha256=slWE8eNyQu-iQqDwlsWBiS4eS5ELmSxRCkUxEQ7by28,78
+pip_requirements_parser-32.0.1.dist-info/CHANGELOG.rst,sha256=jCbiS3LD04oVGElYeCGszmjaZ70nmY8qAkoJyjV__eE,931
+pip_requirements_parser-32.0.1.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+pip_requirements_parser-32.0.1.dist-info/METADATA,sha256=4h9JxkSBT_G7oGSmQXaPL1NMgGz_Uj4kA2Unk3lKtG0,9288
+pip_requirements_parser-32.0.1.dist-info/README.rst,sha256=XCQzWp9pbrvqywub8uaUaFdNvJb_WvkPdA2TSQf5Qq4,7973
+pip_requirements_parser-32.0.1.dist-info/RECORD,,
+pip_requirements_parser-32.0.1.dist-info/WHEEL,sha256=2wepM1nk4DS4eFpYrW1TTqPcoGNfHhhO_i5m4cOimbo,92
+pip_requirements_parser-32.0.1.dist-info/mit.LICENSE,sha256=GAgcLIJ3HKCdmdCM2sQFkkMJ4J_Rmxbx7qWcvGq4Ce0,1080
+pip_requirements_parser-32.0.1.dist-info/top_level.txt,sha256=hGJcNh1S8P_G6-V3rc2kp2r2yARB0FXlkw01aDtQCQM,49
+pip_requirements_parser.py,sha256=ZNbxSwgLefDQFq9u0VSOBysa10ngyy0vC43G9_uud4s,96343

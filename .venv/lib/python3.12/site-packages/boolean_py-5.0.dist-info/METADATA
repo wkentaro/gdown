@@ -1,0 +1,65 @@
+Metadata-Version: 2.4
+Name: boolean.py
+Version: 5.0
+Summary: Define boolean algebras, create and parse boolean expressions and create custom boolean DSL.
+Home-page: https://github.com/bastikr/boolean.py
+Author: Sebastian Kraemer
+Author-email: basti.kr@gmail.com
+License: BSD-2-Clause
+Keywords: boolean expression,boolean algebra,logic,expression parser
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Classifier: Topic :: Software Development :: Compilers
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Utilities
+Description-Content-Type: text/x-rst
+License-File: LICENSE.txt
+License-File: README.rst
+License-File: CHANGELOG.rst
+Provides-Extra: testing
+Requires-Dist: pytest!=7.0.0,>=6; extra == "testing"
+Requires-Dist: pytest-xdist>=2; extra == "testing"
+Provides-Extra: dev
+Requires-Dist: twine; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Provides-Extra: linting
+Requires-Dist: black; extra == "linting"
+Requires-Dist: isort; extra == "linting"
+Requires-Dist: pycodestyle; extra == "linting"
+Provides-Extra: docs
+Requires-Dist: Sphinx>=3.3.1; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=0.5.0; extra == "docs"
+Requires-Dist: doc8>=0.8.1; extra == "docs"
+Requires-Dist: sphinxcontrib-apidoc>=0.3.0; extra == "docs"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: summary
+
+
+
+This library helps you deal with boolean expressions and algebra with variables
+and the boolean functions AND, OR, NOT.
+
+You can parse expressions from strings and simplify and compare expressions.
+You can also easily create your custom algreba and mini DSL and create custom
+tokenizers to handle custom expressions.
+
+For extensive documentation look either into the docs directory or view it online, at
+https://booleanpy.readthedocs.org/en/latest/
+
+https://github.com/bastikr/boolean.py
+
+Copyright (c) 2009-2020 Sebastian Kraemer, basti.kr@gmail.com and others
+SPDX-License-Identifier: BSD-2-Clause

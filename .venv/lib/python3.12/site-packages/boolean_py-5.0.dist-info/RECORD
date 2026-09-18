@@ -1,0 +1,14 @@
+boolean/__init__.py,sha256=z1FOZZg2mXnYeAPS9csinA_JVjEI5GhhOGncVdoEqpA,657
+boolean/__pycache__/__init__.cpython-312.pyc,,
+boolean/__pycache__/boolean.cpython-312.pyc,,
+boolean/__pycache__/test_boolean.cpython-312.pyc,,
+boolean/boolean.py,sha256=6Wl7LT9Zci81eTiQYUtfSxGAifUQtyjnTS76av2Whlw,54740
+boolean/test_boolean.py,sha256=FXCBgBHKtY7rJOe8BZ-o1OS5xgj7tQKRAZWLtWZEr0c,47024
+boolean_py-5.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+boolean_py-5.0.dist-info/METADATA,sha256=nkOurhenMHOr7mHetfsmff3w7rZ9bjEjJwtSqsXth_o,2342
+boolean_py-5.0.dist-info/RECORD,,
+boolean_py-5.0.dist-info/WHEEL,sha256=CmyFI0kx5cdEMTLiONQRbGQwjIoR1aIYB7eCAQ4KPJ0,91
+boolean_py-5.0.dist-info/licenses/CHANGELOG.rst,sha256=ZoWRYBmJ4IRdco2zn9y_AFMjllsaDbdYCYjaeOFjxRk,3036
+boolean_py-5.0.dist-info/licenses/LICENSE.txt,sha256=XqDN-M_IJLRGzM9Zf_ZRjDYHplnpgEvHXxJh-casSto,1321
+boolean_py-5.0.dist-info/licenses/README.rst,sha256=wVkJntSukf9-G6Q-Uve-9fq5Y97q5H5Nai7G_XPqTLs,2839
+boolean_py-5.0.dist-info/top_level.txt,sha256=K_8zC8vXmHwYzBbAvKPwu6nrmYI0TFM-kD-gR1qmxHE,8

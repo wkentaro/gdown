@@ -1,0 +1,23 @@
+about_resource: _pyahocorasick.py
+download_url: https://github.com/WojciechMula/pyahocorasick/tree/ec2fb9cb393f571fd4316ea98ed7b65992f16127/py
+name: pyahocorasick-python
+version: ec2fb9
+
+homepage_url: https://github.com/WojciechMula/pyahocorasick
+license_expression: public-domain
+
+copyright: originally authored by Wojciech Mula, modified by the license_expression authors.
+
+notes: this is a vendored subset of the full pyahocorasick containing only the pure
+ python part with an implementation modified to return non-overlapping matches and
+ non-matches.
+ It has many limitation and in particular it does not pickle well and is much slower
+ than the full C-based implementation but is convenient to use as a vendored, pure
+ Python library.
+
+owner: nexB Inc.
+author: Wojciech Mula http://0x80.pl/
+
+vcs_tool: git
+vcs_repository: https://github.com/WojciechMula/pyahocorasick.git
+

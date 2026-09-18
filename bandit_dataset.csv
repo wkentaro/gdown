@@ -1,0 +1,19 @@
+﻿filename,line_number,test_id,test_name,issue_severity,issue_confidence,issue_text,cwe_id
+gdown/__main__.py,271,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/_vendor/_ytdlp_cookies.py,23,B404,blacklist,LOW,HIGH,Consider possible security implications associated with the subprocess module.,78
+gdown/_vendor/_ytdlp_cookies.py,297,B608,hardcoded_sql_expressions,MEDIUM,MEDIUM,Possible SQL injection vector through string-based query construction.,89
+gdown/_vendor/_ytdlp_cookies.py,950,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/_vendor/_ytdlp_shim.py,13,B404,blacklist,LOW,HIGH,Consider possible security implications associated with the subprocess module.,78
+gdown/download.py,53,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/download.py,60,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/download.py,61,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/download.py,357,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/download.py,607,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/download_folder.py,146,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/download_folder.py,237,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+gdown/extractall.py,38,B202,tarfile_unsafe_members,HIGH,HIGH,tarfile.extractall used without any validation. Please check and discard dangerous members.,22
+gdown/extractall.py,51,B202,tarfile_unsafe_members,HIGH,HIGH,tarfile.extractall used without any validation. Please check and discard dangerous members.,22
+gdown/extractall.py,64,B202,tarfile_unsafe_members,HIGH,HIGH,tarfile.extractall used without any validation. Please check and discard dangerous members.,22
+gdown/extractall.py,90,B202,tarfile_unsafe_members,HIGH,HIGH,tarfile.extractall used without any validation. Please check and discard dangerous members.,22
+scripts/vendor_ytdlp_cookies.py,80,B101,assert_used,LOW,HIGH,Use of assert detected. The enclosed code will be removed when compiling to optimised byte code.,703
+scripts/vendor_ytdlp_cookies.py,88,B310,blacklist,MEDIUM,HIGH,Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.,22

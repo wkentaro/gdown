@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning"
+           xmlns:bom="http://cyclonedx.org/schema/bom/1.0"
+           xmlns:spdx="http://cyclonedx.org/schema/spdx"
+           elementFormDefault="qualified"
+           targetNamespace="http://cyclonedx.org/schema/bom/1.0"
+           vc:minVersion="1.0"
+           vc:maxVersion="1.1"
+           version="1.0.1">
+
+    <xs:import namespace="http://cyclonedx.org/schema/spdx" schemaLocation="spdx.SNAPSHOT.xsd"/>
+
+    <xs:complexType name="component">
+        <xs:sequence>
+            <xs:element name="publisher" type="xs:normalizedString" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>The person(s) or organization(s) that published the component</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="group" type="xs:normalizedString" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>The grouping name or identifier. This will often be a shortened, single
+                        name of the company or project that produced the component, or the source package or
+                        domain name. Whitespace and special characters should be avoided. Examples include:
+                        apache, org.apache.commons, and apache.org.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="name" type="xs:normalizedString" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>The name of the component. This will often be a shortened, single name
+                        of the component. Examples: commons-lang3 and jquery</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="version" type="xs:normalizedString" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>The component version. The version should ideally comply with semantic versioning
+                    but is not enforced.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="description" type="xs:normalizedString" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>Specifies a description for the component</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="scope" type="bom:scope" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>Specifies the scope of the component. If scope is not specified, 'runtime'
+                    scope will be assumed.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="hashes" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                        <xs:element name="hash" type="bom:hashType"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="licenses" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="license">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:choice>
+                                        <xs:element name="id" type="spdx:licenseId" minOccurs="0" maxOccurs="unbounded">
+                                            <xs:annotation>
+                                                <xs:documentation>A valid SPDX license ID</xs:documentation>
+                                            </xs:annotation>
+                                        </xs:element>
+                                        <xs:element name="name" type="xs:normalizedString" minOccurs="0" maxOccurs="unbounded">
+                                            <xs:annotation>
+                                                <xs:documentation>If SPDX does not define the license used, this field may be used to provide the license name</xs:documentation>
+                                            </xs:annotation>
+                                        </xs:element>
+                                    </xs:choice>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="copyright" type="xs:normalizedString" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>An optional copyright notice informing users of the underlying claims to copyright ownership in a published work.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="cpe" type="bom:cpe" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>Specifies a well-formed CPE name. See https://nvd.nist.gov/products/cpe</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="purl" type="xs:anyURI" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Specifies the package-url (PURL). The purl, if specified, must be valid and conform
+                        to the specification defined at: https://github.com/package-url/purl-spec
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="modified" type="xs:boolean" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        A boolean value indicating is the component has been modified from the original.
+                        A value of true indicates the component is a derivative of the original.
+                        A value of false indicates the component has not been modified from the original.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="components" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Specifies optional sub-components. This is not a dependency tree. It simply provides
+                        an optional way to group large sets of components together.
+                    </xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                        <xs:element name="component" type="bom:component"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="type" type="bom:classification" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Specifies the type of component. Software applications, libraries, frameworks, and
+                    other dependencies should be classified as 'application'.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:anyAttribute namespace="##other" processContents="lax">
+            <xs:annotation>
+                <xs:documentation>User-defined attributes may be used on this element as long as they
+                    do not have the same name as an existing attribute used by the schema.</xs:documentation>
+            </xs:annotation>
+        </xs:anyAttribute>
+    </xs:complexType>
+
+    <xs:complexType name="hashType">
+        <xs:annotation>
+            <xs:documentation>Specifies the file hash of the component</xs:documentation>
+        </xs:annotation>
+        <xs:simpleContent>
+            <xs:extension base="bom:hashValue">
+                <xs:attribute name="alg" type="bom:hashAlg" use="required">
+                    <xs:annotation>
+                        <xs:documentation>Specifies the algorithm used to create hash</xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:simpleType name="scope">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="required">
+                <xs:annotation>
+                    <xs:documentation>The component is required for runtime</xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="optional">
+                <xs:annotation>
+                    <xs:documentation>The component is optional at runtime. Optional components are components that
+                    are not capable of being called due to them not be installed or otherwise accessible by any means.
+                    Components that are installed but due to configuration or other restrictions are prohibited from
+                    being called must be scoped as 'required'.</xs:documentation>
+                </xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="classification">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="application"/>
+            <xs:enumeration value="framework"/>
+            <xs:enumeration value="library"/>
+            <xs:enumeration value="operating-system"/>
+            <xs:enumeration value="device"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="hashAlg">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="MD5"/>
+            <xs:enumeration value="SHA-1"/>
+            <xs:enumeration value="SHA-256"/>
+            <xs:enumeration value="SHA-384"/>
+            <xs:enumeration value="SHA-512"/>
+            <xs:enumeration value="SHA3-256"/>
+            <xs:enumeration value="SHA3-512"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="hashValue">
+        <xs:restriction base="xs:token">
+            <xs:pattern value="([a-fA-F0-9]{32})|([a-fA-F0-9]{40})|([a-fA-F0-9]{64})|([a-fA-F0-9]{96})|([a-fA-F0-9]{128})"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="cpe">
+        <xs:annotation>
+            <xs:documentation xml:lang="en">
+                Define the format for acceptable CPE URIs. Supports CPE 2.2 and CPE 2.3 formats. Refer to https://nvd.nist.gov/products/cpe for official specification.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="([c][pP][eE]:/[AHOaho]?(:[A-Za-z0-9\._\-~%]*){0,6})|(cpe:2\.3:[aho\*\-](:(((\?*|\*?)([a-zA-Z0-9\-\._]|(\\[\\\*\?!&quot;#$$%&amp;'\(\)\+,/:;&lt;=&gt;@\[\]\^`\{\|}~]))+(\?*|\*?))|[\*\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[\*\-]))(:(((\?*|\*?)([a-zA-Z0-9\-\._]|(\\[\\\*\?!&quot;#$$%&amp;'\(\)\+,/:;&lt;=&gt;@\[\]\^`\{\|}~]))+(\?*|\*?))|[\*\-])){4})"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="bom">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="components">
+                    <xs:complexType>
+                        <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                            <xs:element name="component" type="bom:component"/>
+                        </xs:sequence>
+                        <xs:anyAttribute namespace="##other" processContents="lax">
+                            <xs:annotation>
+                                <xs:documentation>User-defined attributes may be used on this element as long as they
+                                    do not have the same name as an existing attribute used by the schema.</xs:documentation>
+                            </xs:annotation>
+                        </xs:anyAttribute>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+            <xs:attribute name="version" type="xs:integer" default="1">
+                <xs:annotation>
+                    <xs:documentation>The version allows component publishers/authors to make changes to existing
+                    BOMs to update various aspects of the document such as description or licenses. When a system
+                    is presented with multiiple BOMs for the same component, the system should use the most recent
+                    version of the BOM. The default version is '1' and should be incremented for each version of the
+                    BOM that is published. Each version of a component should have a unique BOM and if no changes are
+                    made to the BOMs, then each BOM will have a version of '1'.</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:anyAttribute namespace="##other" processContents="lax">
+                <xs:annotation>
+                    <xs:documentation>User-defined attributes may be used on this element as long as they
+                        do not have the same name as an existing attribute used by the schema.</xs:documentation>
+                </xs:annotation>
+            </xs:anyAttribute>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

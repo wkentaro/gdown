@@ -1,0 +1,23 @@
+Всего уязвимостей: 18
+Типы уязвимостей:
+	Высокий риск: 4	Средний риск: 2	Незначительный риск: 12
+==========Критичные уязвимости:==========
+  [B202] ./gdown/extractall.py:38
+    tarfile.extractall used without any validation. Please check and discard dangerous members.
+  [B202] ./gdown/extractall.py:51
+    tarfile.extractall used without any validation. Please check and discard dangerous members.
+  [B202] ./gdown/extractall.py:64
+    tarfile.extractall used without any validation. Please check and discard dangerous members.
+  [B202] ./gdown/extractall.py:90
+    tarfile.extractall used without any validation. Please check and discard dangerous members.
+========================================
+========Экспертное мнение========
+Обнаружено 4 уязвимости высокого уровня с тестом B202 в файле ./gdown/extractall.py.
+Функция tarfile.extractall() используется без параметра filter или с непроверенными members. 
+Это означает, что при распаковке tar-архива имена файлов внутри архива не валидируются.
+Злоумышленник может создать архив с именами вида ../../etc/passwd,и при распаковке файл будет записан за пределами целевой директории.
+ Что опасно для пользователя, который использует данную библиотеку
+Если пользователь запустит gdown с sudo — последствия опасны для системы(запись в /etc, /usr, /root).
+========Рекомендации:========
+Для python3.12+: Использовать функцию .extracall() c аргументом filter="data"
+Для старых версий Python: Использовать проверку, что итоговый путь остаётся внутри целевой директории
