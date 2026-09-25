@@ -4,7 +4,11 @@ import urllib.parse
 
 def is_google_drive_url(url: str) -> bool:  # noqa: GR005 -- public API accepts both call styles
     parsed = urllib.parse.urlparse(url)
-    return parsed.hostname in ["drive.google.com", "docs.google.com"]
+    return parsed.hostname in [
+        "drive.google.com",
+        "docs.google.com",
+        "drive.usercontent.google.com",
+    ]
 
 
 def _parse_google_drive_folder_id(*, url: str) -> str | None:
@@ -25,7 +29,7 @@ def parse_url(url: str) -> tuple[str | None, bool]:  # noqa: GR005 -- public API
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
     is_gdrive = is_google_drive_url(url=url)
-    is_download_link = parsed.path.endswith("/uc")
+    is_download_link = parsed.path.endswith("/uc") or parsed.path.endswith("/download")
 
     if not is_gdrive:
         return None, is_download_link
@@ -37,14 +41,14 @@ def parse_url(url: str) -> tuple[str | None, bool]:  # noqa: GR005 -- public API
             file_id = file_ids[0]
     else:
         patterns = [
-            r"^/file/d/(.*?)/(edit|view)$",
-            r"^/file/u/[0-9]+/d/(.*?)/(edit|view)$",
-            r"^/document/d/(.*?)/(edit|htmlview|view)$",
-            r"^/document/u/[0-9]+/d/(.*?)/(edit|htmlview|view)$",
-            r"^/presentation/d/(.*?)/(edit|htmlview|view)$",
-            r"^/presentation/u/[0-9]+/d/(.*?)/(edit|htmlview|view)$",
-            r"^/spreadsheets/d/(.*?)/(edit|htmlview|view)$",
-            r"^/spreadsheets/u/[0-9]+/d/(.*?)/(edit|htmlview|view)$",
+            r"^/file/d/([-\w]+)(?:/(?:edit|view|preview))?/?$",
+            r"^/file/u/[0-9]+/d/([-\w]+)(?:/(?:edit|view|preview))?/?$",
+            r"^/document/d/([-\w]+)(?:/(?:edit|htmlview|view|preview))?/?$",
+            r"^/document/u/[0-9]+/d/([-\w]+)(?:/(?:edit|htmlview|view|preview))?/?$",
+            r"^/presentation/d/([-\w]+)(?:/(?:edit|htmlview|view|preview))?/?$",
+            r"^/presentation/u/[0-9]+/d/([-\w]+)(?:/(?:edit|htmlview|view|preview))?/?$",
+            r"^/spreadsheets/d/([-\w]+)(?:/(?:edit|htmlview|view|preview))?/?$",
+            r"^/spreadsheets/u/[0-9]+/d/([-\w]+)(?:/(?:edit|htmlview|view|preview))?/?$",
         ]
         for pattern in patterns:
             match = re.match(pattern, parsed.path)
@@ -53,3 +57,4 @@ def parse_url(url: str) -> tuple[str | None, bool]:  # noqa: GR005 -- public API
                 break
 
     return file_id, is_download_link
+

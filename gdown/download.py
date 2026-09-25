@@ -49,48 +49,78 @@ GoogleDriveFileToDownload = collections.namedtuple(
 
 
 def get_url_from_gdrive_confirmation(contents: str) -> str:  # noqa: GR005 -- public API accepts both call styles
-    url = ""
-    for line in contents.splitlines():
-        m = re.search(r'href="(\/uc\?export=download[^"]+)', line)
-        if m:
-            url = "https://docs.google.com" + m.groups()[0]
-            url = url.replace("&amp;", "&")
-            break
-        soup = bs4.BeautifulSoup(line, features="html.parser")
-        form = soup.select_one("#download-form")
-        if form is not None:
-            action = form["action"]
-            assert isinstance(action, str)
-            url = action.replace("&amp;", "&")
-            url_components = urllib.parse.urlsplit(url)
-            query_params = urllib.parse.parse_qs(url_components.query)
-            for param in form.find_all("input", attrs={"type": "hidden"}):
-                param_name = param["name"]
-                param_value = param["value"]
-                assert isinstance(param_name, str)
-                assert isinstance(param_value, str)
+    # Check for explicit error subcaption
+    m_err = re.search(
+        r'<p class="uc-error-subcaption">(.*?)</p>', contents, flags=re.DOTALL
+    )
+    if m_err:
+        raise FileURLRetrievalError(m_err.groups()[0].strip())
+
+    soup = bs4.BeautifulSoup(contents, features="html.parser")
+
+    # 1. Check for download form (#download-form) across the full HTML document
+    form = soup.select_one("#download-form")
+    if form is not None and form.get("action"):
+        action = form["action"]
+        assert isinstance(action, str)
+        url = action.replace("&amp;", "&")
+        if url.startswith("/"):
+            url = urllib.parse.urljoin("https://drive.usercontent.google.com", url)
+        url_components = urllib.parse.urlsplit(url)
+        query_params = urllib.parse.parse_qs(url_components.query)
+        for param in form.find_all("input"):
+            param_name = param.get("name")
+            param_value = param.get("value", "")
+            if (
+                param_name
+                and isinstance(param_name, str)
+                and isinstance(param_value, str)
+            ):
                 query_params[param_name] = [param_value]
-            query = urllib.parse.urlencode(query_params, doseq=True)
-            url = urllib.parse.urlunsplit(url_components._replace(query=query))
-            break
-        m = re.search('"downloadUrl":"([^"]+)', line)
-        if m:
-            url = m.groups()[0]
-            url = url.replace("\\u003d", "=")
-            url = url.replace("\\u0026", "&")
-            break
-        m = re.search('<p class="uc-error-subcaption">(.*)</p>', line)
-        if m:
-            error = m.groups()[0]
-            raise FileURLRetrievalError(error)
-    if not url:
-        raise FileURLRetrievalError(
-            "Cannot retrieve the public link of the file. "
-            "You may need to change the permission to "
-            "'Anyone with the link', or have had many accesses. "
-            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
+        query = urllib.parse.urlencode(query_params, doseq=True)
+        return urllib.parse.urlunsplit(url_components._replace(query=query))
+
+    # 2. Check for uc download link in HTML or href
+    link = soup.select_one("#uc-download-link")
+    if link is not None and link.get("href"):
+        href = link["href"].replace("&amp;", "&")
+        if href.startswith("/"):
+            href = urllib.parse.urljoin("https://docs.google.com", href)
+        return href
+
+    m = re.search(r'href="(\/uc\?export=download[^"]+)', contents)
+    if m:
+        url = "https://docs.google.com" + m.groups()[0]
+        return url.replace("&amp;", "&")
+
+    # 3. Check for JSON downloadUrl
+    m = re.search(r'"downloadUrl":"([^"]+)', contents)
+    if m:
+        url = m.groups()[0]
+        url = url.replace(r"\u003d", "=")
+        url = url.replace(r"\u0026", "&")
+        return url
+
+    # 4. Fallback for confirm token in inputs / regex
+    confirm_match = re.search(r'name="confirm"\s+value="([^"]+)"', contents)
+    id_match = re.search(r'name="id"\s+value="([^"]+)"', contents)
+    if confirm_match and id_match:
+        confirm_val = confirm_match.group(1)
+        file_id = id_match.group(1)
+        uuid_match = re.search(r'name="uuid"\s+value="([^"]+)"', contents)
+        uuid_val = f"&uuid={uuid_match.group(1)}" if uuid_match else ""
+        return (
+            f"https://drive.usercontent.google.com/download?id={file_id}"
+            f"&export=download&confirm={confirm_val}{uuid_val}"
         )
-    return url
+
+    raise FileURLRetrievalError(
+        "Cannot retrieve the public link of the file. "
+        "You may need to change the permission to "
+        "'Anyone with the link', or have had many accesses. "
+        "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
+    )
+
 
 
 def _sanitize_filename(*, filename: str) -> str:
