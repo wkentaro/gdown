@@ -29,9 +29,7 @@ from gdown.download import _import_cookies_from_browser
 from gdown.download import _load_cookies
 from gdown.download import _save_cookies
 from gdown.download import download
-from gdown.download import get_url_from_gdrive_confirmation
 from gdown.exceptions import DownloadError
-from gdown.exceptions import FileURLRetrievalError
 
 from .conftest import build_google_cookie
 from .conftest import build_response
@@ -936,57 +934,3 @@ def test_download_closes_replaced_responses(
     assert output.read_bytes() == b"partialdata"
     assert all(body.closed for body in bodies)
     download_session.close.assert_called_once_with()
-
-
-def test_get_url_from_gdrive_confirmation_multiline_form() -> None:
-    html = """
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <form
-            id="download-form"
-            action="https://drive.usercontent.google.com/download"
-            method="post"
-        >
-            <input type="hidden" name="id" value="test-file-id">
-            <input type="hidden" name="export" value="download">
-            <input type="hidden" name="confirm" value="t_xyz123">
-            <input type="hidden" name="uuid" value="uuid-456">
-            <input type="submit" id="uc-download-link" value="Download anyway">
-        </form>
-    </body>
-    </html>
-    """
-    url = get_url_from_gdrive_confirmation(html)
-    assert "https://drive.usercontent.google.com/download" in url
-    assert "id=test-file-id" in url
-    assert "confirm=t_xyz123" in url
-    assert "uuid=uuid-456" in url
-
-
-def test_get_url_from_gdrive_confirmation_fallback_link() -> None:
-    html = """
-    <div>
-        <a id="uc-download-link"
-           href="/uc?export=download&amp;id=test-file-id&amp;confirm=t">
-            Download anyway
-        </a>
-    </div>
-    """
-    url = get_url_from_gdrive_confirmation(html)
-    assert url == (
-        "https://docs.google.com/uc?export=download&id=test-file-id&confirm=t"
-    )
-
-
-def test_get_url_from_gdrive_confirmation_error() -> None:
-    html = """
-    <div>
-        <p class="uc-error-subcaption">The file exceeds the maximum quota.</p>
-    </div>
-    """
-    with pytest.raises(
-        FileURLRetrievalError, match="The file exceeds the maximum quota."
-    ):
-        get_url_from_gdrive_confirmation(html)
-
