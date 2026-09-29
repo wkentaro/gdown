@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## 6.4.1 - 2026-09-29
+
+### Fixed
+
+- Support Google Drive file URLs ending in `/preview` or without a `/view` or `/edit` suffix. ([#532](https://github.com/wkentaro/gdown/pull/532))
+
 ## 6.4.0 - 2026-09-17
 
 ### Added
