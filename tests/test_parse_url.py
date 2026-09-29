@@ -80,6 +80,10 @@ def test_parse_url() -> None:
             (file_id, False),
         ),
         (
+            f"https://drive.google.com/file/d/{file_id}/",
+            (file_id, False),
+        ),
+        (
             f"https://drive.google.com/file/d/{file_id}/preview",
             (file_id, False),
         ),
