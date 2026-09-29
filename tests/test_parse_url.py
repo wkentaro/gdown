@@ -75,6 +75,34 @@ def test_parse_url() -> None:
             f"https://docs.google.com/presentation/u/0/d/{file_id}/htmlview",
             (file_id, False),
         ),
+        (
+            f"https://drive.google.com/file/d/{file_id}",
+            (file_id, False),
+        ),
+        (
+            f"https://drive.google.com/file/d/{file_id}/",
+            (file_id, False),
+        ),
+        (
+            f"https://drive.google.com/file/d/{file_id}/preview",
+            (file_id, False),
+        ),
+        (
+            f"https://drive.google.com/file/u/0/d/{file_id}",
+            (file_id, False),
+        ),
+        (
+            f"https://drive.google.com/file/u/0/d/{file_id}/preview?usp=sharing",
+            (file_id, False),
+        ),
+        (
+            "https://drive.google.com/file/d/",
+            (None, False),
+        ),
+        (
+            f"https://drive.google.com/file/d/{file_id}/unsupported",
+            (None, False),
+        ),
     ]
 
     for url, expected in urls:

@@ -37,8 +37,8 @@ def parse_url(url: str) -> tuple[str | None, bool]:  # noqa: GR005 -- public API
             file_id = file_ids[0]
     else:
         patterns = [
-            r"^/file/d/(.*?)/(edit|view)$",
-            r"^/file/u/[0-9]+/d/(.*?)/(edit|view)$",
+            r"^/file/d/([-\w]+)(?:/(?:edit|view|preview))?/?$",
+            r"^/file/u/[0-9]+/d/([-\w]+)(?:/(?:edit|view|preview))?/?$",
             r"^/document/d/(.*?)/(edit|htmlview|view)$",
             r"^/document/u/[0-9]+/d/(.*?)/(edit|htmlview|view)$",
             r"^/presentation/d/(.*?)/(edit|htmlview|view)$",
