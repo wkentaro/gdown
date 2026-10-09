@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -69,3 +70,42 @@ def test_get_filename_from_response(*, content_disposition: str, expected: str) 
 )
 def test_sanitize_filename(*, filename: str, expected: str) -> None:
     assert _sanitize_filename(filename=filename) == expected
+
+
+@pytest.mark.parametrize("platform", ["win32", "linux", "darwin"])
+@pytest.mark.parametrize(
+    "filename, windows_name",
+    [
+        (":RE PART 1", "_RE PART 1"),
+        ('a<>:"|?*b.txt', "a_______b.txt"),
+        *[(f"a{chr(code)}b.txt", "a_b.txt") for code in range(1, 32)],
+        ("trailing. .", "trailing"),
+        ("...", "_"),
+        ("CON", "_CON"),
+        ("con.txt", "_con.txt"),
+        ("PRN", "_PRN"),
+        ("AUX.txt", "_AUX.txt"),
+        ("NUL.tar.gz", "_NUL.tar.gz"),
+        ("NUL .txt", "_NUL .txt"),
+        ("COM1", "_COM1"),
+        ("com9.txt", "_com9.txt"),
+        ("LPT1", "_LPT1"),
+        ("lpt9.txt", "_lpt9.txt"),
+        ("COM\u00b9.txt", "_COM\u00b9.txt"),
+        ("LPT\u00b2", "_LPT\u00b2"),
+        ("COM\u00b3", "_COM\u00b3"),
+        ("CONIN$", "_CONIN$"),
+        ("CONOUT$", "_CONOUT$"),
+        ("COM0.txt", "COM0.txt"),
+        ("COM10.txt", "COM10.txt"),
+        ("console.txt", "console.txt"),
+        ("\u8cc7\u6599.txt", "\u8cc7\u6599.txt"),
+    ],
+)
+def test_sanitize_filename_platform_rules(
+    *, monkeypatch: pytest.MonkeyPatch, platform: str, filename: str, windows_name: str
+) -> None:
+    monkeypatch.setattr(sys, "platform", platform)
+    assert _sanitize_filename(filename=filename) == (
+        windows_name if platform == "win32" else filename
+    )
