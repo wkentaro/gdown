@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## 6.4.2 - 2026-10-09
+
+### Fixed
+
+- Sanitize Windows-invalid file and folder names when downloading from Google Drive. ([#534](https://github.com/wkentaro/gdown/pull/534))
+
 ## 6.4.1 - 2026-09-29
 
 ### Fixed
