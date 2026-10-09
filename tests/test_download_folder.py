@@ -337,23 +337,32 @@ def test_download_folder_keeps_ordinary_drive_filename(*, tmp_path: Path) -> Non
     assert get.call_count == 1
 
 
-def test_download_folder_lists_and_writes_nested_google_native_file(
-    *, tmp_path: Path
+@pytest.mark.parametrize("windows_names", [False, True])
+@pytest.mark.parametrize(
+    "child_type", ["text/plain", _GoogleDriveFile.TYPE_PRESENTATION]
+)
+def test_download_folder_lists_and_writes_nested_file(
+    *, tmp_path: Path, windows_names: bool, child_type: str
 ) -> None:
+    root_name = ":ROOT" if windows_names else "folder"
+    sub_name = ":RE PART 1" if windows_names else "sub"
+    drive_name = "report:1" if windows_names else "report.v2"
+    extension = ".pptx" if child_type == _GoogleDriveFile.TYPE_PRESENTATION else ".txt"
+    response_name = drive_name + extension
     root = _GoogleDriveFile(
         id="root_id",
-        name="folder",
+        name=root_name,
         type=_GoogleDriveFile.TYPE_FOLDER,
         children=[
             _GoogleDriveFile(
                 id="sub_id",
-                name="sub",
+                name=sub_name,
                 type=_GoogleDriveFile.TYPE_FOLDER,
                 children=[
                     _GoogleDriveFile(
                         id="native_id",
-                        name="report.v2",
-                        type=_GoogleDriveFile.TYPE_PRESENTATION,
+                        name=drive_name if extension == ".pptx" else response_name,
+                        type=child_type,
                     )
                 ],
             )
@@ -361,13 +370,14 @@ def test_download_folder_lists_and_writes_nested_google_native_file(
     )
     responses = [
         build_response(
-            headers={"Content-Disposition": 'attachment; filename="report.v2.pptx"'},
+            headers={"Content-Disposition": f'attachment; filename="{response_name}"'},
             chunks=[b"export"],
         )
         for _ in range(2)
     ]
 
     with (
+        unittest.mock.patch("sys.platform", "win32" if windows_names else sys.platform),
         unittest.mock.patch.object(
             sys.modules["gdown.download_folder"],
             "_download_and_parse_google_drive_link",
@@ -377,20 +387,23 @@ def test_download_folder_lists_and_writes_nested_google_native_file(
     ):
         listing = download_folder(
             id="root_id",
-            output=str(tmp_path),
+            output=str(tmp_path) + osp.sep,
             quiet=True,
             use_cookies=False,
             skip_download=True,
         )
         files = download_folder(
-            id="root_id", output=str(tmp_path), quiet=True, use_cookies=False
+            id="root_id", output=str(tmp_path) + osp.sep, quiet=True, use_cookies=False
         )
 
-    export_path = tmp_path / "sub" / "report.v2.pptx"
+    local_root = "_ROOT" if windows_names else root_name
+    local_sub = "_RE PART 1" if windows_names else sub_name
+    local_name = response_name.replace(":", "_") if windows_names else response_name
+    export_path = tmp_path / local_root / local_sub / local_name
     listing_file = listing[0]
     assert not isinstance(listing_file, str)
     assert listing_file.id == "native_id"
-    assert listing_file.path == osp.join("sub", "report.v2.pptx")
+    assert listing_file.path == osp.join(local_sub, local_name)
     assert listing_file.local_path == str(export_path)
     assert files == [str(export_path)]
     assert export_path.read_bytes() == b"export"

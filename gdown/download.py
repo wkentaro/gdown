@@ -96,6 +96,14 @@ def get_url_from_gdrive_confirmation(contents: str) -> str:  # noqa: GR005 -- pu
 def _sanitize_filename(*, filename: str) -> str:
     filename = filename.replace("\x00", "")
     filename = filename.replace("/", "_").replace("\\", "_").strip()
+    if sys.platform == "win32":
+        filename = re.sub(r'[<>:"|?*\x01-\x1f]', "_", filename).rstrip(". ")
+        # Device names stay reserved with an extension or spaces before it.
+        stem = filename.split(".")[0].rstrip(" ").upper()
+        if re.fullmatch(
+            r"CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|(?:COM|LPT)[1-9\u00b9\u00b2\u00b3]", stem
+        ):
+            filename = "_" + filename
     if filename in ("", ".", ".."):
         return "_"
     return filename
