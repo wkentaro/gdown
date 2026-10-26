@@ -115,7 +115,7 @@ class _CancellableAdapter(HTTPAdapter):
             # The upstream mapping is inferred as exact classes, not subclasses.
             manager.pool_classes_by_scheme[scheme] = Pool  # ty: ignore[invalid-assignment]
 
-    def proxy_manager_for(self, proxy: str, **proxy_kwargs: object) -> PoolManager:  # noqa: GR005 -- preserve the upstream calling convention
+    def proxy_manager_for(self, proxy: str, **proxy_kwargs: object) -> PoolManager:  # noqa: GR001 -- preserve the upstream calling convention
         existed = proxy in self.proxy_manager
         manager = super().proxy_manager_for(proxy, **proxy_kwargs)
         if not existed:
