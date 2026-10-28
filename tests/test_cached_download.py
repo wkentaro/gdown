@@ -1,6 +1,8 @@
+import errno
 import hashlib
 import http.server
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -78,6 +80,125 @@ def test_cached_download_cleans_staging(
             )
         assert not output.exists()
     assert not [path for path in cache.iterdir() if path.is_dir()]
+
+
+def test_cached_download_cache_hits_only_see_complete_files(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "cache"
+    output = tmp_path / "output"
+    body = b"complete downloaded payload"
+    observed: list[bytes] = []
+    monkeypatch.setattr(sys.modules["gdown.cached_download"], "cache_root", str(cache))
+
+    def write_download(*, output: str, **_kwargs: object) -> str:
+        Path(output).write_bytes(body)
+        return output
+
+    def observe_cache_hit() -> None:
+        path = gdown.cached_download(
+            url="https://example.com/file", path=str(output), quiet=True
+        )
+        observed.append(Path(path).read_bytes())
+
+    real_rename, real_replace, real_copyfile = os.rename, os.replace, shutil.copyfile
+
+    def rename(source: str, destination: str) -> None:
+        if Path(destination) == output and cache in Path(source).parents:
+            # Model a cache and destination on different mounted filesystems.
+            raise OSError(errno.EXDEV, "cross-device link")
+        real_rename(source, destination)
+        if Path(destination) == output:
+            observe_cache_hit()
+
+    def replace(source: str, destination: str) -> None:
+        real_replace(source, destination)
+        if Path(destination) == output:
+            observe_cache_hit()
+
+    def copyfile(source: str, destination: str, *, follow_symlinks: bool = True) -> str:
+        if Path(destination) != output:
+            return real_copyfile(source, destination, follow_symlinks=follow_symlinks)
+        with open(source, "rb") as src, open(destination, "wb") as dst:
+            dst.write(src.read(3))
+            dst.flush()
+            # Interleave another caller while shutil.move's fallback copies.
+            observe_cache_hit()
+            shutil.copyfileobj(src, dst)
+        return destination
+
+    monkeypatch.setattr(
+        sys.modules["gdown.cached_download"], "download", write_download
+    )
+    monkeypatch.setattr(os, "rename", rename)
+    monkeypatch.setattr(os, "replace", replace)
+    monkeypatch.setattr(shutil, "copyfile", copyfile)
+
+    assert gdown.cached_download(
+        url="https://example.com/file", path=str(output), quiet=True
+    ) == str(output)
+    assert observed == [body]
+    assert output.read_bytes() == body
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_cached_download_failed_publication_preserves_destination(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool
+) -> None:
+    cache = tmp_path / "cache"
+    output = tmp_path / "output"
+    body = b"complete downloaded payload"
+    if existing:
+        output.write_bytes(b"previous file")
+    monkeypatch.setattr(sys.modules["gdown.cached_download"], "cache_root", str(cache))
+
+    def write_download(
+        *, output: str, hasher: "hashlib._Hash | None" = None, **_kwargs: object
+    ) -> str:
+        Path(output).write_bytes(body)
+        if hasher is not None:
+            hasher.update(body)
+        return output
+
+    real_rename, real_replace, real_copyfile = os.rename, os.replace, shutil.copyfile
+
+    def rename(source: str, destination: str) -> None:
+        if Path(destination) == output:
+            if cache in Path(source).parents:
+                raise OSError(errno.EXDEV, "cross-device link")
+            raise OSError(errno.EIO, "publication failed")
+        real_rename(source, destination)
+
+    def replace(source: str, destination: str) -> None:
+        if Path(destination) == output:
+            raise OSError(errno.EIO, "publication failed")
+        real_replace(source, destination)
+
+    def copyfile(source: str, destination: str, *, follow_symlinks: bool = True) -> str:
+        if Path(destination) != output:
+            return real_copyfile(source, destination, follow_symlinks=follow_symlinks)
+        Path(destination).write_bytes(b"par")
+        raise OSError(errno.EIO, "publication failed")
+
+    monkeypatch.setattr(
+        sys.modules["gdown.cached_download"], "download", write_download
+    )
+    monkeypatch.setattr(os, "rename", rename)
+    monkeypatch.setattr(os, "replace", replace)
+    monkeypatch.setattr(shutil, "copyfile", copyfile)
+
+    with pytest.raises(OSError, match="publication failed"):
+        gdown.cached_download(
+            url="https://example.com/file",
+            path=str(output),
+            quiet=True,
+            hash=f"sha256:{hashlib.sha256(body).hexdigest()}",
+        )
+    if existing:
+        assert output.read_bytes() == b"previous file"
+    else:
+        assert not output.exists()
+    assert set(tmp_path.iterdir()) == ({cache, output} if existing else {cache})
 
 
 @pytest.mark.parametrize("matches", [True, False])

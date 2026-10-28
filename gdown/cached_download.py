@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import os
 import os.path as osp
-import shutil
 import sys
 import tempfile
 import threading
@@ -116,7 +115,8 @@ def cached_download(
     except OSError:
         pass
     os.makedirs(cache_root, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=cache_root) as temp_root:
+    # Keep publication on one filesystem, even when the cache is on another.
+    with tempfile.TemporaryDirectory(dir=osp.dirname(path) or ".") as temp_root:
         temp_path = osp.join(temp_root, "dl")
 
         log_message_hash = f"Hash: {hash}\n" if hash else ""
@@ -137,7 +137,7 @@ def cached_download(
             _assert_hash(hash_actual=_format_hash(hasher=hasher), hash=hash)
         with filelock.FileLock(lock_path):
             _check_cancelled(cancel=cancel)
-            shutil.move(temp_path, path)
+            os.replace(temp_path, path)
 
     # postprocess
     if postprocess is not None:
