@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 6.5.1 - 2026-10-29
 
-No significant changes.
+### Fixed
+
+- Report unknown progress totals for compressed or chunked HTTP responses instead of comparing decoded bytes against Content-Length. ([#544](https://github.com/wkentaro/gdown/pull/544))
 
 ## 6.5.0 - 2026-10-29
 
