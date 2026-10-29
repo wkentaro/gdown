@@ -79,7 +79,7 @@ def test_cached_download_cleans_staging(
                 hash="md5:wrong" if outcome == "hash" else None,
             )
         assert not output.exists()
-    assert not [path for path in cache.iterdir() if path.is_dir()]
+    assert {path for path in tmp_path.iterdir() if path.is_dir()} == {cache}
 
 
 def test_cached_download_cache_hits_only_see_complete_files(
