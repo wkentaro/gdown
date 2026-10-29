@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## 6.5.0 - 2026-10-29
+
+### Changed
+
+- Name cached-download staging directories after their file, hidden, so a killed download's leftover is recognizable. ([#541](https://github.com/wkentaro/gdown/pull/541))
+
+### Fixed
+
+- Publish cached downloads atomically when the cache and destination are on different filesystems. ([#540](https://github.com/wkentaro/gdown/pull/540))
+- Resume a download only from its own partial file, instead of one belonging to a longer filename that starts with the same name (e.g. `report` resuming `report2`'s partial file). ([#542](https://github.com/wkentaro/gdown/pull/542))
+
 ## 6.4.2 - 2026-10-09
 
 ### Fixed
