@@ -50,6 +50,10 @@ def test_cached_download_cleans_staging(
     output = tmp_path / "output"
 
     def write_download(*, output: str, **_kwargs: object) -> str:
+        staging = Path(output).parent
+        assert staging.parent == tmp_path
+        assert staging.name.startswith(".output.")
+        assert staging.name.endswith(".gdown")
         Path(output).write_bytes(b"data")
         if outcome == "failure":
             raise RuntimeError("failed")
