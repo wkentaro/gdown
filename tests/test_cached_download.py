@@ -48,8 +48,10 @@ def test_cached_download_cleans_staging(
     cache = tmp_path / "cache"
     monkeypatch.setattr(sys.modules["gdown.cached_download"], "cache_root", str(cache))
     output = tmp_path / "output"
+    stagings: list[Path] = []
 
     def write_download(*, output: str, **_kwargs: object) -> str:
+        stagings.append(Path(output).parent)
         Path(output).write_bytes(b"data")
         if outcome == "failure":
             raise RuntimeError("failed")
@@ -79,7 +81,32 @@ def test_cached_download_cleans_staging(
                 hash="md5:wrong" if outcome == "hash" else None,
             )
         assert not output.exists()
-    assert not [path for path in cache.iterdir() if path.is_dir()]
+    [staging] = stagings
+    assert staging.parent == tmp_path
+    assert staging.name.startswith(".output.")
+    assert staging.name.endswith(".gdown")
+    assert {path for path in tmp_path.iterdir() if path.is_dir()} == {cache}
+
+
+def test_cached_download_accepts_a_maximum_length_name(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        sys.modules["gdown.cached_download"], "cache_root", str(tmp_path / "cache")
+    )
+    output = tmp_path / ("a" * 255)
+
+    def write_download(*, output: str, **_kwargs: object) -> str:
+        Path(output).write_bytes(b"data")
+        return output
+
+    monkeypatch.setattr(
+        sys.modules["gdown.cached_download"], "download", write_download
+    )
+    assert gdown.cached_download(
+        url="https://example.com/file", path=str(output), quiet=True
+    ) == str(output)
+    assert output.read_bytes() == b"data"
 
 
 def test_cached_download_cache_hits_only_see_complete_files(
