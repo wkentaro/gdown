@@ -1,4 +1,5 @@
 import contextlib
+import gzip
 import hashlib
 import http.cookiejar
 import http.server
@@ -113,7 +114,7 @@ def test_download_progress(*, download_env: DownloadEnv) -> None:
     assert currents == sorted(currents)
 
     final_current, final_total = reported[-1]
-    assert final_total is not None
+    assert final_total is None or final_total == final_current
     assert final_current == os.path.getsize(download_env.file_path)
 
 
@@ -561,9 +562,9 @@ def test_download_fails_when_the_transport_reports_a_broken_body(
         ({"Content-Length": "not-a-number"}, None),
         ({"Content-Length": "-1"}, None),
         # Content-Length counts the compressed wire bytes, not the decoded ones.
-        ({"Content-Length": "10", "Content-Encoding": "gzip"}, 10),
+        ({"Content-Length": "10", "Content-Encoding": "gzip"}, None),
         # A transfer encoding makes the client ignore Content-Length.
-        ({"Content-Length": "100", "Transfer-Encoding": "chunked"}, 100),
+        ({"Content-Length": "100", "Transfer-Encoding": "chunked"}, None),
     ],
 )
 def test_download_accepts_body_when_announced_size_is_not_comparable(
@@ -588,6 +589,48 @@ def test_download_accepts_body_when_announced_size_is_not_comparable(
 
     assert output.read_bytes() == b"data"
     assert reported == [(4, total)]
+
+
+@pytest.mark.parametrize("quiet", [False, True])
+def test_download_reports_unknown_total_for_compressed_response(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, quiet: bool
+) -> None:
+    body = b"spam\n" * 100
+    compressed = gzip.compress(body)
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(compressed)))
+            self.end_headers()
+            self.wfile.write(compressed)
+
+    pbar = unittest.mock.Mock()
+    make_pbar = unittest.mock.Mock(return_value=pbar)
+    monkeypatch.setattr(sys.modules["gdown.download"].tqdm, "tqdm", make_pbar)
+    reported: list[tuple[int, int | None]] = []
+    output = tmp_path / "output"
+    with http.server.HTTPServer(("127.0.0.1", 0), Handler) as server:
+        threading.Thread(target=server.handle_request, daemon=True).start()
+        download(
+            url=f"http://127.0.0.1:{server.server_port}/",
+            output=str(output),
+            quiet=quiet,
+            use_cookies=False,
+            progress=lambda current, total: reported.append((current, total)),
+        )
+
+    assert output.read_bytes() == body
+    assert reported == [(len(body), None)]
+    if quiet:
+        make_pbar.assert_not_called()
+    else:
+        make_pbar.assert_called_once_with(
+            total=None, unit="B", initial=0, unit_scale=True
+        )
+        assert pbar.total is None
+        pbar.update.assert_called_once_with(len(body))
 
 
 def test_download_keeps_part_when_the_connection_closes_early(

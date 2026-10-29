@@ -124,6 +124,8 @@ def _get_filename_from_response(*, response: requests.Response) -> str | None:
 
 
 def _get_content_length_from_response(*, response: requests.Response) -> int | None:
+    if not _is_content_length_comparable(response=response):
+        return None
     content_length = response.headers.get("Content-Length")
     if content_length is None:
         return None
@@ -765,7 +767,8 @@ def download(
         - 'output': the message to show the output filename
     progress:
         Callback called after each chunk: ``progress(bytes_so_far, bytes_total)``.
-        *bytes_total* is None when Content-Length is unavailable.
+        *bytes_total* is None when Content-Length is unavailable or does not
+        describe the decoded body size.
         Raise any exception from the callback to abort the download.
     skip_download:
         Resolve the Google Drive filename without downloading the file body.
