@@ -459,6 +459,42 @@ def test_download_counts_resumed_bytes_toward_announced_size(
     assert part.read_bytes() == b"partialda"
 
 
+def test_download_resumes_only_partial_file_of_its_output(
+    *,
+    tmp_path: Path,
+    download_session: unittest.mock.Mock,
+) -> None:
+    other_part = tmp_path / "report2abcdefgh.part"
+    other_part.write_bytes(b"BAD")
+    output = tmp_path / "report"
+    download_session.get.side_effect = [
+        build_response(headers={"Content-Length": "6"}, chunks=[b"GOO"]),
+        build_response(headers={"Content-Length": "6"}, chunks=[b"GOOD!!"]),
+    ]
+
+    with pytest.raises(DownloadError):
+        download(
+            url="https://example.com/file", output=str(output), quiet=True, resume=True
+        )
+    assert other_part.read_bytes() == b"BAD"
+    (part,) = set(tmp_path.glob("*.part")) - {other_part}
+    assert part.read_bytes() == b"GOO"
+
+    download_session.get.side_effect = [
+        build_response(headers={"Content-Length": "6"}, chunks=[b"GOO"]),
+        build_response(
+            headers={"Content-Length": "3", "Content-Range": "bytes 3-5/6"},
+            chunks=[b"D!!"],
+        ),
+    ]
+    download(
+        url="https://example.com/file", output=str(output), quiet=True, resume=True
+    )
+    assert output.read_bytes() == b"GOOD!!"
+    assert not part.exists()
+    assert other_part.read_bytes() == b"BAD"
+
+
 def test_download_feeds_resumed_bytes_to_hasher(
     *,
     tmp_path: Path,
