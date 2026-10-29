@@ -117,9 +117,9 @@ def cached_download(
     os.makedirs(cache_root, exist_ok=True)
     # Keep publication on one filesystem, even when the cache is on another.
     # Hide staging and name it after its file so a killed download's leftover
-    # is recognizable.
+    # is recognizable. Cap the name to stay within NAME_MAX.
     with tempfile.TemporaryDirectory(
-        prefix=f".{osp.basename(path)}.",
+        prefix=f".{osp.basename(path)[:32]}.",
         suffix=".gdown",
         dir=osp.dirname(path) or ".",
     ) as temp_root:
