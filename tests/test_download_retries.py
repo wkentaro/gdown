@@ -173,7 +173,7 @@ def test_retry_refuses_invalid_range_without_appending(
     if content_range is not None:
         headers["Content-Range"] = content_range
     replies.extend([(200, {"Content-Length": "6"}, b"abcdef"), (status, headers, body)])
-    part = tmp_path / "output.saved.part"
+    part = tmp_path / "output.partial.part"
     part.write_bytes(b"abc")
     with pytest.raises(DownloadError, match="byte range"):
         download(
@@ -199,7 +199,7 @@ def test_resume_accepts_complete_range_with_unknown_total(
         ]
     )
     output = tmp_path / "output"
-    part = tmp_path / "output.saved.part"
+    part = tmp_path / "output.partial.part"
     part.write_bytes(b"abc")
     download(url=url, output=str(output), resume=True, quiet=True, use_cookies=False)
     assert output.read_bytes() == b"abcdef"

@@ -500,9 +500,18 @@ def _get_download_response(
 
 
 def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
+    # NamedTemporaryFile names are prefix + 8 random characters + suffix, so the
+    # length tells this output's partial files from those of a longer name that
+    # shares the prefix (e.g. "report" and "report2").
+    basename = osp.basename(output)
+    suffix = ".part"
     existing_tmp_files = []
     for file in os.listdir(osp.dirname(output) or "."):
-        if file.startswith(osp.basename(output)) and file.endswith(".part"):
+        if (
+            file.startswith(basename)
+            and file.endswith(suffix)
+            and len(file) == len(basename) + 8 + len(suffix)
+        ):
             existing_tmp_files.append(osp.join(osp.dirname(output), file))
     if resume and existing_tmp_files:
         if len(existing_tmp_files) != 1:
@@ -515,8 +524,8 @@ def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
         return existing_tmp_files[0], True
     # Close the temporary file before reopening it for Windows compatibility (#153).
     tmp_file_obj = tempfile.NamedTemporaryFile(
-        suffix=".part",
-        prefix=osp.basename(output),
+        suffix=suffix,
+        prefix=basename,
         dir=osp.dirname(output),
         delete=False,
     )
