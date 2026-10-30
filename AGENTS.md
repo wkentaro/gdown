@@ -2,6 +2,8 @@
 
 Record user-facing changes as towncrier fragments, following
 `changelog.d/README.md`; never edit `CHANGELOG.md` directly.
+Documentation-only changes, such as the README or `docs/`, do not need
+fragments.
 
 ## Agent skills
 
