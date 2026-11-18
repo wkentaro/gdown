@@ -416,12 +416,7 @@ def _get_download_response(
         if not gdrive_file_id:
             return res, url
 
-        if url == url_origin and res.status_code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            # The file could be Google Docs or Spreadsheets.
-            url = f"https://drive.google.com/open?id={gdrive_file_id}"
-            continue
-
-        if res.headers["Content-Type"].startswith("text/html"):
+        if res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
             if "/document/" in res.url and "/export" not in res.url:
                 url = (
@@ -485,6 +480,13 @@ def _get_download_response(
         ) as error:
             responses.close()
             _wait_for_retry(retry=retry, error=error)
+            continue
+        if (
+            url == url_origin
+            and not res.ok
+            and not (_has_gdrive_error_message := "uc-error-subcaption" in contents)
+        ):
+            url = f"https://drive.google.com/open?id={gdrive_file_id}"
             continue
         try:
             url = get_url_from_gdrive_confirmation(contents)

@@ -31,6 +31,7 @@ from gdown.download import _load_cookies
 from gdown.download import _save_cookies
 from gdown.download import download
 from gdown.exceptions import DownloadError
+from gdown.exceptions import FileURLRetrievalError
 
 from .conftest import build_google_cookie
 from .conftest import build_response
@@ -402,6 +403,105 @@ def test_download_google_slides_without_extension(*, tmp_path: Path) -> None:
     )
     assert isinstance(output, str)
     assert output.endswith(".pptx")
+
+
+def _mock_html_response(
+    *,
+    status: HTTPStatus,
+    url: str,
+    text: str = "",
+    headers: dict[str, str] | None = None,
+) -> unittest.mock.Mock:
+    response = unittest.mock.Mock()
+    response.status_code = status
+    response.ok = status < HTTPStatus.BAD_REQUEST
+    response.headers = (
+        {"Content-Type": "text/html; charset=utf-8"} if headers is None else headers
+    )
+    response.url = url
+    response.text = text
+    return response
+
+
+def _mock_drive_session(
+    *, monkeypatch: pytest.MonkeyPatch, responses: dict[str, unittest.mock.Mock]
+) -> unittest.mock.Mock:
+    session = unittest.mock.Mock()
+    session.headers = {}
+    session.get.side_effect = lambda url, **_kwargs: responses[url]
+    monkeypatch.setattr(
+        sys.modules["gdown.download"],
+        "_get_session",
+        lambda **_kwargs: (session, "cookies.txt"),
+    )
+    return session
+
+
+@pytest.mark.parametrize("uc_headers", [None, {}])
+@pytest.mark.parametrize(
+    "uc_status",
+    [HTTPStatus.NOT_FOUND, HTTPStatus.FORBIDDEN, HTTPStatus.INTERNAL_SERVER_ERROR],
+)
+def test_download_exports_google_sheet_when_uc_fails(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    uc_status: HTTPStatus,
+    uc_headers: dict[str, str] | None,
+) -> None:
+    file_id = "1h6wQX7ATSJDOSWFEjHPmv_nukJzZD_zZ30Jvy6XNiTE"
+    export_url = f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=xlsx"
+    export_response = build_response(
+        headers={"Content-Disposition": 'attachment; filename="sheet.xlsx"'},
+        chunks=[b"data"],
+    )
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            f"https://drive.google.com/uc?id={file_id}": _mock_html_response(
+                status=uc_status,
+                url=f"https://drive.usercontent.google.com/download?id={file_id}",
+                headers=uc_headers,
+            ),
+            f"https://drive.google.com/open?id={file_id}": _mock_html_response(
+                status=HTTPStatus.OK,
+                url=f"https://docs.google.com/spreadsheets/d/{file_id}/edit",
+            ),
+            export_url: export_response,
+        },
+    )
+
+    output = download(
+        id=file_id, output=str(tmp_path) + os.sep, quiet=True, use_cookies=False
+    )
+
+    assert output == str(tmp_path / "sheet.xlsx")
+    assert (tmp_path / "sheet.xlsx").read_bytes() == b"data"
+    assert session.get.call_args_list[-1].args[0] == export_url
+
+
+def test_download_reports_google_error_when_uc_fails_with_one(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            f"https://drive.google.com/uc?id={file_id}": _mock_html_response(
+                status=HTTPStatus.FORBIDDEN,
+                url=f"https://drive.usercontent.google.com/download?id={file_id}",
+                text='<p class="uc-error-subcaption">Too many users have viewed or'
+                " downloaded this file recently.</p>",
+            ),
+        },
+    )
+
+    with pytest.raises(FileURLRetrievalError, match="Too many users"):
+        download(
+            id=file_id, output=str(tmp_path) + os.sep, quiet=True, use_cookies=False
+        )
+
+    assert session.get.call_count == 1
 
 
 def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(
@@ -997,6 +1097,8 @@ def test_download_closes_replaced_responses(
         response.raw = HTTPResponse(body=body, preload_content=False)
         responses.append(response)
         bodies.append(body)
+    responses[0].headers = {"Content-Type": "text/html"}
+    responses[0].url = "https://drive.usercontent.google.com/download?id=file-id"
 
     def get_response(*_args: object, **_kwargs: object) -> requests.Response:
         index = download_session.get.call_count - 1
