@@ -481,7 +481,11 @@ def _get_download_response(
             responses.close()
             _wait_for_retry(retry=retry, error=error)
             continue
-        if url == url_origin and not res.ok and "uc-error-subcaption" not in contents:
+        if (
+            url == url_origin
+            and not res.ok
+            and not (_has_gdrive_error_message := "uc-error-subcaption" in contents)
+        ):
             url = f"https://drive.google.com/open?id={gdrive_file_id}"
             continue
         try:
