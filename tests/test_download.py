@@ -406,12 +406,18 @@ def test_download_google_slides_without_extension(*, tmp_path: Path) -> None:
 
 
 def _mock_html_response(
-    *, status: HTTPStatus, url: str, text: str = ""
+    *,
+    status: HTTPStatus,
+    url: str,
+    text: str = "",
+    headers: dict[str, str] | None = None,
 ) -> unittest.mock.Mock:
     response = unittest.mock.Mock()
     response.status_code = status
     response.ok = status < HTTPStatus.BAD_REQUEST
-    response.headers = {"Content-Type": "text/html; charset=utf-8"}
+    response.headers = (
+        {"Content-Type": "text/html; charset=utf-8"} if headers is None else headers
+    )
     response.url = url
     response.text = text
     return response
@@ -431,12 +437,17 @@ def _mock_drive_session(
     return session
 
 
+@pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",
     [HTTPStatus.NOT_FOUND, HTTPStatus.FORBIDDEN, HTTPStatus.INTERNAL_SERVER_ERROR],
 )
 def test_download_exports_google_sheet_when_uc_fails(
-    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uc_status: HTTPStatus
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    uc_status: HTTPStatus,
+    uc_headers: dict[str, str] | None,
 ) -> None:
     file_id = "1h6wQX7ATSJDOSWFEjHPmv_nukJzZD_zZ30Jvy6XNiTE"
     export_url = f"https://docs.google.com/spreadsheets/d/{file_id}/export?format=xlsx"
@@ -450,6 +461,7 @@ def test_download_exports_google_sheet_when_uc_fails(
             f"https://drive.google.com/uc?id={file_id}": _mock_html_response(
                 status=uc_status,
                 url=f"https://drive.usercontent.google.com/download?id={file_id}",
+                headers=uc_headers,
             ),
             f"https://drive.google.com/open?id={file_id}": _mock_html_response(
                 status=HTTPStatus.OK,
@@ -1085,6 +1097,8 @@ def test_download_closes_replaced_responses(
         response.raw = HTTPResponse(body=body, preload_content=False)
         responses.append(response)
         bodies.append(body)
+    responses[0].headers = {"Content-Type": "text/html"}
+    responses[0].url = "https://drive.usercontent.google.com/download?id=file-id"
 
     def get_response(*_args: object, **_kwargs: object) -> requests.Response:
         index = download_session.get.call_count - 1
