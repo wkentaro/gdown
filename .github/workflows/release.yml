@@ -4,7 +4,12 @@ on:
   push:
     tags: [v*]
 jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+  test:
+    uses: ./.github/workflows/test.yml
   release:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
