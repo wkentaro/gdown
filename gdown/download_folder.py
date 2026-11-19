@@ -134,7 +134,7 @@ def download_folder(
         it over. Folder discovery and skip_download do not retry.
     format:
         Preferred export format for every Google Docs, Sheets and Slides file
-        in the folder. A file Google cannot export in it is downloaded in its
+        in the folder. A file for which Google rejects it is downloaded in its
         default format: Google Docs: 'docx', Sheets: 'xlsx', Slides: 'pptx'.
         Other files are downloaded as they are.
 

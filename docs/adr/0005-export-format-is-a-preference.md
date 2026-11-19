@@ -22,10 +22,12 @@ its export formats as preferred and falls back to its defaults.
 
 ## Decision
 
-The format is a preference. Every file is downloaded: a Google-native file in
-the requested format when Google can export it, and otherwise in its default
-format with a warning. This holds for a single file and for each file of a
-folder alike.
+The format is a preference. A Google-native file is downloaded in the
+requested format when Google can export it. When Google answers the export
+with an HTTP error, the file is downloaded in its default format with a
+warning. This holds for a single file and for each file of a folder alike. A
+file Google does not export at all, whose export ends on the editor page
+instead of a file, still fails.
 
 `download_folder(format=...)` and `--format` on a folder pass the one format
 to every Google-native file. Ordinary files never receive it, because a
@@ -38,10 +40,10 @@ such as `csv,pdf`.
 
 ## Consequences
 
-- A download no longer fails because of the format. The written filename and
-  a Listing `path` carry the extension of the format actually used, so a
-  caller that needs the requested format checks the extension.
-- A file that falls back costs two extra requests, since the default export
-  is resolved again from the file's own URL.
+- A download no longer fails because Google rejects the format. The written
+  filename and a Listing `path` carry the extension of the format actually
+  used, so a caller that needs the requested format checks the extension.
+- A file that falls back is resolved a second time from its own URL, which
+  repeats the requests of the first resolution.
 - A single uploaded `.pptx` can still be exported in another format, as
   before, while the same file inside a folder keeps its bytes.
