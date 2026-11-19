@@ -1581,6 +1581,47 @@ def test_download_keeps_uploaded_pptx_when_export_fails(
     assert (tmp_path / "talk.pptx").read_bytes() == b"uploaded"
 
 
+def test_download_restarts_instead_of_resuming_after_a_format_fallback(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "talk.csv"
+    part = tmp_path / "talk.csvabcdefgh.part"
+    part.write_bytes(b"stale partial bytes")
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=pptx-id": build_response(
+                headers={"Content-Disposition": 'attachment; filename="talk.pptx"'},
+                chunks=[b"uploaded"],
+            ),
+            "https://docs.google.com/presentation/d/pptx-id/export?format=csv": (
+                _mock_html_response(
+                    status=HTTPStatus.NOT_FOUND,
+                    url="https://docs.google.com/presentation/d/pptx-id/export",
+                )
+            ),
+        },
+    )
+
+    with pytest.warns(UserWarning, match="cannot export pptx-id as 'csv'"):
+        result = download(
+            id="pptx-id",
+            output=str(output),
+            resume=True,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"uploaded"
+    assert part.read_bytes() == b"stale partial bytes"
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
 def test_download_does_not_fall_back_from_the_default_format(
     *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
