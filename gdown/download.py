@@ -490,7 +490,7 @@ def _get_download_response(
         if (
             export_kind is not None
             and format not in {None, _GOOGLE_EXPORT_DEFAULT_FORMATS[export_kind]}
-            and not res.ok
+            and res.status_code in {HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND}
         ):
             warnings.warn(
                 f"Google Drive cannot export {gdrive_file_id} as '{format}' "
