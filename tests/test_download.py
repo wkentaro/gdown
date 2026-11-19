@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import threading
 import unittest.mock
+import warnings
 from http import HTTPStatus
 from pathlib import Path
 from typing import BinaryIO
@@ -1546,3 +1547,29 @@ def test_download_keeps_uploaded_pptx_when_export_fails(
 
     assert output == str(tmp_path / "talk.pptx")
     assert (tmp_path / "talk.pptx").read_bytes() == b"uploaded"
+
+
+def test_download_does_not_fall_back_from_the_default_format(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _mock_slides_export_session(
+        monkeypatch=monkeypatch, exportable_formats=set()
+    )
+
+    with (
+        warnings.catch_warnings(),
+        pytest.raises(FileURLRetrievalError, match="Cannot retrieve the public link"),
+    ):
+        warnings.simplefilter("error")
+        download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="pptx",
+        )
+
+    assert [call.args[0].rsplit("=", 1)[1] for call in session.get.call_args_list] == [
+        "slides-id",
+        "pptx",
+    ]
