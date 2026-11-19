@@ -590,7 +590,7 @@ def test_download_restarts_an_export_instead_of_resuming(
 ) -> None:
     output = tmp_path / "deck.pdf"
     part = tmp_path / "deck.pdfabcdefgh.part"
-    part.write_bytes(b"stale")
+    part.write_bytes(b"stale partial bytes")
     session = _mock_drive_session(
         monkeypatch=monkeypatch,
         responses={
@@ -655,7 +655,7 @@ def test_download_restarts_an_export_url_instead_of_resuming(
 ) -> None:
     output = tmp_path / "deck.pdf"
     part = tmp_path / "deck.pdfabcdefgh.part"
-    part.write_bytes(b"stale")
+    part.write_bytes(b"stale partial bytes")
     response = build_response(
         headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
         chunks=[b"export"],
