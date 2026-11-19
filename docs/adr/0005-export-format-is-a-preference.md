@@ -23,11 +23,12 @@ its export formats as preferred and falls back to its defaults.
 ## Decision
 
 The format is a preference. A Google-native file is downloaded in the
-requested format when Google can export it. When Google answers the export
-with an HTTP error, the file is downloaded in its default format with a
-warning. This holds for a single file and for each file of a folder alike. A
-file Google does not export at all, whose export ends on the editor page
-instead of a file, still fails.
+requested format when Google can export it. When Google rejects the export
+with HTTP 400 or 404, the file is downloaded in its default format with a
+warning. This holds for a single file and for each file of a folder alike.
+Any other failed export still fails: a server error or rate limit says
+nothing about the format, and a file Google does not export at all ends on
+the editor page instead of a file.
 
 `download_folder(format=...)` and `--format` on a folder pass the one format
 to every Google-native file. Ordinary files never receive it, because a
