@@ -415,7 +415,7 @@ def _get_download_response(
     retry: _RetryState,
     use_cookies: bool,
     cookies_file: str,
-) -> tuple[requests.Response, str]:
+) -> tuple[requests.Response, str, bool]:
     url_origin = url
     export_requested = False
     while True:
@@ -431,7 +431,7 @@ def _get_download_response(
         responses.callback(res.close)
 
         if not gdrive_file_id:
-            return res, url
+            return res, url, not export_requested
 
         if export_requested:
             pass
@@ -472,7 +472,7 @@ def _get_download_response(
                 )
 
         if "Content-Disposition" in res.headers:
-            return res, url
+            return res, url, not export_requested
 
         try:
             contents = res.text
@@ -765,7 +765,9 @@ def download(
     id:
         Google Drive's file ID.
     resume:
-        Resume interrupted downloads while skipping completed ones.
+        Resume interrupted downloads while skipping completed ones. An
+        interrupted Google Docs, Sheets or Slides export starts over,
+        because Google does not serve byte ranges for exports.
         Default is False.
     format:
         Format of Google Docs, Spreadsheets and Slides. Default is:
@@ -881,7 +883,7 @@ def download(
             url_origin = url
             is_gdrive_download_link = True
 
-        res, url = _get_download_response(
+        res, url, resumable = _get_download_response(
             sess=sess,
             responses=responses,
             url=url,
@@ -931,7 +933,9 @@ def download(
                 return output
 
             tmp_file, resume = _prepare_partial_file(output=output, resume=resume)
-            f = open(tmp_file, "ab")
+            if not resumable:
+                resume = False
+            f = open(tmp_file, "ab" if resume else "wb")
             stack.callback(f.close)
         else:
             tmp_file = None
