@@ -81,6 +81,7 @@ def download_folder(
     cookies_file: str | None = None,
     timeout: float | tuple[float, float] | None = None,
     retries: int = 0,
+    format: str | None = None,
 ) -> list[str] | list[GoogleDriveFileToDownload]:  # noqa: GR005 -- public API accepts both call styles
     """Downloads entire folder from URL.
 
@@ -131,6 +132,11 @@ def download_folder(
         downloads. A Google Docs, Sheets or Slides export cannot be resumed
         mid-transfer: a retry after its first byte fails, and the next run starts
         it over. Folder discovery and skip_download do not retry.
+    format:
+        Preferred export format for every Google Docs, Sheets and Slides file
+        in the folder. A file Google cannot export in it is downloaded in its
+        default format: Google Docs: 'docx', Sheets: 'xlsx', Slides: 'pptx'.
+        Other files are downloaded as they are.
 
     Returns
     -------
@@ -239,6 +245,7 @@ def download_folder(
                 skip_download=skip_download,
                 timeout=timeout,
                 retries=retries,
+                format=format if gdrive_file.is_google_native() else None,
             )
         except DownloadError as e:
             if skip_download:

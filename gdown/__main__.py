@@ -169,7 +169,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--format",
-        help="Preferred format of Google Docs, Spreadsheets and Slides. "
+        help="Preferred format of Google Docs, Spreadsheets and Slides, "
+        "applied to every such file of a folder. "
         "Default is Google Docs: 'docx', Spreadsheet: 'xlsx', Slides: 'pptx', "
         "also used when Google rejects the preferred format for a file.",
     )
@@ -282,6 +283,7 @@ def main() -> None:
                 cookies_file=cookies_file,
                 timeout=args.timeout,
                 retries=args.retries,
+                format=args.format,
             )
         else:
             result = download(
