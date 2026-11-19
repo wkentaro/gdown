@@ -115,6 +115,7 @@ def download_folder(
         Resume interrupted transfers.
         Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
+        An interrupted Google Docs, Sheets or Slides export starts over on the next run.
         Default is False.
     cookies_file:
         Netscape cookies file to load when a session opens and save after
@@ -127,7 +128,9 @@ def download_folder(
     retries:
         Additional attempts per file for transient network failures. Default is
         zero. Retries resume the current transfer; resume=True also reuses earlier
-        downloads. Folder discovery and skip_download do not retry.
+        downloads. A Google Docs, Sheets or Slides export cannot be resumed
+        mid-transfer: a retry after its first byte fails, and the next run starts
+        it over. Folder discovery and skip_download do not retry.
 
     Returns
     -------
