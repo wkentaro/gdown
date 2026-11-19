@@ -565,6 +565,7 @@ def _iter_response_chunks(
     url: str,
     tmp_file: str | None,
     start_size: int,
+    resumable: bool,
     flush: Callable[[], None],
     pbar: tqdm.tqdm | None,
     require_disposition: bool,
@@ -652,7 +653,7 @@ def _iter_response_chunks(
             )
             if expected_size is not None:
                 message += f" but the server announced {total} bytes"
-            if tmp_file is not None:
+            if resumable and tmp_file is not None:
                 message += (
                     f".\nThe received bytes are kept in {tmp_file}, which resume "
                     "(--continue on the command line) picks up"
@@ -680,6 +681,7 @@ def _write_response(
     f: BinaryIO,
     tmp_file: str | None,
     start_size: int,
+    resumable: bool,
     quiet: bool,
     speed: float | None,
     progress: Callable[[int, int | None], None] | None,
@@ -708,6 +710,7 @@ def _write_response(
         url=url,
         tmp_file=tmp_file,
         start_size=start_size,
+        resumable=resumable,
         flush=f.flush,
         pbar=pbar,
         require_disposition=require_disposition,
@@ -993,6 +996,7 @@ def download(
             f=f,
             tmp_file=tmp_file,
             start_size=start_size,
+            resumable=resumable,
             quiet=quiet,
             speed=speed,
             progress=progress,
