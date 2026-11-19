@@ -585,51 +585,15 @@ def test_download_rejects_drive_retry_without_attachment(
     assert output.read_bytes() == b"old"
 
 
+@pytest.mark.parametrize("partial_count", [1, 2])
 def test_download_restarts_an_export_instead_of_resuming(
-    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, partial_count: int
 ) -> None:
     output = tmp_path / "deck.pdf"
-    part = tmp_path / "deck.pdfabcdefgh.part"
-    part.write_bytes(b"stale partial bytes")
-    session = _mock_drive_session(
-        monkeypatch=monkeypatch,
-        responses={
-            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
-                status=HTTPStatus.OK,
-                url="https://docs.google.com/presentation/d/slides-id/edit",
-            ),
-            "https://docs.google.com/presentation/d/slides-id/export?format=pdf": (
-                build_response(
-                    headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
-                    chunks=[b"export"],
-                )
-            ),
-        },
-    )
-
-    result = download(
-        id="slides-id",
-        output=str(output),
-        resume=True,
-        quiet=True,
-        use_cookies=False,
-        format="pdf",
-    )
-
-    assert result == str(output)
-    assert output.read_bytes() == b"export"
-    assert part.read_bytes() == b"stale partial bytes"
-    assert all(
-        "Range" not in (call.kwargs.get("headers") or {})
-        for call in session.get.call_args_list
-    )
-
-
-def test_download_restarts_an_export_despite_several_partial_files(
-    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    output = tmp_path / "deck.pdf"
-    parts = [tmp_path / "deck.pdfabcdefgh.part", tmp_path / "deck.pdfijklmnop.part"]
+    parts = [
+        tmp_path / "deck.pdfabcdefgh.part",
+        tmp_path / "deck.pdfijklmnop.part",
+    ][:partial_count]
     for part in parts:
         part.write_bytes(b"stale partial bytes")
     session = _mock_drive_session(
