@@ -494,8 +494,7 @@ def _get_download_response(
         ):
             warnings.warn(
                 f"Google Drive cannot export {gdrive_file_id} as '{format}' "
-                f"(HTTP {res.status_code}); downloading it in the default "
-                "format instead.",
+                f"(HTTP {res.status_code}); using the default format instead.",
                 stacklevel=3,
             )
             format = None
