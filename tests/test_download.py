@@ -552,6 +552,39 @@ def test_download_exports_slides_in_requested_format(
     assert session.get.call_args_list[-1].args[0] == export_url
 
 
+@pytest.mark.parametrize(
+    "retry_headers",
+    [{"Content-Type": "text/html; charset=utf-8"}, {}],
+    ids=["html-page", "no-disposition"],
+)
+def test_download_rejects_drive_retry_without_attachment(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    retry_headers: dict[str, str],
+) -> None:
+    monkeypatch.setattr(sys.modules["gdown.download"].time, "sleep", lambda _: None)
+    file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
+    dropped = build_response(
+        headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+        chunks=[],
+    )
+    dropped.iter_content.side_effect = requests.exceptions.ConnectionError()
+    page = build_response(headers=retry_headers, chunks=[b"<html>editor</html>"])
+    responses = iter([dropped, page])
+    session = _mock_drive_session(monkeypatch=monkeypatch, responses={})
+    session.get.side_effect = lambda _url, **_kwargs: next(responses)
+    output = tmp_path / "deck.pdf"
+    output.write_bytes(b"old")
+
+    with pytest.raises(DownloadError, match="retry"):
+        download(
+            id=file_id, output=str(output), quiet=True, use_cookies=False, retries=1
+        )
+
+    assert output.read_bytes() == b"old"
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",

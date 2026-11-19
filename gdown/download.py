@@ -554,6 +554,7 @@ def _iter_response_chunks(
     start_size: int,
     flush: Callable[[], None],
     pbar: tqdm.tqdm | None,
+    require_disposition: bool,
 ) -> Iterator[tuple[bytes, int | None]]:
     downloaded = 0
     reconnect = start_size != 0
@@ -589,6 +590,11 @@ def _iter_response_chunks(
                 )
             else:
                 res.raise_for_status()
+                if require_disposition and "Content-Disposition" not in res.headers:
+                    raise DownloadError(
+                        "Server answered the retry with a page instead of the file; "
+                        "nothing was written."
+                    )
 
         content_length = (
             range_size
@@ -666,6 +672,7 @@ def _write_response(
     progress: Callable[[int, int | None], None] | None,
     hasher: "hashlib._Hash | None",
     stack: contextlib.ExitStack,
+    require_disposition: bool,
 ) -> None:
     pbar = None
     if not quiet:
@@ -690,6 +697,7 @@ def _write_response(
         start_size=start_size,
         flush=f.flush,
         pbar=pbar,
+        require_disposition=require_disposition,
     ):
         _check_cancelled(cancel=retry.cancel)
         f.write(chunk)
@@ -972,6 +980,7 @@ def download(
             progress=progress,
             hasher=hasher,
             stack=stack,
+            require_disposition=bool(gdrive_file_id),
         )
 
     _check_cancelled(cancel=cancel)

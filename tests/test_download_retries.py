@@ -481,3 +481,29 @@ def test_retry_recovers_from_a_timeout(
     assert output.read_bytes() == b"data"
     assert retry_delays == [1]
     assert ranges == [None]
+
+
+@pytest.mark.parametrize(
+    ("first_headers", "retry_headers"),
+    [
+        ({}, {}),
+        ({"Content-Disposition": 'attachment; filename="data.bin"'}, {}),
+        ({}, {"Content-Type": "text/html"}),
+    ],
+    ids=["no-disposition", "disposition-dropped", "became-html"],
+)
+def test_retry_from_zero_keeps_direct_urls_permissive(
+    *,
+    retry_server: RetryServer,
+    tmp_path: Path,
+    first_headers: dict[str, str],
+    retry_headers: dict[str, str],
+) -> None:
+    url, replies, _ranges = retry_server
+    replies.append((200, {"Content-Length": "4", **first_headers}, b""))
+    replies.append((200, {"Content-Length": "4", **retry_headers}, b"data"))
+    output = tmp_path / "output"
+
+    download(url=url, output=str(output), retries=1, use_cookies=False, quiet=True)
+
+    assert output.read_bytes() == b"data"
