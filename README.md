@@ -121,6 +121,10 @@ as `csv` for Slides, the file is downloaded in its default format with a
 warning. With a folder, the format applies to every Docs, Sheets and Slides
 file in it, and other files are downloaded as they are.
 
+A `--json` listing made with `--format` reports the path of the exported
+file, but its `url` does not carry the format. Pass the same `--format` when
+you download a Docs, Sheets or Slides entry from the listing.
+
 #### Resume, speed limit, proxy
 
 ```bash
