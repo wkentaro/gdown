@@ -1450,7 +1450,10 @@ def test_download_closes_replaced_responses(
 
 
 def _mock_slides_export_session(
-    *, monkeypatch: pytest.MonkeyPatch, exportable_formats: set[str]
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    exportable_formats: set[str],
+    unexportable_status: HTTPStatus = HTTPStatus.NOT_FOUND,
 ) -> unittest.mock.Mock:
     export_url = "https://docs.google.com/presentation/d/slides-id/export?format="
     responses = {
@@ -1467,7 +1470,7 @@ def _mock_slides_export_session(
             )
         else:
             responses[export_url + export_format] = _mock_html_response(
-                status=HTTPStatus.NOT_FOUND, url=export_url + export_format
+                status=unexportable_status, url=export_url + export_format
             )
     return _mock_drive_session(monkeypatch=monkeypatch, responses=responses)
 
@@ -1514,6 +1517,35 @@ def test_download_reports_failure_when_default_format_export_fails_too(
         "csv",
         "slides-id",
         "pptx",
+    ]
+
+
+def test_download_does_not_fall_back_on_a_server_error(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _mock_slides_export_session(
+        monkeypatch=monkeypatch,
+        exportable_formats={"pptx"},
+        unexportable_status=HTTPStatus.SERVICE_UNAVAILABLE,
+    )
+
+    with (
+        warnings.catch_warnings(),
+        pytest.raises(FileURLRetrievalError),
+    ):
+        warnings.simplefilter("error")
+        download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert list(tmp_path.iterdir()) == []
+    assert [call.args[0].rsplit("=", 1)[1] for call in session.get.call_args_list] == [
+        "slides-id",
+        "csv",
     ]
 
 
