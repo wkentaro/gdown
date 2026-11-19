@@ -430,7 +430,8 @@ def _get_download_response(
     cookies_file: str,
 ) -> tuple[requests.Response, str, bool]:
     url_origin = url
-    export_requested = False
+    export_kind: str | None = None
+    fell_back = False
     while True:
         responses.close()
         res = _get_response_with_retries(
@@ -446,7 +447,7 @@ def _get_download_response(
         if not gdrive_file_id:
             return res, url, not _is_google_export(url=url, res=res)
 
-        if export_requested:
+        if export_kind is not None:
             pass
         elif res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
@@ -462,7 +463,7 @@ def _get_download_response(
                 url = _google_export_url(
                     kind=kind, file_id=gdrive_file_id, format=format
                 )
-                export_requested = True
+                export_kind = kind
                 continue
         elif (
             format not in {None, "pptx"}
@@ -472,7 +473,7 @@ def _get_download_response(
             url = _google_export_url(
                 kind="presentation", file_id=gdrive_file_id, format=format
             )
-            export_requested = True
+            export_kind = "presentation"
             continue
 
         if use_cookies:
@@ -484,8 +485,24 @@ def _get_download_response(
                     f"Failed to save cookies to {cookies_file}: {e}", stacklevel=3
                 )
 
+        if (
+            export_kind is not None
+            and format not in {None, _GOOGLE_EXPORT_DEFAULT_FORMATS[export_kind]}
+            and res.status_code in {HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND}
+        ):
+            warnings.warn(
+                f"Google Drive cannot export {gdrive_file_id} as '{format}' "
+                f"(HTTP {res.status_code}); using the default format instead.",
+                stacklevel=3,
+            )
+            format = None
+            fell_back = True
+            export_kind = None
+            url = url_origin
+            continue
+
         if "Content-Disposition" in res.headers:
-            return res, url, not _is_google_export(url=url, res=res)
+            return res, url, not _is_google_export(url=url, res=res) and not fell_back
 
         try:
             contents = res.text
@@ -787,7 +804,9 @@ def download(
         exports.
         Default is False.
     format:
-        Format of Google Docs, Spreadsheets and Slides. Default is:
+        Preferred format of Google Docs, Spreadsheets and Slides. When Google
+        rejects it for a file, the file is downloaded in the default format with
+        a warning. Default is:
             - Google Docs: 'docx'
             - Google Spreadsheet: 'xlsx'
             - Google Slides: 'pptx'

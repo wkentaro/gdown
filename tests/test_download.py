@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import threading
 import unittest.mock
+import warnings
 from http import HTTPStatus
 from pathlib import Path
 from typing import BinaryIO
@@ -1446,3 +1447,247 @@ def test_download_closes_replaced_responses(
     assert output.read_bytes() == b"partialdata"
     assert all(body.closed for body in bodies)
     download_session.close.assert_called_once_with()
+
+
+def _mock_slides_export_session(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    exportable_formats: set[str],
+    unexportable_status: HTTPStatus = HTTPStatus.NOT_FOUND,
+) -> unittest.mock.Mock:
+    export_url = "https://docs.google.com/presentation/d/slides-id/export?format="
+    responses = {
+        "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+            status=HTTPStatus.OK,
+            url="https://docs.google.com/presentation/d/slides-id/edit",
+        ),
+    }
+    for export_format in ("csv", "pptx"):
+        if export_format in exportable_formats:
+            disposition = f'attachment; filename="deck.{export_format}"'
+            responses[export_url + export_format] = build_response(
+                headers={"Content-Disposition": disposition}, chunks=[b"export"]
+            )
+        else:
+            responses[export_url + export_format] = _mock_html_response(
+                status=unexportable_status, url=export_url + export_format
+            )
+    return _mock_drive_session(monkeypatch=monkeypatch, responses=responses)
+
+
+def test_download_falls_back_to_default_format_when_export_fails(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_slides_export_session(monkeypatch=monkeypatch, exportable_formats={"pptx"})
+
+    with pytest.warns(UserWarning, match="cannot export slides-id as 'csv'"):
+        output = download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert output == str(tmp_path / "deck.pptx")
+    assert (tmp_path / "deck.pptx").read_bytes() == b"export"
+
+
+@pytest.mark.parametrize("skip_download", [False, True])
+def test_download_falls_back_when_the_rejection_names_a_file(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, skip_download: bool
+) -> None:
+    export_url = "https://docs.google.com/presentation/d/slides-id/export?format="
+    _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            export_url + "csv": _mock_html_response(
+                status=HTTPStatus.NOT_FOUND,
+                url=export_url + "csv",
+                headers={
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Content-Disposition": 'attachment; filename="error.csv"',
+                },
+            ),
+            export_url + "pptx": build_response(
+                headers={"Content-Disposition": 'attachment; filename="deck.pptx"'},
+                chunks=[b"export"],
+            ),
+        },
+    )
+
+    with pytest.warns(UserWarning, match="cannot export slides-id as 'csv'"):
+        result = download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+            skip_download=skip_download,
+        )
+
+    if skip_download:
+        assert isinstance(result, GoogleDriveFileToDownload)
+        assert result.path == "deck.pptx"
+    else:
+        assert (tmp_path / "deck.pptx").read_bytes() == b"export"
+        assert not (tmp_path / "error.csv").exists()
+
+
+def test_download_reports_failure_when_default_format_export_fails_too(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _mock_slides_export_session(
+        monkeypatch=monkeypatch, exportable_formats=set()
+    )
+
+    with (
+        pytest.warns(UserWarning, match="cannot export slides-id as 'csv'"),
+        pytest.raises(FileURLRetrievalError, match="Cannot retrieve the public link"),
+    ):
+        download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert [call.args[0].rsplit("=", 1)[1] for call in session.get.call_args_list] == [
+        "slides-id",
+        "csv",
+        "slides-id",
+        "pptx",
+    ]
+
+
+def test_download_does_not_fall_back_on_a_server_error(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _mock_slides_export_session(
+        monkeypatch=monkeypatch,
+        exportable_formats={"pptx"},
+        unexportable_status=HTTPStatus.SERVICE_UNAVAILABLE,
+    )
+
+    with (
+        warnings.catch_warnings(),
+        pytest.raises(FileURLRetrievalError),
+    ):
+        warnings.simplefilter("error")
+        download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert list(tmp_path.iterdir()) == []
+    assert [call.args[0].rsplit("=", 1)[1] for call in session.get.call_args_list] == [
+        "slides-id",
+        "csv",
+    ]
+
+
+def test_download_keeps_uploaded_pptx_when_export_fails(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=pptx-id": build_response(
+                headers={"Content-Disposition": 'attachment; filename="talk.pptx"'},
+                chunks=[b"uploaded"],
+            ),
+            "https://docs.google.com/presentation/d/pptx-id/export?format=csv": (
+                _mock_html_response(
+                    status=HTTPStatus.NOT_FOUND,
+                    url="https://docs.google.com/presentation/d/pptx-id/export",
+                )
+            ),
+        },
+    )
+
+    with pytest.warns(UserWarning, match="cannot export pptx-id as 'csv'"):
+        output = download(
+            id="pptx-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert output == str(tmp_path / "talk.pptx")
+    assert (tmp_path / "talk.pptx").read_bytes() == b"uploaded"
+
+
+def test_download_restarts_instead_of_resuming_after_a_format_fallback(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "talk.csv"
+    part = tmp_path / "talk.csvabcdefgh.part"
+    part.write_bytes(b"stale partial bytes")
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=pptx-id": build_response(
+                headers={"Content-Disposition": 'attachment; filename="talk.pptx"'},
+                chunks=[b"uploaded"],
+            ),
+            "https://docs.google.com/presentation/d/pptx-id/export?format=csv": (
+                _mock_html_response(
+                    status=HTTPStatus.NOT_FOUND,
+                    url="https://docs.google.com/presentation/d/pptx-id/export",
+                )
+            ),
+        },
+    )
+
+    with pytest.warns(UserWarning, match="cannot export pptx-id as 'csv'"):
+        result = download(
+            id="pptx-id",
+            output=str(output),
+            resume=True,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+        )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"uploaded"
+    assert part.read_bytes() == b"stale partial bytes"
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
+def test_download_does_not_fall_back_from_the_default_format(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _mock_slides_export_session(
+        monkeypatch=monkeypatch, exportable_formats=set()
+    )
+
+    with (
+        warnings.catch_warnings(),
+        pytest.raises(FileURLRetrievalError, match="Cannot retrieve the public link"),
+    ):
+        warnings.simplefilter("error")
+        download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="pptx",
+        )
+
+    assert [call.args[0].rsplit("=", 1)[1] for call in session.get.call_args_list] == [
+        "slides-id",
+        "pptx",
+    ]
