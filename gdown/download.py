@@ -803,9 +803,9 @@ def download(
         exports.
         Default is False.
     format:
-        Preferred format of Google Docs, Spreadsheets and Slides. A file that
-        cannot be exported in it is downloaded in the default format with a
-        warning. Default is:
+        Preferred format of Google Docs, Spreadsheets and Slides. When Google
+        rejects it for a file, the file is downloaded in the default format with
+        a warning. Default is:
             - Google Docs: 'docx'
             - Google Spreadsheet: 'xlsx'
             - Google Slides: 'pptx'
