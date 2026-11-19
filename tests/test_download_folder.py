@@ -9,6 +9,7 @@ from typing import Final
 import pytest
 import requests
 
+from gdown.download import DEFAULT_USER_AGENT
 from gdown.download_folder import _GoogleDriveFile
 from gdown.download_folder import _parse_embedded_folder_view
 from gdown.download_folder import download_folder
@@ -657,7 +658,6 @@ def test_download_folder_preserves_user_agent(
     assert files == [str(tmp_path / "file.txt")]
     assert (tmp_path / "file.txt").read_bytes() == b"data"
     if user_agent is None:
-        assert "Chrome/98" in agents[0]
-        assert "Chrome/39" in agents[1]
+        assert agents == [DEFAULT_USER_AGENT, DEFAULT_USER_AGENT]
     else:
         assert agents == [user_agent, user_agent]

@@ -437,6 +437,121 @@ def _mock_drive_session(
     return session
 
 
+def _mock_session_requesting_each_url_once(
+    *, monkeypatch: pytest.MonkeyPatch, responses: dict[str, unittest.mock.Mock]
+) -> unittest.mock.Mock:
+    session = _mock_drive_session(monkeypatch=monkeypatch, responses=responses)
+    requested: set[str] = set()
+
+    def get(url: str, **_kwargs: object) -> unittest.mock.Mock:
+        if url in requested:
+            pytest.fail(f"requested {url} again")
+        requested.add(url)
+        return responses[url]
+
+    session.get.side_effect = get
+    return session
+
+
+def test_download_fails_when_export_redirects_to_editor(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    uc_url = f"https://drive.google.com/uc?id={file_id}"
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    editor = _mock_html_response(
+        status=HTTPStatus.OK,
+        url=f"https://docs.google.com/presentation/d/{file_id}/edit",
+    )
+    _mock_session_requesting_each_url_once(
+        monkeypatch=monkeypatch,
+        responses={uc_url: editor, export_url: editor},
+    )
+
+    with pytest.raises(FileURLRetrievalError):
+        download(
+            id=file_id,
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="pdf",
+        )
+
+
+@pytest.mark.parametrize("content_type", [None, "text/html"])
+def test_download_keeps_pptx_when_export_returns_pptx(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content_type: str | None
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    uc_url = f"https://drive.google.com/uc?id={file_id}"
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    headers = {
+        "Content-Disposition": 'attachment; filename="deck.pptx"; '
+        "filename*=UTF-8''deck.pptx"
+    }
+    export_headers = (
+        headers if content_type is None else {**headers, "Content-Type": content_type}
+    )
+    _mock_session_requesting_each_url_once(
+        monkeypatch=monkeypatch,
+        responses={
+            uc_url: build_response(headers=headers, chunks=[b"pptx"]),
+            export_url: build_response(
+                headers=export_headers, chunks=[b"exported pptx"]
+            ),
+        },
+    )
+
+    output = download(
+        id=file_id,
+        output=str(tmp_path) + os.sep,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert output == str(tmp_path / "deck.pptx")
+    assert (tmp_path / "deck.pptx").read_bytes() == b"exported pptx"
+
+
+@pytest.mark.parametrize(
+    "content_disposition",
+    [
+        'attachment; filename="slides.pptx"',
+        "attachment; filename=\"slides.pptx\"; filename*=UTF-8''slides.pptx",
+    ],
+)
+def test_download_exports_slides_in_requested_format(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content_disposition: str
+) -> None:
+    file_id = "13AhW1Z1GYGaiTpJ0Pr2TTXoQivb6jx-a"
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            f"https://drive.google.com/uc?id={file_id}": build_response(
+                headers={"Content-Disposition": content_disposition}, chunks=[b"pptx"]
+            ),
+            export_url: build_response(
+                headers={"Content-Disposition": 'attachment; filename="slides.pdf"'},
+                chunks=[b"pdf"],
+            ),
+        },
+    )
+
+    output = download(
+        id=file_id,
+        output=str(tmp_path) + os.sep,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert output == str(tmp_path / "slides.pdf")
+    assert (tmp_path / "slides.pdf").read_bytes() == b"pdf"
+    assert session.get.call_args_list[-1].args[0] == export_url
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",

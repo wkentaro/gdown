@@ -42,6 +42,7 @@ from .parse_url import parse_url
 CHUNK_SIZE: Final = 512 * 1024  # 512KB
 home = osp.expanduser("~")
 DEFAULT_COOKIES_FILE: Final = osp.join(home, ".cache/gdown/cookies.txt")
+DEFAULT_USER_AGENT: Final = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36"  # NOQA: E501
 
 GoogleDriveFileToDownload = collections.namedtuple(
     "GoogleDriveFileToDownload", ("id", "path", "local_path")
@@ -265,12 +266,14 @@ def _get_session(
     *,
     proxy: str | None,
     use_cookies: bool,
-    user_agent: str,
+    user_agent: str | None,
     cookies_file: str | None,
 ) -> tuple[requests.Session, str]:
     sess = requests.session()
 
-    sess.headers.update({"User-Agent": user_agent})
+    sess.headers.update(
+        {"User-Agent": DEFAULT_USER_AGENT if user_agent is None else user_agent}
+    )
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
@@ -387,6 +390,19 @@ def _validate_resumed_response(
     return int(match[3]) - offset if match[3] != "*" else int(match[2]) - offset + 1
 
 
+_GOOGLE_EXPORT_DEFAULT_FORMATS: Final = {
+    "document": "docx",
+    "spreadsheets": "xlsx",
+    "presentation": "pptx",
+}
+
+
+def _google_export_url(*, kind: str, file_id: str, format: str | None) -> str:
+    if format is None:
+        format = _GOOGLE_EXPORT_DEFAULT_FORMATS[kind]
+    return f"https://docs.google.com/{kind}/d/{file_id}/export?format={format}"
+
+
 def _get_download_response(
     *,
     sess: requests.Session,
@@ -401,6 +417,7 @@ def _get_download_response(
     cookies_file: str,
 ) -> tuple[requests.Response, str]:
     url_origin = url
+    export_requested = False
     while True:
         responses.close()
         res = _get_response_with_retries(
@@ -416,47 +433,33 @@ def _get_download_response(
         if not gdrive_file_id:
             return res, url
 
-        if res.headers.get("Content-Type", "").startswith("text/html"):
+        if export_requested:
+            pass
+        elif res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
-            if "/document/" in res.url and "/export" not in res.url:
-                url = (
-                    "https://docs.google.com/document/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="docx" if format is None else format,
-                    )
+            kind = next(
+                (
+                    kind
+                    for kind in _GOOGLE_EXPORT_DEFAULT_FORMATS
+                    if f"/{kind}/" in res.url
+                ),
+                None,
+            )
+            if kind is not None and "/export" not in res.url:
+                url = _google_export_url(
+                    kind=kind, file_id=gdrive_file_id, format=format
                 )
-                continue
-            elif "/spreadsheets/" in res.url and "/export" not in res.url:
-                url = (
-                    "https://docs.google.com/spreadsheets/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="xlsx" if format is None else format,
-                    )
-                )
-                continue
-            elif "/presentation/" in res.url and "/export" not in res.url:
-                url = (
-                    "https://docs.google.com/presentation/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="pptx" if format is None else format,
-                    )
-                )
+                export_requested = True
                 continue
         elif (
-            "Content-Disposition" in res.headers
-            and res.headers["Content-Disposition"].endswith("pptx")
-            and format not in {None, "pptx"}
+            format not in {None, "pptx"}
+            and "Content-Disposition" in res.headers
+            and (_get_filename_from_response(response=res) or "").endswith(".pptx")
         ):
-            url = (
-                "https://docs.google.com/presentation/d/{id}/export"
-                "?format={format}".format(
-                    id=gdrive_file_id,
-                    format="pptx" if format is None else format,
-                )
+            url = _google_export_url(
+                kind="presentation", file_id=gdrive_file_id, format=format
             )
+            export_requested = True
             continue
 
         if use_cookies:
@@ -838,9 +841,6 @@ def download(
     if id is not None:
         url = f"https://drive.google.com/uc?id={id}"
     assert url is not None
-    if user_agent is None:
-        # We need to use different user agent for file download c.f., folder
-        user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA: E501
     if log_messages is None:
         log_messages = {}
 
