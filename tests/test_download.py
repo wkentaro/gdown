@@ -840,12 +840,17 @@ def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(
         headers={"Content-Length": "10"}, chunks=[b"data"]
     )
 
-    with pytest.raises(DownloadError, match="received 4 bytes.*announced 10 bytes"):
+    with pytest.raises(DownloadError) as excinfo:
         download(url="https://example.com/file", output=str(output), quiet=True)
 
     assert not output.exists()
     (part,) = tmp_path.glob("output*.part")
     assert part.read_bytes() == b"data"
+    assert str(excinfo.value) == (
+        "Download is incomplete: received 4 bytes but the server announced 10 "
+        f"bytes.\nThe received bytes are kept in {part}, which resume "
+        "(--continue on the command line) picks up."
+    )
 
     download_session.get.side_effect = [
         download_session.get.return_value,
