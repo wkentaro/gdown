@@ -821,7 +821,9 @@ def download(
     retries:
         Additional attempts for transient network failures, per file. Default
         is zero. Retries resume the current transfer; use resume=True to reuse
-        earlier partial downloads and skip completed files. Requires a filesystem
+        earlier partial downloads and skip completed files. A Google Docs, Sheets
+        or Slides export cannot be resumed mid-transfer: a retry after its first
+        byte fails, and the next run starts it over. Requires a filesystem
         destination. Ignored when skip_download is True.
 
     cancel:

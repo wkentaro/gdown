@@ -261,8 +261,9 @@ gdown --continue --retries 3 https://drive.google.com/drive/folders/<folder_id>
 ```
 
 Retries default to zero and use exponential backoff with jitter, capped at 30
-seconds. Retries resume the current transfer automatically; `--continue` controls
-whether earlier downloads are reused. Python callers can pass `retries=3` to
+seconds. Retries resume the current transfer automatically, except for a Docs,
+Sheets or Slides export; `--continue` controls whether earlier downloads are
+reused. Python callers can pass `retries=3` to
 `download`, `download_folder`, or `cached_download`.
 
 Retries require a filesystem destination; stdout and file-like outputs are not
