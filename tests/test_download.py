@@ -625,6 +625,65 @@ def test_download_restarts_an_export_instead_of_resuming(
     )
 
 
+@pytest.mark.parametrize(
+    ("url", "file_id", "requested_url", "response_url"),
+    [
+        pytest.param(
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf",
+            None,
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf",
+            None,
+            id="direct",
+        ),
+        pytest.param(
+            None,
+            "slides-id",
+            "https://drive.google.com/uc?id=slides-id",
+            "https://doc-0g-6s-slides.googleusercontent.com/export/abc/def",
+            id="redirected",
+        ),
+    ],
+)
+def test_download_restarts_an_export_url_instead_of_resuming(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    url: str | None,
+    file_id: str | None,
+    requested_url: str,
+    response_url: str | None,
+) -> None:
+    output = tmp_path / "deck.pdf"
+    part = tmp_path / "deck.pdfabcdefgh.part"
+    part.write_bytes(b"stale")
+    response = build_response(
+        headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+        chunks=[b"export"],
+    )
+    if response_url is not None:
+        response.url = response_url
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch, responses={requested_url: response}
+    )
+
+    result = download(
+        url=url,
+        id=file_id,
+        output=str(output),
+        resume=True,
+        quiet=True,
+        use_cookies=False,
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"export"
+    assert not part.exists()
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",
