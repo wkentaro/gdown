@@ -449,9 +449,9 @@ def _get_download_response(
                 export_requested = True
                 continue
         elif (
-            "Content-Disposition" in res.headers
-            and res.headers["Content-Disposition"].endswith("pptx")
-            and format not in {None, "pptx"}
+            format not in {None, "pptx"}
+            and "Content-Disposition" in res.headers
+            and (_get_filename_from_response(response=res) or "").endswith(".pptx")
         ):
             url = _google_export_url(
                 kind="presentation", file_id=gdrive_file_id, format=format
