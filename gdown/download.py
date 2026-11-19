@@ -49,7 +49,21 @@ GoogleDriveFileToDownload = collections.namedtuple(
 )
 
 
-def get_url_from_gdrive_confirmation(contents: str) -> str:  # noqa: GR005 -- public API accepts both call styles
+_MISSING_DOWNLOAD_LINK_MESSAGE: Final = (
+    "Cannot retrieve the public link of the file. "
+    "You may need to change the permission to "
+    "'Anyone with the link', or have had many accesses. "
+    "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq."
+)
+
+
+@dataclass(frozen=True)
+class _ConfirmationPage:
+    download_url: str | None
+    google_error: str | None
+
+
+def _parse_confirmation_page(*, contents: str) -> _ConfirmationPage:
     url = ""
     for line in contents.splitlines():
         m = re.search(r'href="(\/uc\?export=download[^"]+)', line)
@@ -82,16 +96,20 @@ def get_url_from_gdrive_confirmation(contents: str) -> str:  # noqa: GR005 -- pu
             break
         m = re.search('<p class="uc-error-subcaption">(.*)</p>', line)
         if m:
-            error = m.groups()[0]
-            raise FileURLRetrievalError(error)
-    if not url:
-        raise FileURLRetrievalError(
-            "Cannot retrieve the public link of the file. "
-            "You may need to change the permission to "
-            "'Anyone with the link', or have had many accesses. "
-            "Check FAQ in https://github.com/wkentaro/gdown?tab=readme-ov-file#faq.",
-        )
-    return url
+            text = re.split(r"</?p\b", m.groups()[0], maxsplit=1, flags=re.I)[0]
+            caption = bs4.BeautifulSoup(f"<p>{text}</p>", features="html.parser")
+            for br in caption.find_all("br"):
+                br.replace_with(" ")
+            error = " ".join(caption.get_text().split())
+            return _ConfirmationPage(download_url=None, google_error=error or None)
+    return _ConfirmationPage(download_url=url or None, google_error=None)
+
+
+def get_url_from_gdrive_confirmation(contents: str) -> str:  # noqa: GR005 -- public API accepts both call styles
+    page = _parse_confirmation_page(contents=contents)
+    if page.download_url is None:
+        raise FileURLRetrievalError(page.google_error or _MISSING_DOWNLOAD_LINK_MESSAGE)
+    return page.download_url
 
 
 def _sanitize_filename(*, filename: str) -> str:
@@ -491,19 +509,20 @@ def _get_download_response(
         ):
             url = f"https://drive.google.com/open?id={gdrive_file_id}"
             continue
-        try:
-            url = get_url_from_gdrive_confirmation(contents)
-        except FileURLRetrievalError as e:
-            message = (
-                "Failed to retrieve file url:\n\n{}\n\n"
-                "You may still be able to access the file from the browser:"
-                "\n\n\t{}\n\n"
-                "but Gdown can't. Please check connections and permissions."
-            ).format(
-                textwrap.indent("\n".join(textwrap.wrap(str(e))), prefix="\t"),
+        page = _parse_confirmation_page(contents=contents)
+        if page.download_url is not None:
+            url = page.download_url
+            continue
+        reason = page.google_error or _MISSING_DOWNLOAD_LINK_MESSAGE
+        raise FileURLRetrievalError(
+            "Failed to retrieve file url:\n\n{}\n\n"
+            "You may still be able to access the file from the browser:"
+            "\n\n\t{}\n\n"
+            "but Gdown can't. Please check connections and permissions.".format(
+                textwrap.indent("\n".join(textwrap.wrap(reason)), prefix="\t"),
                 url_origin,
             )
-            raise FileURLRetrievalError(message)
+        )
 
 
 def _prepare_partial_file(*, output: str, resume: bool) -> tuple[str, bool]:
