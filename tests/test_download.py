@@ -437,6 +437,83 @@ def _mock_drive_session(
     return session
 
 
+def _mock_session_requesting_each_url_once(
+    *, monkeypatch: pytest.MonkeyPatch, responses: dict[str, unittest.mock.Mock]
+) -> unittest.mock.Mock:
+    session = _mock_drive_session(monkeypatch=monkeypatch, responses=responses)
+    requested: set[str] = set()
+
+    def get(url: str, **_kwargs: object) -> unittest.mock.Mock:
+        if url in requested:
+            pytest.fail(f"requested {url} again")
+        requested.add(url)
+        return responses[url]
+
+    session.get.side_effect = get
+    return session
+
+
+def test_download_fails_when_export_redirects_to_editor(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    uc_url = f"https://drive.google.com/uc?id={file_id}"
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    editor = _mock_html_response(
+        status=HTTPStatus.OK,
+        url=f"https://docs.google.com/presentation/d/{file_id}/edit",
+    )
+    _mock_session_requesting_each_url_once(
+        monkeypatch=monkeypatch,
+        responses={uc_url: editor, export_url: editor},
+    )
+
+    with pytest.raises(FileURLRetrievalError):
+        download(
+            id=file_id,
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="pdf",
+        )
+
+
+@pytest.mark.parametrize("content_type", [None, "text/html"])
+def test_download_keeps_pptx_when_export_returns_pptx(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content_type: str | None
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    uc_url = f"https://drive.google.com/uc?id={file_id}"
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    headers = {
+        "Content-Disposition": 'attachment; filename="deck.pptx"; '
+        "filename*=UTF-8''deck.pptx"
+    }
+    export_headers = (
+        headers if content_type is None else {**headers, "Content-Type": content_type}
+    )
+    _mock_session_requesting_each_url_once(
+        monkeypatch=monkeypatch,
+        responses={
+            uc_url: build_response(headers=headers, chunks=[b"pptx"]),
+            export_url: build_response(
+                headers=export_headers, chunks=[b"exported pptx"]
+            ),
+        },
+    )
+
+    output = download(
+        id=file_id,
+        output=str(tmp_path) + os.sep,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert output == str(tmp_path / "deck.pptx")
+    assert (tmp_path / "deck.pptx").read_bytes() == b"exported pptx"
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",

@@ -414,6 +414,7 @@ def _get_download_response(
     cookies_file: str,
 ) -> tuple[requests.Response, str]:
     url_origin = url
+    export_requested = False
     while True:
         responses.close()
         res = _get_response_with_retries(
@@ -429,7 +430,9 @@ def _get_download_response(
         if not gdrive_file_id:
             return res, url
 
-        if res.headers.get("Content-Type", "").startswith("text/html"):
+        if export_requested:
+            pass
+        elif res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
             kind = next(
                 (
@@ -443,6 +446,7 @@ def _get_download_response(
                 url = _google_export_url(
                     kind=kind, file_id=gdrive_file_id, format=format
                 )
+                export_requested = True
                 continue
         elif (
             "Content-Disposition" in res.headers
@@ -452,6 +456,7 @@ def _get_download_response(
             url = _google_export_url(
                 kind="presentation", file_id=gdrive_file_id, format=format
             )
+            export_requested = True
             continue
 
         if use_cookies:
