@@ -779,8 +779,9 @@ def download(
         Google Drive's file ID.
     resume:
         Resume interrupted downloads while skipping completed ones. An
-        interrupted Google Docs, Sheets or Slides export starts over,
-        because Google does not serve byte ranges for exports.
+        interrupted Google Docs, Sheets or Slides export starts over on
+        the next run, because Google does not serve byte ranges for
+        exports.
         Default is False.
     format:
         Format of Google Docs, Spreadsheets and Slides. Default is:

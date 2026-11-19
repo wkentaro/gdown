@@ -249,8 +249,9 @@ resolving each Google Drive file, whether or not it downloads it.
 
 Google Drive terminates connections after approximately 1 hour for large files.
 Use `--continue` to reuse earlier partial downloads and skip completed files.
-An interrupted Docs, Sheets or Slides export starts over, because Google does
-not serve byte ranges for exports.
+An interrupted Docs, Sheets or Slides export starts over on the next
+`--continue` run and `--retries` cannot resume it mid-transfer, because Google
+does not serve byte ranges for exports.
 Add `--retries N` for up to N automatic retries per file after a transient
 connection failure, timeout, or incomplete transfer:
 

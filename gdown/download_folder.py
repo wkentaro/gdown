@@ -115,7 +115,7 @@ def download_folder(
         Resume interrupted transfers.
         Completed output files will be skipped.
         Partial tempfiles will be reused, if the transfer is incomplete.
-        An interrupted Google Docs, Sheets or Slides export starts over.
+        An interrupted Google Docs, Sheets or Slides export starts over on the next run.
         Default is False.
     cookies_file:
         Netscape cookies file to load when a session opens and save after
