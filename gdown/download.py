@@ -487,6 +487,18 @@ def _get_download_response(
         if "Content-Disposition" in res.headers:
             return res, url, not _is_google_export(url=url, res=res)
 
+        if export_requested and format is not None and not res.ok:
+            warnings.warn(
+                f"Google Drive cannot export {gdrive_file_id} as '{format}' "
+                f"(HTTP {res.status_code}); downloading it in the default "
+                "format instead.",
+                stacklevel=3,
+            )
+            format = None
+            export_requested = False
+            url = url_origin
+            continue
+
         try:
             contents = res.text
         except (
@@ -787,7 +799,9 @@ def download(
         exports.
         Default is False.
     format:
-        Format of Google Docs, Spreadsheets and Slides. Default is:
+        Preferred format of Google Docs, Spreadsheets and Slides. A file that
+        cannot be exported in it is downloaded in the default format with a
+        warning. Default is:
             - Google Docs: 'docx'
             - Google Spreadsheet: 'xlsx'
             - Google Slides: 'pptx'

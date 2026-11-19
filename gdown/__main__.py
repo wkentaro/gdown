@@ -169,8 +169,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--format",
-        help="Format of Google Docs, Spreadsheets and Slides. "
-        "Default is Google Docs: 'docx', Spreadsheet: 'xlsx', Slides: 'pptx'.",
+        help="Preferred format of Google Docs, Spreadsheets and Slides. "
+        "Default is Google Docs: 'docx', Spreadsheet: 'xlsx', Slides: 'pptx', "
+        "also used for a file that cannot be exported in the preferred format.",
     )
     parser.add_argument(
         "--user-agent",

@@ -113,6 +113,9 @@ gdown "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/
 
 Default export formats: Docs → `docx`, Sheets → `xlsx`, Slides → `pptx`.
 
+`--format` is a preference. A file Google cannot export in that format, such
+as Slides as `csv`, is downloaded in its default format with a warning.
+
 #### Resume, speed limit, proxy
 
 ```bash
