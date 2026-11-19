@@ -109,13 +109,17 @@ gdown "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/
 
 # Export as PDF instead
 gdown "https://docs.google.com/presentation/d/15umvZKlsJ3094HNg5S4vJsIhxcFlyTeK/edit" --format pdf
+
+# Export every Docs, Sheets and Slides file in a folder as PDF
+gdown https://drive.google.com/drive/folders/15uNXeRBIhVvZJIhL4yTw4IsStMhUaaxl --format pdf
 ```
 
 Default export formats: Docs → `docx`, Sheets → `xlsx`, Slides → `pptx`.
 
 `--format` is a preference. When Google rejects the format for a file, such
 as `csv` for Slides, the file is downloaded in its default format with a
-warning.
+warning. With a folder, the format applies to every Docs, Sheets and Slides
+file in it, and other files are downloaded as they are.
 
 #### Resume, speed limit, proxy
 
