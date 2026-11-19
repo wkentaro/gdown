@@ -387,6 +387,19 @@ def _validate_resumed_response(
     return int(match[3]) - offset if match[3] != "*" else int(match[2]) - offset + 1
 
 
+_GOOGLE_EXPORT_DEFAULT_FORMATS: Final = {
+    "document": "docx",
+    "spreadsheets": "xlsx",
+    "presentation": "pptx",
+}
+
+
+def _google_export_url(*, kind: str, file_id: str, format: str | None) -> str:
+    if format is None:
+        format = _GOOGLE_EXPORT_DEFAULT_FORMATS[kind]
+    return f"https://docs.google.com/{kind}/d/{file_id}/export?format={format}"
+
+
 def _get_download_response(
     *,
     sess: requests.Session,
@@ -418,31 +431,17 @@ def _get_download_response(
 
         if res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
-            if "/document/" in res.url and "/export" not in res.url:
-                url = (
-                    "https://docs.google.com/document/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="docx" if format is None else format,
-                    )
-                )
-                continue
-            elif "/spreadsheets/" in res.url and "/export" not in res.url:
-                url = (
-                    "https://docs.google.com/spreadsheets/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="xlsx" if format is None else format,
-                    )
-                )
-                continue
-            elif "/presentation/" in res.url and "/export" not in res.url:
-                url = (
-                    "https://docs.google.com/presentation/d/{id}/export"
-                    "?format={format}".format(
-                        id=gdrive_file_id,
-                        format="pptx" if format is None else format,
-                    )
+            kind = next(
+                (
+                    kind
+                    for kind in _GOOGLE_EXPORT_DEFAULT_FORMATS
+                    if f"/{kind}/" in res.url
+                ),
+                None,
+            )
+            if kind is not None and "/export" not in res.url:
+                url = _google_export_url(
+                    kind=kind, file_id=gdrive_file_id, format=format
                 )
                 continue
         elif (
@@ -450,12 +449,8 @@ def _get_download_response(
             and res.headers["Content-Disposition"].endswith("pptx")
             and format not in {None, "pptx"}
         ):
-            url = (
-                "https://docs.google.com/presentation/d/{id}/export"
-                "?format={format}".format(
-                    id=gdrive_file_id,
-                    format="pptx" if format is None else format,
-                )
+            url = _google_export_url(
+                kind="presentation", file_id=gdrive_file_id, format=format
             )
             continue
 
