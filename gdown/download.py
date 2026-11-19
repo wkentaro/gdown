@@ -110,17 +110,26 @@ def _sanitize_filename(*, filename: str) -> str:
 
 
 def _get_filename_from_response(*, response: requests.Response) -> str | None:
-    content_disposition = urllib.parse.unquote(response.headers["Content-Disposition"])
+    parameters = {
+        name.lower(): value.strip()
+        for name, value in re.findall(
+            r'(?:^|;)\s*([^\s=;]+)\s*=\s*("(?:[^"\\]|\\.)*"|[^;]*)',
+            response.headers["Content-Disposition"],
+        )
+    }
 
-    m = re.search(r"filename\*=UTF-8''(.*)", content_disposition)
+    m = re.fullmatch(
+        r"UTF-8'[^']*'(.*)", parameters.get("filename*", ""), flags=re.IGNORECASE
+    )
     if m:
-        return _sanitize_filename(filename=m.groups()[0])
+        return _sanitize_filename(filename=urllib.parse.unquote(m[1]))
 
-    m = re.search('attachment; filename="(.*?)"', content_disposition)
-    if m:
-        return _sanitize_filename(filename=m.groups()[0])
-
-    return None
+    filename = parameters.get("filename", "")
+    if filename.startswith('"') and filename.endswith('"'):
+        filename = filename[1:-1]
+    if not filename:
+        return None
+    return _sanitize_filename(filename=urllib.parse.unquote(filename))
 
 
 def _get_content_length_from_response(*, response: requests.Response) -> int | None:

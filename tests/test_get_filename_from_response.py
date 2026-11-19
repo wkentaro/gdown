@@ -22,6 +22,31 @@ def _make_response(*, content_disposition: str) -> MagicMock:
         ('attachment; filename="report.pdf"', "report.pdf"),
         ('attachment; filename="Budget/2024.pdf"', "Budget_2024.pdf"),
         ('attachment; filename="path\\to\\file.pdf"', "path_to_file.pdf"),
+        ("attachment; filename=report.pdf", "report.pdf"),
+        ("attachment; filename= report.pdf", "report.pdf"),
+        ('inline; filename="report.pdf"', "report.pdf"),
+        ('attachment; filename="report.pdf"; size=42', "report.pdf"),
+        ("attachment; filename*=UTF-8'en'report%2Epdf", "report.pdf"),
+        ("attachment; filename*=UTF-8''report.pdf; size=42", "report.pdf"),
+        ("attachment; filename*=UTF-8''a%3Bb.pdf", "a;b.pdf"),
+        ("attachment; x-filename=wrong.pdf; filename=right.pdf", "right.pdf"),
+        (
+            "attachment; filename=\"a filename*=UTF-8'en'b.pdf\"",
+            "a filename*=UTF-8'en'b.pdf",
+        ),
+        (
+            "attachment; filename=\"a; filename*=UTF-8'en'b.pdf\"",
+            "a; filename*=UTF-8'en'b.pdf",
+        ),
+        ("attachment; FILENAME=report.pdf", "report.pdf"),
+        (
+            "attachment; filename=\"__.pdf\"; filename*=utf-8''%E6%97%A5.pdf",
+            "\u65e5.pdf",
+        ),
+        (
+            "attachment; filename=\"__.pdf\"; filename*=UTF-8''%E6%97%A5.pdf",
+            "\u65e5.pdf",
+        ),
     ],
     ids=[
         "utf8-normal",
@@ -30,11 +55,32 @@ def _make_response(*, content_disposition: str) -> MagicMock:
         "attachment-normal",
         "attachment-forward-slash",
         "attachment-backslash",
+        "attachment-unquoted",
+        "attachment-space-after-equals",
+        "inline",
+        "attachment-trailing-parameter",
+        "utf8-language-tag",
+        "utf8-trailing-parameter",
+        "utf8-encoded-semicolon",
+        "other-parameter-ending-in-filename",
+        "filename-star-inside-quoted-name",
+        "semicolon-inside-quoted-name",
+        "uppercase-parameter-name",
+        "lowercase-charset",
+        "utf8-preferred-over-ascii-fallback",
     ],
 )
 def test_get_filename_from_response(*, content_disposition: str, expected: str) -> None:
     response = _make_response(content_disposition=content_disposition)
     assert _get_filename_from_response(response=response) == expected
+
+
+@pytest.mark.parametrize("content_disposition", ["attachment", "attachment; filename="])
+def test_get_filename_from_response_without_filename(
+    *, content_disposition: str
+) -> None:
+    response = _make_response(content_disposition=content_disposition)
+    assert _get_filename_from_response(response=response) is None
 
 
 @pytest.mark.parametrize(
