@@ -832,7 +832,9 @@ def download(
         backoff, and speed-limit waits. Does not interrupt DNS, connection/TLS
         setup, proxy negotiation, filesystem operations, or caller callbacks.
         An event already set cancels before work. The event is never cleared.
-        Partial files remain available for resume; caller-owned streams stay open.
+        Partial files remain available for resume, except those of a Google
+        Docs, Sheets or Slides export, which starts over; caller-owned streams
+        stay open.
         Once final-file publication starts, a late event does not cancel success.
 
     Returns
