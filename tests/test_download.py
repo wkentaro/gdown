@@ -1493,6 +1493,51 @@ def test_download_falls_back_to_default_format_when_export_fails(
     assert (tmp_path / "deck.pptx").read_bytes() == b"export"
 
 
+@pytest.mark.parametrize("skip_download", [False, True])
+def test_download_falls_back_when_the_rejection_names_a_file(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, skip_download: bool
+) -> None:
+    export_url = "https://docs.google.com/presentation/d/slides-id/export?format="
+    _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            export_url + "csv": _mock_html_response(
+                status=HTTPStatus.NOT_FOUND,
+                url=export_url + "csv",
+                headers={
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Content-Disposition": 'attachment; filename="error.csv"',
+                },
+            ),
+            export_url + "pptx": build_response(
+                headers={"Content-Disposition": 'attachment; filename="deck.pptx"'},
+                chunks=[b"export"],
+            ),
+        },
+    )
+
+    with pytest.warns(UserWarning, match="cannot export slides-id as 'csv'"):
+        result = download(
+            id="slides-id",
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format="csv",
+            skip_download=skip_download,
+        )
+
+    if skip_download:
+        assert isinstance(result, GoogleDriveFileToDownload)
+        assert result.path == "deck.pptx"
+    else:
+        assert (tmp_path / "deck.pptx").read_bytes() == b"export"
+        assert not (tmp_path / "error.csv").exists()
+
+
 def test_download_reports_failure_when_default_format_export_fails_too(
     *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
