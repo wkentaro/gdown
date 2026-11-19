@@ -430,7 +430,7 @@ def _get_download_response(
     cookies_file: str,
 ) -> tuple[requests.Response, str, bool]:
     url_origin = url
-    export_requested = False
+    export_kind: str | None = None
     while True:
         responses.close()
         res = _get_response_with_retries(
@@ -446,7 +446,7 @@ def _get_download_response(
         if not gdrive_file_id:
             return res, url, not _is_google_export(url=url, res=res)
 
-        if export_requested:
+        if export_kind is not None:
             pass
         elif res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
@@ -462,7 +462,7 @@ def _get_download_response(
                 url = _google_export_url(
                     kind=kind, file_id=gdrive_file_id, format=format
                 )
-                export_requested = True
+                export_kind = kind
                 continue
         elif (
             format not in {None, "pptx"}
@@ -472,7 +472,7 @@ def _get_download_response(
             url = _google_export_url(
                 kind="presentation", file_id=gdrive_file_id, format=format
             )
-            export_requested = True
+            export_kind = "presentation"
             continue
 
         if use_cookies:
@@ -487,7 +487,11 @@ def _get_download_response(
         if "Content-Disposition" in res.headers:
             return res, url, not _is_google_export(url=url, res=res)
 
-        if export_requested and format is not None and not res.ok:
+        if (
+            export_kind is not None
+            and format not in {None, _GOOGLE_EXPORT_DEFAULT_FORMATS[export_kind]}
+            and not res.ok
+        ):
             warnings.warn(
                 f"Google Drive cannot export {gdrive_file_id} as '{format}' "
                 f"(HTTP {res.status_code}); downloading it in the default "
@@ -495,7 +499,7 @@ def _get_download_response(
                 stacklevel=3,
             )
             format = None
-            export_requested = False
+            export_kind = None
             url = url_origin
             continue
 
