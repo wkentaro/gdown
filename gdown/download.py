@@ -435,7 +435,7 @@ def _get_download_response(
     cookies_file: str,
 ) -> tuple[requests.Response, str]:
     url_origin = url
-    export_requested = False
+    export_url: str | None = None
     while True:
         responses.close()
         res = _get_response_with_retries(
@@ -451,7 +451,7 @@ def _get_download_response(
         if not gdrive_file_id:
             return res, url
 
-        if export_requested:
+        if export_url is not None:
             pass
         elif res.headers.get("Content-Type", "").startswith("text/html"):
             assert res.url is not None
@@ -464,20 +464,18 @@ def _get_download_response(
                 None,
             )
             if kind is not None and "/export" not in res.url:
-                url = _google_export_url(
+                url = export_url = _google_export_url(
                     kind=kind, file_id=gdrive_file_id, format=format
                 )
-                export_requested = True
                 continue
         elif (
             format not in {None, "pptx"}
             and "Content-Disposition" in res.headers
             and (_get_filename_from_response(response=res) or "").endswith(".pptx")
         ):
-            url = _google_export_url(
+            url = export_url = _google_export_url(
                 kind="presentation", file_id=gdrive_file_id, format=format
             )
-            export_requested = True
             continue
 
         if use_cookies:
@@ -513,6 +511,16 @@ def _get_download_response(
         if page.download_url is not None:
             url = page.download_url
             continue
+        if export_url is not None:
+            raise FileURLRetrievalError(
+                f"Failed to export the file:\n\n\t{export_url}\n\n"
+                + (
+                    page.google_error
+                    or f"Google answered HTTP {res.status_code} instead of a "
+                    "download. The file may not support this format, or it may "
+                    "not be shared with 'Anyone with the link'."
+                )
+            )
         reason = page.google_error or _MISSING_DOWNLOAD_LINK_MESSAGE
         raise FileURLRetrievalError(
             "Failed to retrieve file url:\n\n{}\n\n"
