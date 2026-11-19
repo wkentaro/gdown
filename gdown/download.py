@@ -42,6 +42,7 @@ from .parse_url import parse_url
 CHUNK_SIZE: Final = 512 * 1024  # 512KB
 home = osp.expanduser("~")
 DEFAULT_COOKIES_FILE: Final = osp.join(home, ".cache/gdown/cookies.txt")
+DEFAULT_USER_AGENT: Final = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36"  # NOQA: E501
 
 GoogleDriveFileToDownload = collections.namedtuple(
     "GoogleDriveFileToDownload", ("id", "path", "local_path")
@@ -265,12 +266,14 @@ def _get_session(
     *,
     proxy: str | None,
     use_cookies: bool,
-    user_agent: str,
+    user_agent: str | None,
     cookies_file: str | None,
 ) -> tuple[requests.Session, str]:
     sess = requests.session()
 
-    sess.headers.update({"User-Agent": user_agent})
+    sess.headers.update(
+        {"User-Agent": DEFAULT_USER_AGENT if user_agent is None else user_agent}
+    )
 
     if proxy is not None:
         sess.proxies = {"http": proxy, "https": proxy}
@@ -838,9 +841,6 @@ def download(
     if id is not None:
         url = f"https://drive.google.com/uc?id={id}"
     assert url is not None
-    if user_agent is None:
-        # We need to use different user agent for file download c.f., folder
-        user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # NOQA: E501
     if log_messages is None:
         log_messages = {}
 

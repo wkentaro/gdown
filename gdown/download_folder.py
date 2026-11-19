@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from http import HTTPStatus
 from typing import ClassVar
-from typing import Final
 
 import bs4
 import requests
@@ -159,12 +158,10 @@ def download_folder(
         folder_id = _extract_folder_id(url=url)
     else:
         folder_id = id
-    FOLDER_USER_AGENT: Final = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"  # NOQA: E501
     sess, _ = _get_session(
         proxy=proxy,
         use_cookies=use_cookies,
-        # Folder listing needs a different default agent than file download.
-        user_agent=FOLDER_USER_AGENT if user_agent is None else user_agent,
+        user_agent=user_agent,
         cookies_file=cookies_file,
     )
     try:
