@@ -630,6 +630,42 @@ def test_download_restarts_an_export_instead_of_resuming(
     )
 
 
+def test_download_does_not_offer_to_resume_an_export_whose_body_ends_early(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf": (
+                build_response(
+                    headers={
+                        "Content-Disposition": 'attachment; filename="deck.pdf"',
+                        "Content-Length": "10",
+                    },
+                    chunks=[b"data"],
+                )
+            ),
+        },
+    )
+
+    with pytest.raises(DownloadError) as excinfo:
+        download(
+            id="slides-id",
+            output=str(tmp_path / "deck.pdf"),
+            quiet=True,
+            use_cookies=False,
+            format="pdf",
+        )
+
+    assert str(excinfo.value) == (
+        "Download is incomplete: received 4 bytes but the server announced 10 bytes."
+    )
+
+
 @pytest.mark.parametrize(
     ("url", "file_id", "requested_url", "response_url"),
     [
