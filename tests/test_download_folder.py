@@ -661,3 +661,34 @@ def test_download_folder_preserves_user_agent(
         assert agents == [DEFAULT_USER_AGENT, DEFAULT_USER_AGENT]
     else:
         assert agents == [user_agent, user_agent]
+
+
+def test_download_folder_applies_format_to_google_native_files_only(
+    *, tmp_path: Path
+) -> None:
+    root = _make_folder_root(name="folder", child_names=["deck", "talk.pptx"])
+    root.children[0].type = _GoogleDriveFile.TYPE_PRESENTATION
+    download_mock = unittest.mock.Mock(return_value=str(tmp_path / "file"))
+
+    with (
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"],
+            "_download_and_parse_google_drive_link",
+            return_value=root,
+        ),
+        unittest.mock.patch.object(
+            sys.modules["gdown.download_folder"], "download", download_mock
+        ),
+    ):
+        download_folder(
+            id="root_id",
+            output=str(tmp_path),
+            quiet=True,
+            use_cookies=False,
+            format="pdf",
+        )
+
+    assert [call.kwargs["format"] for call in download_mock.call_args_list] == [
+        "pdf",
+        None,
+    ]
