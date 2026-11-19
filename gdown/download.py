@@ -431,6 +431,7 @@ def _get_download_response(
 ) -> tuple[requests.Response, str, bool]:
     url_origin = url
     export_kind: str | None = None
+    fell_back = False
     while True:
         responses.close()
         res = _get_response_with_retries(
@@ -485,7 +486,7 @@ def _get_download_response(
                 )
 
         if "Content-Disposition" in res.headers:
-            return res, url, not _is_google_export(url=url, res=res)
+            return res, url, not _is_google_export(url=url, res=res) and not fell_back
 
         if (
             export_kind is not None
@@ -498,6 +499,7 @@ def _get_download_response(
                 stacklevel=3,
             )
             format = None
+            fell_back = True
             export_kind = None
             url = url_origin
             continue
