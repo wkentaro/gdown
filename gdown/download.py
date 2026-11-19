@@ -945,10 +945,10 @@ def download(
                     print(f"Skipping already downloaded file {output}", file=sys.stderr)
                 return output
 
-            tmp_file, resume = _prepare_partial_file(output=output, resume=resume)
-            if not resumable:
-                resume = False
-            f = open(tmp_file, "ab" if resume else "wb")
+            tmp_file, resume = _prepare_partial_file(
+                output=output, resume=resume and resumable
+            )
+            f = open(tmp_file, "ab")
             stack.callback(f.close)
         else:
             tmp_file = None
