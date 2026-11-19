@@ -485,9 +485,6 @@ def _get_download_response(
                     f"Failed to save cookies to {cookies_file}: {e}", stacklevel=3
                 )
 
-        if "Content-Disposition" in res.headers:
-            return res, url, not _is_google_export(url=url, res=res) and not fell_back
-
         if (
             export_kind is not None
             and format not in {None, _GOOGLE_EXPORT_DEFAULT_FORMATS[export_kind]}
@@ -503,6 +500,9 @@ def _get_download_response(
             export_kind = None
             url = url_origin
             continue
+
+        if "Content-Disposition" in res.headers:
+            return res, url, not _is_google_export(url=url, res=res) and not fell_back
 
         try:
             contents = res.text
