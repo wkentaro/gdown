@@ -403,6 +403,19 @@ def _google_export_url(*, kind: str, file_id: str, format: str | None) -> str:
     return f"https://docs.google.com/{kind}/d/{file_id}/export?format={format}"
 
 
+def _is_google_export_url(*, url: str) -> bool:
+    parsed = urllib.parse.urlparse(url)
+    hostname = parsed.hostname or ""
+    return (hostname == "docs.google.com" and parsed.path.endswith("/export")) or (
+        hostname.endswith(".googleusercontent.com")
+        and parsed.path.startswith("/export/")
+    )
+
+
+def _is_google_export(*, url: str, res: requests.Response) -> bool:
+    return _is_google_export_url(url=url) or _is_google_export_url(url=res.url or "")
+
+
 def _get_download_response(
     *,
     sess: requests.Session,
@@ -431,7 +444,7 @@ def _get_download_response(
         responses.callback(res.close)
 
         if not gdrive_file_id:
-            return res, url, not export_requested
+            return res, url, not _is_google_export(url=url, res=res)
 
         if export_requested:
             pass
@@ -472,7 +485,7 @@ def _get_download_response(
                 )
 
         if "Content-Disposition" in res.headers:
-            return res, url, not export_requested
+            return res, url, not _is_google_export(url=url, res=res)
 
         try:
             contents = res.text
