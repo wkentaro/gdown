@@ -745,3 +745,21 @@ def test_empty_cookies_path_is_rejected(
 
 def test_browser_choices_match_vendored_extractor() -> None:
     assert set(BROWSERS) == set(SUPPORTED_BROWSERS)
+
+
+def test_folder_format_flag_reaches_download_folder(
+    *, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    download_folder_mock = unittest.mock.Mock(return_value=[])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["gdown", "--no-cookies", "--quiet", "--folder", "root_id", "--format", "pdf"],
+    )
+    monkeypatch.setattr(
+        sys.modules["gdown.__main__"], "download_folder", download_folder_mock
+    )
+
+    main()
+
+    assert download_folder_mock.call_args.kwargs["format"] == "pdf"
