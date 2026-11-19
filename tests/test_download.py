@@ -22,6 +22,7 @@ from urllib3.response import HTTPResponse
 
 from gdown._vendor import _ytdlp_cookies
 from gdown._vendor._ytdlp_cookies import extract_cookies_from_browser
+from gdown.download import _MISSING_DOWNLOAD_LINK_MESSAGE
 from gdown.download import CHUNK_SIZE
 from gdown.download import GoogleDriveFileToDownload
 from gdown.download import _CookieExtractionLogger
@@ -30,6 +31,7 @@ from gdown.download import _import_cookies_from_browser
 from gdown.download import _load_cookies
 from gdown.download import _save_cookies
 from gdown.download import download
+from gdown.download import get_url_from_gdrive_confirmation
 from gdown.exceptions import DownloadError
 from gdown.exceptions import FileURLRetrievalError
 
@@ -593,6 +595,66 @@ def test_download_exports_google_sheet_when_uc_fails(
     assert output == str(tmp_path / "sheet.xlsx")
     assert (tmp_path / "sheet.xlsx").read_bytes() == b"data"
     assert session.get.call_args_list[-1].args[0] == export_url
+
+
+@pytest.mark.parametrize(
+    ("caption", "message"),
+    [
+        ("Too&amp;many <b>users</b>", "Too&many users"),
+        ("Access denied.<br>Ask the owner.", "Access denied. Ask the owner."),
+        ("https://drive.google.com/drive/u/0", "https://drive.google.com/drive/u/0"),
+        (
+            'See <a href="#">https://example.com</a>/help.',
+            "See https://example.com/help.",
+        ),
+        ("&nbsp;", _MISSING_DOWNLOAD_LINK_MESSAGE),
+        ("", _MISSING_DOWNLOAD_LINK_MESSAGE),
+        ("&nbsp;</p><p>Learn more", _MISSING_DOWNLOAD_LINK_MESSAGE),
+        ("&nbsp;<p>Learn more", _MISSING_DOWNLOAD_LINK_MESSAGE),
+    ],
+    ids=[
+        "entities-and-tags",
+        "line-break",
+        "url",
+        "inline-link",
+        "entity-whitespace",
+        "empty",
+        "blank-before-sibling",
+        "blank-before-unclosed-sibling",
+    ],
+)
+def test_get_url_from_gdrive_confirmation_reads_caption_text(
+    *, caption: str, message: str
+) -> None:
+    with pytest.raises(FileURLRetrievalError) as exc_info:
+        get_url_from_gdrive_confirmation(
+            f'<p class="uc-error-subcaption">{caption}</p>'
+        )
+
+    assert str(exc_info.value) == message
+
+
+def test_get_url_from_gdrive_confirmation_reads_caption_inside_comment() -> None:
+    with pytest.raises(FileURLRetrievalError) as exc_info:
+        get_url_from_gdrive_confirmation(
+            '<!-- <p class="uc-error-subcaption">Too many users</p> -->'
+        )
+
+    assert str(exc_info.value) == "Too many users"
+
+
+def test_get_url_from_gdrive_confirmation_rejects_empty_form_action() -> None:
+    with pytest.raises(FileURLRetrievalError, match="Cannot retrieve"):
+        get_url_from_gdrive_confirmation('<form id="download-form" action=""></form>')
+
+
+def test_get_url_from_gdrive_confirmation_skips_caption_split_across_lines() -> None:
+    contents = (
+        '<p class="uc-error-subcaption">\nToo many users</p>\n'
+        '<form id="download-form" action="https://example.com/x"></form>'
+    )
+
+    assert get_url_from_gdrive_confirmation(contents) == "https://example.com/x"
 
 
 def test_download_reports_google_error_when_uc_fails_with_one(
