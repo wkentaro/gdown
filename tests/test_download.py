@@ -684,6 +684,44 @@ def test_download_restarts_an_export_url_instead_of_resuming(
     )
 
 
+def test_download_resumes_an_ordinary_file_served_from_googleusercontent(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "data.bin"
+    part = tmp_path / "data.binabcdefgh.part"
+    part.write_bytes(b"abc")
+    file_response = build_response(
+        headers={
+            "Content-Disposition": 'attachment; filename="data.bin"',
+            "Content-Length": "6",
+        },
+        chunks=[b"abcdef"],
+    )
+    file_response.url = (
+        "https://doc-0g-6s-docs.googleusercontent.com/docs/securesc/abc/def"
+    )
+    resumed_response = build_response(
+        headers={"Content-Length": "3", "Content-Range": "bytes 3-5/6"},
+        chunks=[b"def"],
+    )
+    responses = {"https://drive.google.com/uc?id=file-id": file_response}
+    session = _mock_drive_session(monkeypatch=monkeypatch, responses=responses)
+    session.get.side_effect = lambda url, headers=None, **_kwargs: (
+        resumed_response if headers and "Range" in headers else responses[url]
+    )
+
+    download(
+        id="file-id", output=str(output), resume=True, quiet=True, use_cookies=False
+    )
+
+    assert output.read_bytes() == b"abcdef"
+    assert not part.exists()
+    assert any(
+        (call.kwargs.get("headers") or {}).get("Range") == "bytes=3-"
+        for call in session.get.call_args_list
+    )
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",
