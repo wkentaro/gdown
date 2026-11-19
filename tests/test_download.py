@@ -618,7 +618,48 @@ def test_download_restarts_an_export_instead_of_resuming(
 
     assert result == str(output)
     assert output.read_bytes() == b"export"
-    assert not part.exists()
+    assert part.read_bytes() == b"stale partial bytes"
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
+def test_download_restarts_an_export_despite_several_partial_files(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "deck.pdf"
+    parts = [tmp_path / "deck.pdfabcdefgh.part", tmp_path / "deck.pdfijklmnop.part"]
+    for part in parts:
+        part.write_bytes(b"stale partial bytes")
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf": (
+                build_response(
+                    headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+                    chunks=[b"export"],
+                )
+            ),
+        },
+    )
+
+    result = download(
+        id="slides-id",
+        output=str(output),
+        resume=True,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"export"
+    assert all(part.read_bytes() == b"stale partial bytes" for part in parts)
     assert all(
         "Range" not in (call.kwargs.get("headers") or {})
         for call in session.get.call_args_list
@@ -677,7 +718,7 @@ def test_download_restarts_an_export_url_instead_of_resuming(
 
     assert result == str(output)
     assert output.read_bytes() == b"export"
-    assert not part.exists()
+    assert part.read_bytes() == b"stale partial bytes"
     assert all(
         "Range" not in (call.kwargs.get("headers") or {})
         for call in session.get.call_args_list
