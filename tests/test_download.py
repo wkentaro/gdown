@@ -585,6 +585,46 @@ def test_download_rejects_drive_retry_without_attachment(
     assert output.read_bytes() == b"old"
 
 
+def test_download_restarts_an_export_instead_of_resuming(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "deck.pdf"
+    part = tmp_path / "deck.pdfabcdefgh.part"
+    part.write_bytes(b"stale")
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf": (
+                build_response(
+                    headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+                    chunks=[b"export"],
+                )
+            ),
+        },
+    )
+
+    result = download(
+        id="slides-id",
+        output=str(output),
+        resume=True,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"export"
+    assert not part.exists()
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",
