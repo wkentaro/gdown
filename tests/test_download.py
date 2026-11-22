@@ -22,6 +22,7 @@ from urllib3.response import HTTPResponse
 
 from gdown._vendor import _ytdlp_cookies
 from gdown._vendor._ytdlp_cookies import extract_cookies_from_browser
+from gdown.download import _MISSING_DOWNLOAD_LINK_MESSAGE
 from gdown.download import CHUNK_SIZE
 from gdown.download import GoogleDriveFileToDownload
 from gdown.download import _CookieExtractionLogger
@@ -30,6 +31,7 @@ from gdown.download import _import_cookies_from_browser
 from gdown.download import _load_cookies
 from gdown.download import _save_cookies
 from gdown.download import download
+from gdown.download import get_url_from_gdrive_confirmation
 from gdown.exceptions import DownloadError
 from gdown.exceptions import FileURLRetrievalError
 
@@ -453,22 +455,94 @@ def _mock_session_requesting_each_url_once(
     return session
 
 
-def test_download_fails_when_export_redirects_to_editor(
-    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("export_failure", "format"),
+    [
+        ("editor", "pdf"),
+        ("not_found", "pdf"),
+        ("css_marker", "pdf"),
+        ("blank_caption", "pdf"),
+        ("editor", None),
+    ],
+)
+def test_download_names_export_when_export_fails(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    export_failure: str,
+    format: str | None,
 ) -> None:
     file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
     uc_url = f"https://drive.google.com/uc?id={file_id}"
-    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    export_url = (
+        f"https://docs.google.com/presentation/d/{file_id}/export"
+        f"?format={format or 'pptx'}"
+    )
     editor = _mock_html_response(
         status=HTTPStatus.OK,
         url=f"https://docs.google.com/presentation/d/{file_id}/edit",
     )
     _mock_session_requesting_each_url_once(
         monkeypatch=monkeypatch,
-        responses={uc_url: editor, export_url: editor},
+        responses={
+            uc_url: editor,
+            export_url: {
+                "editor": editor,
+                "not_found": _mock_html_response(
+                    status=HTTPStatus.NOT_FOUND, url=export_url
+                ),
+                "blank_caption": _mock_html_response(
+                    status=HTTPStatus.NOT_FOUND,
+                    url=export_url,
+                    text='<p class="uc-error-subcaption">&nbsp;</p>',
+                ),
+                "css_marker": _mock_html_response(
+                    status=HTTPStatus.NOT_FOUND,
+                    url=export_url,
+                    text="<style>.uc-error-subcaption { color: red }</style>",
+                ),
+            }[export_failure],
+        },
     )
 
-    with pytest.raises(FileURLRetrievalError):
+    with pytest.raises(FileURLRetrievalError) as exc_info:
+        download(
+            id=file_id,
+            output=str(tmp_path) + os.sep,
+            quiet=True,
+            use_cookies=False,
+            format=format,
+        )
+
+    message = str(exc_info.value)
+    assert f"Failed to export the file:\n\n\t{export_url}" in message
+    assert "Cannot retrieve the public link" not in message
+    assert "may not support this format" in message
+
+
+def test_download_keeps_google_reason_when_export_fails(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    editor = _mock_html_response(
+        status=HTTPStatus.OK,
+        url=f"https://docs.google.com/presentation/d/{file_id}/edit",
+    )
+    _mock_session_requesting_each_url_once(
+        monkeypatch=monkeypatch,
+        responses={
+            f"https://drive.google.com/uc?id={file_id}": editor,
+            f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf": (
+                _mock_html_response(
+                    status=HTTPStatus.OK,
+                    url=f"https://docs.google.com/presentation/d/{file_id}/export",
+                    text='<p class="uc-error-subcaption">Too many users</p>',
+                )
+            ),
+        },
+    )
+
+    with pytest.raises(FileURLRetrievalError) as exc_info:
         download(
             id=file_id,
             output=str(tmp_path) + os.sep,
@@ -476,6 +550,51 @@ def test_download_fails_when_export_redirects_to_editor(
             use_cookies=False,
             format="pdf",
         )
+
+    assert str(exc_info.value) == (
+        "Failed to export the file:\n\n\t"
+        f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+        "\n\nToo many users"
+    )
+
+
+def test_download_follows_confirmation_after_export(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    file_id = "1lW4mf5YNtS4MAD7ZkAauDDWp2N3_Qzs7"
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export?format=pdf"
+    confirmed_url = "https://drive.usercontent.google.com/download?id=x&confirm=t"
+    _mock_session_requesting_each_url_once(
+        monkeypatch=monkeypatch,
+        responses={
+            f"https://drive.google.com/uc?id={file_id}": _mock_html_response(
+                status=HTTPStatus.OK,
+                url=f"https://docs.google.com/presentation/d/{file_id}/edit",
+            ),
+            export_url: _mock_html_response(
+                status=HTTPStatus.OK,
+                url=export_url,
+                text='<form id="download-form" action="'
+                'https://drive.usercontent.google.com/download?id=x">'
+                '<input type="hidden" name="confirm" value="t"></form>',
+            ),
+            confirmed_url: build_response(
+                headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+                chunks=[b"pdf"],
+            ),
+        },
+    )
+
+    output = download(
+        id=file_id,
+        output=str(tmp_path) + os.sep,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert (tmp_path / "deck.pdf").read_bytes() == b"pdf"
+    assert output == str(tmp_path / "deck.pdf")
 
 
 @pytest.mark.parametrize("content_type", [None, "text/html"])
@@ -626,6 +745,66 @@ def test_download_exports_google_sheet_when_uc_fails(
     assert output == str(tmp_path / "sheet.xlsx")
     assert (tmp_path / "sheet.xlsx").read_bytes() == b"data"
     assert session.get.call_args_list[-1].args[0] == export_url
+
+
+@pytest.mark.parametrize(
+    ("caption", "message"),
+    [
+        ("Too&amp;many <b>users</b>", "Too&many users"),
+        ("Access denied.<br>Ask the owner.", "Access denied. Ask the owner."),
+        ("https://drive.google.com/drive/u/0", "https://drive.google.com/drive/u/0"),
+        (
+            'See <a href="#">https://example.com</a>/help.',
+            "See https://example.com/help.",
+        ),
+        ("&nbsp;", _MISSING_DOWNLOAD_LINK_MESSAGE),
+        ("", _MISSING_DOWNLOAD_LINK_MESSAGE),
+        ("&nbsp;</p><p>Learn more", _MISSING_DOWNLOAD_LINK_MESSAGE),
+        ("&nbsp;<p>Learn more", _MISSING_DOWNLOAD_LINK_MESSAGE),
+    ],
+    ids=[
+        "entities-and-tags",
+        "line-break",
+        "url",
+        "inline-link",
+        "entity-whitespace",
+        "empty",
+        "blank-before-sibling",
+        "blank-before-unclosed-sibling",
+    ],
+)
+def test_get_url_from_gdrive_confirmation_reads_caption_text(
+    *, caption: str, message: str
+) -> None:
+    with pytest.raises(FileURLRetrievalError) as exc_info:
+        get_url_from_gdrive_confirmation(
+            f'<p class="uc-error-subcaption">{caption}</p>'
+        )
+
+    assert str(exc_info.value) == message
+
+
+def test_get_url_from_gdrive_confirmation_reads_caption_inside_comment() -> None:
+    with pytest.raises(FileURLRetrievalError) as exc_info:
+        get_url_from_gdrive_confirmation(
+            '<!-- <p class="uc-error-subcaption">Too many users</p> -->'
+        )
+
+    assert str(exc_info.value) == "Too many users"
+
+
+def test_get_url_from_gdrive_confirmation_rejects_empty_form_action() -> None:
+    with pytest.raises(FileURLRetrievalError, match="Cannot retrieve"):
+        get_url_from_gdrive_confirmation('<form id="download-form" action=""></form>')
+
+
+def test_get_url_from_gdrive_confirmation_skips_caption_split_across_lines() -> None:
+    contents = (
+        '<p class="uc-error-subcaption">\nToo many users</p>\n'
+        '<form id="download-form" action="https://example.com/x"></form>'
+    )
+
+    assert get_url_from_gdrive_confirmation(contents) == "https://example.com/x"
 
 
 def test_download_reports_google_error_when_uc_fails_with_one(
