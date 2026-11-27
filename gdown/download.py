@@ -421,6 +421,19 @@ def _google_export_url(*, kind: str, file_id: str, format: str | None) -> str:
     return f"https://docs.google.com/{kind}/d/{file_id}/export?format={format}"
 
 
+def _is_google_export_url(*, url: str) -> bool:
+    parsed = urllib.parse.urlparse(url)
+    hostname = parsed.hostname or ""
+    return (hostname == "docs.google.com" and parsed.path.endswith("/export")) or (
+        hostname.endswith(".googleusercontent.com")
+        and parsed.path.startswith("/export/")
+    )
+
+
+def _is_google_export(*, url: str, res: requests.Response) -> bool:
+    return _is_google_export_url(url=url) or _is_google_export_url(url=res.url or "")
+
+
 def _get_download_response(
     *,
     sess: requests.Session,
@@ -433,7 +446,7 @@ def _get_download_response(
     retry: _RetryState,
     use_cookies: bool,
     cookies_file: str,
-) -> tuple[requests.Response, str]:
+) -> tuple[requests.Response, str, bool]:
     url_origin = url
     export_url: str | None = None
     while True:
@@ -449,7 +462,7 @@ def _get_download_response(
         responses.callback(res.close)
 
         if not gdrive_file_id:
-            return res, url
+            return res, url, not _is_google_export(url=url, res=res)
 
         if export_url is not None:
             pass
@@ -488,7 +501,7 @@ def _get_download_response(
                 )
 
         if "Content-Disposition" in res.headers:
-            return res, url
+            return res, url, not _is_google_export(url=url, res=res)
 
         try:
             contents = res.text
@@ -579,6 +592,7 @@ def _iter_response_chunks(
     url: str,
     tmp_file: str | None,
     start_size: int,
+    resumable: bool,
     flush: Callable[[], None],
     pbar: tqdm.tqdm | None,
     require_disposition: bool,
@@ -666,7 +680,7 @@ def _iter_response_chunks(
             )
             if expected_size is not None:
                 message += f" but the server announced {total} bytes"
-            if tmp_file is not None:
+            if resumable and tmp_file is not None:
                 message += (
                     f".\nThe received bytes are kept in {tmp_file}, which resume "
                     "(--continue on the command line) picks up"
@@ -694,6 +708,7 @@ def _write_response(
     f: BinaryIO,
     tmp_file: str | None,
     start_size: int,
+    resumable: bool,
     quiet: bool,
     speed: float | None,
     progress: Callable[[int, int | None], None] | None,
@@ -722,6 +737,7 @@ def _write_response(
         url=url,
         tmp_file=tmp_file,
         start_size=start_size,
+        resumable=resumable,
         flush=f.flush,
         pbar=pbar,
         require_disposition=require_disposition,
@@ -792,7 +808,10 @@ def download(
     id:
         Google Drive's file ID.
     resume:
-        Resume interrupted downloads while skipping completed ones.
+        Resume interrupted downloads while skipping completed ones. An
+        interrupted Google Docs, Sheets or Slides export starts over on
+        the next run, because Google does not serve byte ranges for
+        exports.
         Default is False.
     format:
         Format of Google Docs, Spreadsheets and Slides. Default is:
@@ -829,7 +848,9 @@ def download(
     retries:
         Additional attempts for transient network failures, per file. Default
         is zero. Retries resume the current transfer; use resume=True to reuse
-        earlier partial downloads and skip completed files. Requires a filesystem
+        earlier partial downloads and skip completed files. A Google Docs, Sheets
+        or Slides export cannot be resumed mid-transfer: a retry after its first
+        byte fails, and the next run starts it over. Requires a filesystem
         destination. Ignored when skip_download is True.
 
     cancel:
@@ -838,7 +859,9 @@ def download(
         backoff, and speed-limit waits. Does not interrupt DNS, connection/TLS
         setup, proxy negotiation, filesystem operations, or caller callbacks.
         An event already set cancels before work. The event is never cleared.
-        Partial files remain available for resume; caller-owned streams stay open.
+        Partial files remain available for resume, except those of a Google
+        Docs, Sheets or Slides export, which starts over; caller-owned streams
+        stay open.
         Once final-file publication starts, a late event does not cancel success.
 
     Returns
@@ -908,7 +931,7 @@ def download(
             url_origin = url
             is_gdrive_download_link = True
 
-        res, url = _get_download_response(
+        res, url, resumable = _get_download_response(
             sess=sess,
             responses=responses,
             url=url,
@@ -957,7 +980,9 @@ def download(
                     print(f"Skipping already downloaded file {output}", file=sys.stderr)
                 return output
 
-            tmp_file, resume = _prepare_partial_file(output=output, resume=resume)
+            tmp_file, resume = _prepare_partial_file(
+                output=output, resume=resume and resumable
+            )
             f = open(tmp_file, "ab")
             stack.callback(f.close)
         else:
@@ -1002,6 +1027,7 @@ def download(
             f=f,
             tmp_file=tmp_file,
             start_size=start_size,
+            resumable=resumable,
             quiet=quiet,
             speed=speed,
             progress=progress,

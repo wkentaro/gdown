@@ -704,6 +704,184 @@ def test_download_rejects_drive_retry_without_attachment(
     assert output.read_bytes() == b"old"
 
 
+@pytest.mark.parametrize("partial_count", [1, 2])
+def test_download_restarts_an_export_instead_of_resuming(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, partial_count: int
+) -> None:
+    output = tmp_path / "deck.pdf"
+    parts = [
+        tmp_path / "deck.pdfabcdefgh.part",
+        tmp_path / "deck.pdfijklmnop.part",
+    ][:partial_count]
+    for part in parts:
+        part.write_bytes(b"stale partial bytes")
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf": (
+                build_response(
+                    headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+                    chunks=[b"export"],
+                )
+            ),
+        },
+    )
+
+    result = download(
+        id="slides-id",
+        output=str(output),
+        resume=True,
+        quiet=True,
+        use_cookies=False,
+        format="pdf",
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"export"
+    assert all(part.read_bytes() == b"stale partial bytes" for part in parts)
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
+def test_download_does_not_offer_to_resume_an_export_whose_body_ends_early(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_drive_session(
+        monkeypatch=monkeypatch,
+        responses={
+            "https://drive.google.com/uc?id=slides-id": _mock_html_response(
+                status=HTTPStatus.OK,
+                url="https://docs.google.com/presentation/d/slides-id/edit",
+            ),
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf": (
+                build_response(
+                    headers={
+                        "Content-Disposition": 'attachment; filename="deck.pdf"',
+                        "Content-Length": "10",
+                    },
+                    chunks=[b"data"],
+                )
+            ),
+        },
+    )
+
+    with pytest.raises(DownloadError) as excinfo:
+        download(
+            id="slides-id",
+            output=str(tmp_path / "deck.pdf"),
+            quiet=True,
+            use_cookies=False,
+            format="pdf",
+        )
+
+    assert str(excinfo.value) == (
+        "Download is incomplete: received 4 bytes but the server announced 10 bytes."
+    )
+
+
+@pytest.mark.parametrize(
+    ("url", "file_id", "requested_url", "response_url"),
+    [
+        pytest.param(
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf",
+            None,
+            "https://docs.google.com/presentation/d/slides-id/export?format=pdf",
+            None,
+            id="direct",
+        ),
+        pytest.param(
+            None,
+            "slides-id",
+            "https://drive.google.com/uc?id=slides-id",
+            "https://doc-0g-6s-slides.googleusercontent.com/export/abc/def",
+            id="redirected",
+        ),
+    ],
+)
+def test_download_restarts_an_export_url_instead_of_resuming(
+    *,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    url: str | None,
+    file_id: str | None,
+    requested_url: str,
+    response_url: str | None,
+) -> None:
+    output = tmp_path / "deck.pdf"
+    part = tmp_path / "deck.pdfabcdefgh.part"
+    part.write_bytes(b"stale partial bytes")
+    response = build_response(
+        headers={"Content-Disposition": 'attachment; filename="deck.pdf"'},
+        chunks=[b"export"],
+    )
+    if response_url is not None:
+        response.url = response_url
+    session = _mock_drive_session(
+        monkeypatch=monkeypatch, responses={requested_url: response}
+    )
+
+    result = download(
+        url=url,
+        id=file_id,
+        output=str(output),
+        resume=True,
+        quiet=True,
+        use_cookies=False,
+    )
+
+    assert result == str(output)
+    assert output.read_bytes() == b"export"
+    assert part.read_bytes() == b"stale partial bytes"
+    assert all(
+        "Range" not in (call.kwargs.get("headers") or {})
+        for call in session.get.call_args_list
+    )
+
+
+def test_download_resumes_an_ordinary_file_served_from_googleusercontent(
+    *, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "data.bin"
+    part = tmp_path / "data.binabcdefgh.part"
+    part.write_bytes(b"abc")
+    file_response = build_response(
+        headers={
+            "Content-Disposition": 'attachment; filename="data.bin"',
+            "Content-Length": "6",
+        },
+        chunks=[b"abcdef"],
+    )
+    file_response.url = (
+        "https://doc-0g-6s-docs.googleusercontent.com/docs/securesc/abc/def"
+    )
+    resumed_response = build_response(
+        headers={"Content-Length": "3", "Content-Range": "bytes 3-5/6"},
+        chunks=[b"def"],
+    )
+    responses = {"https://drive.google.com/uc?id=file-id": file_response}
+    session = _mock_drive_session(monkeypatch=monkeypatch, responses=responses)
+    session.get.side_effect = lambda url, headers=None, **_kwargs: (
+        resumed_response if headers and "Range" in headers else responses[url]
+    )
+
+    download(
+        id="file-id", output=str(output), resume=True, quiet=True, use_cookies=False
+    )
+
+    assert output.read_bytes() == b"abcdef"
+    assert not part.exists()
+    assert any(
+        (call.kwargs.get("headers") or {}).get("Range") == "bytes=3-"
+        for call in session.get.call_args_list
+    )
+
+
 @pytest.mark.parametrize("uc_headers", [None, {}])
 @pytest.mark.parametrize(
     "uc_status",
@@ -841,12 +1019,17 @@ def test_download_keeps_part_then_resumes_when_body_ends_before_announced_size(
         headers={"Content-Length": "10"}, chunks=[b"data"]
     )
 
-    with pytest.raises(DownloadError, match="received 4 bytes.*announced 10 bytes"):
+    with pytest.raises(DownloadError) as excinfo:
         download(url="https://example.com/file", output=str(output), quiet=True)
 
     assert not output.exists()
     (part,) = tmp_path.glob("output*.part")
     assert part.read_bytes() == b"data"
+    assert str(excinfo.value) == (
+        "Download is incomplete: received 4 bytes but the server announced 10 "
+        f"bytes.\nThe received bytes are kept in {part}, which resume "
+        "(--continue on the command line) picks up."
+    )
 
     download_session.get.side_effect = [
         download_session.get.return_value,

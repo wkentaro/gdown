@@ -148,8 +148,9 @@ def main() -> None:
         default=0,
         metavar="N",
         help="retry transient failures up to N times per file, resuming the current "
-        "transfer; use --continue to resume earlier downloads and skip completed "
-        "files (filesystem destinations only; excludes --json and folder discovery)",
+        "transfer (not possible for a Docs, Sheets or Slides export); use --continue "
+        "to resume earlier downloads and skip completed files (filesystem "
+        "destinations only; excludes --json and folder discovery)",
     )
     parser.add_argument(
         "--folder",

@@ -249,6 +249,9 @@ resolving each Google Drive file, whether or not it downloads it.
 
 Google Drive terminates connections after approximately 1 hour for large files.
 Use `--continue` to reuse earlier partial downloads and skip completed files.
+An interrupted Docs, Sheets or Slides export starts over on the next
+`--continue` run and `--retries` cannot resume it mid-transfer, because Google
+does not serve byte ranges for exports.
 Add `--retries N` for up to N automatic retries per file after a transient
 connection failure, timeout, or incomplete transfer:
 
@@ -258,8 +261,9 @@ gdown --continue --retries 3 https://drive.google.com/drive/folders/<folder_id>
 ```
 
 Retries default to zero and use exponential backoff with jitter, capped at 30
-seconds. Retries resume the current transfer automatically; `--continue` controls
-whether earlier downloads are reused. Python callers can pass `retries=3` to
+seconds. Retries resume the current transfer automatically, except for a Docs,
+Sheets or Slides export; `--continue` controls whether earlier downloads are
+reused. Python callers can pass `retries=3` to
 `download`, `download_folder`, or `cached_download`.
 
 Retries require a filesystem destination; stdout and file-like outputs are not
